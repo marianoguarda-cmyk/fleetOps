@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FleetOps Op">
+<meta name="theme-color" content="#185FA5">
+<title>FleetOps Operador</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --blue:#185FA5;--blue-dark:#0C447C;--blue-light:#E6F1FB;
+  --green:#3B6D11;--green-light:#EAF3DE;
+  --amber:#854F0B;--amber-light:#FAEEDA;
+  --red:#A32D2D;--red-light:#FCEBEB;
+  --bg:#f7f7f5;--bg2:#fff;--bg3:#f0efe9;
+  --text:#1a1a18;--text2:#666660;--text3:#999993;
+  --border:#e5e4de;--radius:12px;--radius-sm:8px;
+  --safe-top:env(safe-area-inset-top);
+  --safe-bottom:env(safe-area-inset-bottom);
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow:hidden}
+
+/* SPLASH */
+#splash{position:fixed;inset:0;background:var(--blue);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:9999;transition:opacity .3s}
+#splash.hide{opacity:0;pointer-events:none}
+.sp-icon{width:72px;height:72px;background:rgba(255,255,255,.2);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:40px}
+.sp-title{color:white;font-size:22px;font-weight:700}
+.sp-sub{color:rgba(255,255,255,.7);font-size:13px}
+.spin-w{width:22px;height:22px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;margin-top:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* LOGIN */
+#login{display:none;position:fixed;inset:0;background:var(--blue);flex-direction:column;align-items:center;justify-content:center;padding:24px;z-index:100}
+#login.show{display:flex}
+.login-card{background:white;border-radius:20px;padding:28px 22px;width:100%;max-width:360px}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:22px;justify-content:center}
+.ll-icon{width:40px;height:40px;background:var(--blue);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px}
+.ll-name{font-size:18px;font-weight:700;color:var(--blue)}
+.ll-sub{font-size:11px;color:var(--text2)}
+.lf{margin-bottom:13px}
+.ll{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;display:block}
+.li{width:100%;padding:13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:16px;background:var(--bg);color:var(--text);outline:none;font-family:inherit}
+.li:focus{border-color:var(--blue)}
+.login-btn{width:100%;padding:14px;background:var(--blue);color:white;border:none;border-radius:var(--radius-sm);font-size:16px;font-weight:600;cursor:pointer;font-family:inherit}
+.login-btn:active{background:var(--blue-dark)}
+.login-btn:disabled{opacity:.6}
+.login-err{background:var(--red-light);color:var(--red);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;margin-top:10px;display:none;text-align:center}
+.login-err.show{display:block}
+
+/* APP */
+.app{display:none;flex-direction:column;height:100dvh}
+.app.show{display:flex}
+
+/* HEADER */
+.header{background:var(--blue);padding:calc(var(--safe-top) + 10px) 16px 10px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.h-icon{width:32px;height:32px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.h-info{flex:1}
+.h-title{color:white;font-size:14px;font-weight:600}
+.h-sub{color:rgba(255,255,255,.7);font-size:11px;margin-top:1px}
+.h-avatar{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;cursor:pointer;flex-shrink:0}
+
+/* BOTTOM NAV */
+.nav{background:var(--bg2);border-top:1px solid var(--border);display:flex;padding:6px 0 calc(var(--safe-bottom) + 6px);flex-shrink:0}
+.nav-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer;border:none;background:none;color:var(--text3);font-family:inherit}
+.nav-tab.active{color:var(--blue)}
+.nt-icon{font-size:22px;line-height:1}
+.nt-label{font-size:10px;font-weight:500}
+
+/* CONTENT */
+.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.page{display:none;padding:14px}
+.page.active{display:block}
+
+/* CHECK HEADER */
+.check-header{background:var(--blue);border-radius:var(--radius);padding:14px 15px;margin-bottom:13px;color:white}
+.ch-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.ch-title{font-size:14px;font-weight:600}
+.ch-hora{background:rgba(255,255,255,.2);padding:5px 11px;border-radius:20px;font-size:12px;font-weight:600}
+.ch-selects{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ch-sel-wrap{display:flex;flex-direction:column;gap:3px}
+.ch-sel-label{font-size:10px;opacity:.75}
+.ch-sel{width:100%;font-size:13px;background:rgba(255,255,255,.92);color:var(--text);border:none;border-radius:8px;padding:7px 9px;font-family:inherit;outline:none}
+.ch-sel-full{grid-column:1/-1}
+
+/* CHECK FORM */
+.check-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:11px;overflow:hidden}
+.cs-title{padding:11px 13px;font-size:13px;font-weight:600;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
+.cs-item{display:flex;align-items:center;gap:11px;padding:12px 13px;border-bottom:1px solid var(--border);cursor:pointer}
+.cs-item:last-child{border-bottom:none}
+.cs-item:active{background:var(--bg3)}
+.cs-check{width:22px;height:22px;border:2px solid var(--border);border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .12s}
+.cs-check.on{background:var(--blue);border-color:var(--blue);color:white}
+.cs-label{font-size:14px;flex:1;line-height:1.3}
+.cs-input-row{padding:11px 13px;border-bottom:1px solid var(--border)}
+.cs-input-row:last-child{border-bottom:none}
+.cs-input-label{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px}
+.cs-input{width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:15px;font-family:inherit;background:var(--bg);color:var(--text);outline:none}
+.cs-input:focus{border-color:var(--blue)}
+
+/* ESTADO CHIPS */
+.estado-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 13px;margin-bottom:11px}
+.ew-title{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px}
+.ew-chips{display:flex;gap:7px}
+.echip{flex:1;padding:10px 4px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--bg);text-align:center;font-size:12px;font-weight:500;cursor:pointer;color:var(--text2);font-family:inherit}
+.echip.s-ok{background:var(--green-light);border-color:#97C459;color:var(--green)}
+.echip.s-warn{background:var(--amber-light);border-color:#EF9F27;color:var(--amber)}
+.echip.s-err{background:var(--red-light);border-color:#F09595;color:var(--red)}
+
+/* GPS CARD */
+.gps-card{background:var(--blue-light);border:1px solid var(--blue);border-radius:var(--radius);padding:12px 13px;margin-bottom:11px}
+.gps-title{font-size:13px;font-weight:600;color:var(--blue);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.gps-chips{display:flex;gap:7px}
+
+/* PEON */
+.peon-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 13px;margin-bottom:11px}
+.peon-title{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px}
+.peon-row{display:flex;gap:8px;margin-bottom:8px}
+.peon-opt{flex:1;padding:10px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--bg);text-align:center;font-size:14px;cursor:pointer;font-family:inherit;color:var(--text2)}
+.peon-opt.active{background:var(--blue-light);border-color:var(--blue);color:var(--blue);font-weight:600}
+
+/* FOTOS */
+.fotos-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 13px;margin-bottom:11px}
+.fotos-title{font-size:12px;font-weight:600;margin-bottom:9px}
+.fotos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:9px}
+.foto-thumb{aspect-ratio:1;border-radius:8px;overflow:hidden;position:relative;background:var(--bg3)}
+.foto-thumb img{width:100%;height:100%;object-fit:cover}
+.foto-del{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);color:white;border:none;border-radius:50%;width:21px;height:21px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.add-foto{background:var(--bg3);border:1.5px dashed var(--border);border-radius:var(--radius-sm);padding:12px;text-align:center;cursor:pointer;font-size:13px;color:var(--text2);display:flex;align-items:center;justify-content:center;gap:7px;font-family:inherit}
+
+/* OBS */
+.obs-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 13px;margin-bottom:13px}
+.obs-label{font-size:12px;font-weight:600;margin-bottom:7px}
+.obs-input{width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;background:var(--bg);color:var(--text);resize:none;height:75px;outline:none}
+.obs-input:focus{border-color:var(--blue)}
+
+/* ADVERTENCIA NUEVO */
+.warn-nuevo{display:none;background:var(--amber-light);border:1.5px solid #EF9F27;border-radius:var(--radius);padding:12px 13px;margin-bottom:11px;color:var(--amber)}
+.wn-title{font-size:13px;font-weight:600;margin-bottom:3px}
+.wn-sub{font-size:12px;line-height:1.4}
+
+/* SUBMIT */
+.submit-btn{width:100%;padding:15px;background:var(--blue);color:white;border:none;border-radius:var(--radius);font-size:15px;font-weight:600;cursor:pointer;margin-bottom:20px;font-family:inherit}
+.submit-btn:active{background:var(--blue-dark)}
+.submit-btn:disabled{opacity:.6}
+
+/* SUCCESS */
+.success{padding:32px 20px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.success-icon{font-size:64px;margin-bottom:14px}
+.success-title{font-size:20px;font-weight:700;margin-bottom:6px}
+.success-sub{font-size:13px;color:var(--text2);margin-bottom:22px;line-height:1.5}
+.success-btn{padding:13px 28px;background:var(--blue);color:white;border:none;border-radius:var(--radius);font-size:15px;font-weight:600;cursor:pointer;width:100%;margin-bottom:10px;font-family:inherit}
+.success-btn-sec{background:var(--bg2);border:1px solid var(--border);color:var(--text)}
+
+/* HISTORIAL */
+.hist-filters{display:flex;gap:7px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px}
+.hf{padding:6px 13px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;color:var(--text2);font-family:inherit}
+.hf.active{background:var(--blue);color:white;border-color:var(--blue)}
+.hist-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:13px;margin-bottom:9px}
+.hi-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px}
+.hi-pat{font-size:14px;font-weight:700}
+.hi-meta{font-size:11px;color:var(--text2);margin-top:2px}
+.badge{display:inline-flex;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
+.b-ok{background:var(--green-light);color:var(--green)}
+.b-warn{background:var(--amber-light);color:var(--amber)}
+.b-err{background:var(--red-light);color:var(--red)}
+.hi-estados{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:5px}
+.hi-chip{font-size:11px;font-weight:600;padding:3px 7px;border-radius:20px}
+.hi-obs{font-size:12px;color:var(--text2);margin-top:6px;padding:7px;background:var(--bg3);border-radius:6px}
+.hi-footer{font-size:11px;color:var(--text3);margin-top:5px}
+.hi-photos{display:flex;gap:5px;margin-top:7px;overflow-x:auto}
+.hi-photo{width:52px;height:52px;border-radius:6px;object-fit:cover;flex-shrink:0}
+
+/* MAPA */
+.map-page{padding:12px}
+#op-map{height:calc(100dvh - 200px);border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)}
+.map-info{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:11px 13px;margin-top:10px;font-size:13px}
+.mi-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)}
+.mi-row:last-child{border-bottom:none}
+.mi-label{color:var(--text2)}
+.mi-val{font-weight:600}
+
+/* USER MENU */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:flex-end}
+.overlay.show{display:flex}
+.sheet{background:var(--bg2);border-radius:20px 20px 0 0;padding:16px 18px calc(var(--safe-bottom)+18px);width:100%}
+.sh-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px}
+.sh-name{font-size:15px;font-weight:600;margin-bottom:3px}
+.sh-role{font-size:13px;color:var(--text2);margin-bottom:14px}
+.sh-btn{display:flex;align-items:center;gap:10px;padding:12px 0;font-size:14px;cursor:pointer;border-top:1px solid var(--border)}
+
+/* LOADER / EMPTY */
+.loader{display:flex;align-items:center;justify-content:center;padding:36px;gap:9px;color:var(--text2);font-size:13px}
+.spin{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+.empty{text-align:center;padding:36px 20px;color:var(--text2);font-size:13px}
+.empty-icon{font-size:36px;margin-bottom:10px}
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <div class="sp-icon">🚛</div>
+  <div class="sp-title">FleetOps</div>
+  <div class="sp-sub">Operador de playa</div>
+  <div class="spin-w"></div>
+</div>
+
+<div id="login">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="ll-icon">🚛</div>
+      <div><div class="ll-name">FleetOps</div><div class="ll-sub">Operador de playa</div></div>
+    </div>
+    <div class="lf"><label class="ll">Email</label><input class="li" type="email" id="li-email" placeholder="tu@email.com" autocomplete="email" inputmode="email"></div>
+    <div class="lf"><label class="ll">Contraseña</label><input class="li" type="password" id="li-pass" placeholder="••••••••" autocomplete="current-password"></div>
+    <button class="login-btn" id="li-btn" onclick="doLogin()">Ingresar</button>
+    <div class="login-err" id="li-err"></div>
+  </div>
+</div>
+
+<div class="app" id="app">
+  <div class="header">
+    <div class="h-icon">🚛</div>
+    <div class="h-info">
+      <div class="h-title" id="h-title">FleetOps</div>
+      <div class="h-sub" id="h-sub">Operador</div>
+    </div>
+    <div class="h-avatar" id="h-av" onclick="showSheet()">?</div>
+  </div>
+
+  <div class="content">
+
+    <!-- CHECK DIARIO -->
+    <div class="page active" id="p-check">
+      <div class="check-header">
+        <div class="ch-top">
+          <div>
+            <div class="ch-title" id="ch-fecha">Check diario</div>
+            <div style="font-size:11px;opacity:.75;margin-top:2px">Completá antes de la salida</div>
+          </div>
+          <div class="ch-hora" id="ch-hora">⏱ --:--</div>
+        </div>
+        <div class="ch-selects">
+          <div class="ch-sel-wrap">
+            <div class="ch-sel-label">Empresa</div>
+            <select class="ch-sel" id="sel-empresa" onchange="filtrarVehiculos(this.value)">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div class="ch-sel-wrap">
+            <div class="ch-sel-label">Vehículo *</div>
+            <select class="ch-sel" id="sel-vehiculo" onchange="onVehiculoChange(this.value)">
+              <option value="">Seleccioná</option>
+            </select>
+          </div>
+          <div class="ch-sel-wrap ch-sel-full">
+            <div class="ch-sel-label">Cliente</div>
+            <select class="ch-sel" id="sel-cliente">
+              <option value="">Sin cliente</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Advertencia vehículo nuevo -->
+      <div class="warn-nuevo" id="warn-nuevo">
+        <div class="wn-title">⚠️ Vehículo en período de primeras cargas</div>
+        <div class="wn-sub" id="warn-nuevo-sub"></div>
+      </div>
+
+      <!-- GPS -->
+      <div class="gps-card" id="gps-card" style="display:none">
+        <div class="gps-title">
+          <span id="gps-nombre-label">📍 GPS</span>
+          <a id="gps-link-btn" href="#" target="_blank" style="color:var(--blue);font-size:12px;font-weight:600;display:none">Ver mapa →</a>
+        </div>
+        <div class="ew-title">Estado GPS</div>
+        <div class="gps-chips">
+          <button class="echip" onclick="setChip('gps',this,'ok')">✓ Verificado</button>
+          <button class="echip" onclick="setChip('gps',this,'err')">✕ Sin señal</button>
+        </div>
+      </div>
+
+      <!-- DOC CHOFER -->
+      <div class="check-section">
+        <div class="cs-title">🪪 Documentación del chofer</div>
+        <div class="cs-item" onclick="togCheck('dc0')"><div class="cs-check" id="dc0"></div><div class="cs-label">Licencia de conducir vigente</div></div>
+        <div class="cs-item" onclick="togCheck('dc1')"><div class="cs-check" id="dc1"></div><div class="cs-label">Identificación del conductor (DNI)</div></div>
+      </div>
+      <div class="estado-wrap">
+        <div class="ew-title">Estado del chofer</div>
+        <div class="ew-chips">
+          <button class="echip" onclick="setChip('chofer',this,'ok')">✓ OK</button>
+          <button class="echip" onclick="setChip('chofer',this,'warn')">⚠ Obs.</button>
+          <button class="echip" onclick="setChip('chofer',this,'err')">✕ No apto</button>
+        </div>
+      </div>
+
+      <!-- CARGA -->
+      <div class="check-section">
+        <div class="cs-title">📦 Carga / mercadería</div>
+        <div class="cs-item" onclick="togCheck('ca0')"><div class="cs-check" id="ca0"></div><div class="cs-label">Remito y documentación de carga</div></div>
+        <div class="cs-input-row">
+          <div class="cs-input-label">🔒 Número de precinto</div>
+          <input class="cs-input" id="precinto" type="text" placeholder="Ingresá el número" inputmode="numeric">
+        </div>
+      </div>
+      <div class="estado-wrap">
+        <div class="ew-title">Estado de la carga</div>
+        <div class="ew-chips">
+          <button class="echip" onclick="setChip('carga',this,'ok')">✓ OK</button>
+          <button class="echip" onclick="setChip('carga',this,'warn')">⚠ Obs.</button>
+          <button class="echip" onclick="setChip('carga',this,'err')">✕ Rechazado</button>
+        </div>
+      </div>
+
+      <!-- VEHÍCULO -->
+      <div class="check-section">
+        <div class="cs-title">🚛 Estado del vehículo</div>
+        <div class="cs-item" onclick="togCheck('ve0')"><div class="cs-check" id="ve0"></div><div class="cs-label">Carrocería sin daños visibles</div></div>
+        <div class="cs-item" onclick="togCheck('ve1')"><div class="cs-check" id="ve1"></div><div class="cs-label">Espejos y vidrios en orden</div></div>
+        <div class="cs-item" onclick="togCheck('ve2')"><div class="cs-check" id="ve2"></div><div class="cs-label">Sin pérdida de fluidos</div></div>
+        <div class="cs-item" onclick="togCheck('ve3')"><div class="cs-check" id="ve3"></div><div class="cs-label">Limpieza general</div></div>
+        <div class="cs-item" onclick="togCheck('ve4')"><div class="cs-check" id="ve4"></div><div class="cs-label">Extintor presente y vigente</div></div>
+        <div class="cs-item" onclick="togCheck('ve5')"><div class="cs-check" id="ve5"></div><div class="cs-label">Botiquín de primeros auxilios</div></div>
+      </div>
+      <div class="estado-wrap">
+        <div class="ew-title">Estado final del vehículo</div>
+        <div class="ew-chips">
+          <button class="echip" onclick="setChip('vehiculo',this,'ok')">✓ Listo</button>
+          <button class="echip" onclick="setChip('vehiculo',this,'warn')">⚠ Con obs.</button>
+          <button class="echip" onclick="setChip('vehiculo',this,'err')">✕ No sale</button>
+        </div>
+      </div>
+
+      <!-- PEÓN -->
+      <div class="peon-wrap">
+        <div class="peon-title">👷 ¿Sale con peón?</div>
+        <div class="peon-row">
+          <button class="peon-opt" id="peon-no" onclick="setPeon(false)">No</button>
+          <button class="peon-opt" id="peon-si" onclick="setPeon(true)">Sí</button>
+        </div>
+        <div id="peon-nombre-wrap" style="display:none">
+          <input class="cs-input" id="peon-nombre" type="text" placeholder="Nombre del peón">
+        </div>
+      </div>
+
+      <!-- FOTOS -->
+      <div class="fotos-wrap">
+        <div class="fotos-title">📷 Fotos de novedades</div>
+        <div class="fotos-grid" id="fotos-grid"></div>
+        <button class="add-foto" onclick="document.getElementById('foto-input').click()">
+          <span style="font-size:20px">📷</span> Sacar foto
+        </button>
+      </div>
+
+      <!-- OBS -->
+      <div class="obs-wrap">
+        <div class="obs-label">📝 Observaciones</div>
+        <textarea class="obs-input" id="obs" placeholder="Novedades o comentarios..."></textarea>
+      </div>
+
+      <button class="submit-btn" id="submit-btn" onclick="guardarCheck()">Confirmar check del día</button>
+    </div>
+
+    <!-- HISTORIAL -->
+    <div class="page" id="p-historial">
+      <div class="hist-filters">
+        <button class="hf active" onclick="setHF('hoy',this)">Hoy</button>
+        <button class="hf" onclick="setHF('semana',this)">Esta semana</button>
+        <button class="hf" onclick="setHF('mes',this)">Este mes</button>
+      </div>
+      <div id="hist-list"><div class="loader"><div class="spin"></div>Cargando...</div></div>
+    </div>
+
+    <!-- MAPA -->
+    <div class="page map-page" id="p-mapa">
+      <div id="op-map"></div>
+      <div class="map-info" id="map-info">
+        <div style="text-align:center;color:var(--text2);font-size:13px">Activá el GPS para ver tu posición</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="nav">
+    <button class="nav-tab active" onclick="goPage('check')" id="tab-check">
+      <div class="nt-icon">✅</div><div class="nt-label">Check</div>
+    </button>
+    <button class="nav-tab" onclick="goPage('historial')" id="tab-historial">
+      <div class="nt-icon">🕐</div><div class="nt-label">Historial</div>
+    </button>
+    <button class="nav-tab" onclick="goPage('mapa')" id="tab-mapa">
+      <div class="nt-icon">📍</div><div class="nt-label">Mapa</div>
+    </button>
+  </div>
+</div>
+
+<!-- USER SHEET -->
+<div class="overlay" id="ov-sheet" onclick="if(event.target===this)closeSheet()">
+  <div class="sheet">
+    <div class="sh-handle"></div>
+    <div class="sh-name" id="sh-name">Usuario</div>
+    <div class="sh-role" id="sh-role">Operador</div>
+    <div class="sh-btn" onclick="closeSheet();doLogout()" style="color:var(--red)">
+      <span style="font-size:20px">↩</span><span>Cerrar sesión</span>
+    </div>
+  </div>
+</div>
+
+<input type="file" accept="image/*" capture="environment" id="foto-input" style="display:none" onchange="handleFoto(event)">
+
+<!-- TOAST -->
+<div id="toast" style="position:fixed;bottom:calc(var(--safe-bottom)+80px);left:50%;transform:translateX(-50%) translateY(20px);background:#1a1a18;color:white;padding:11px 18px;border-radius:30px;font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center"></div>
+
+<script>
+const SB_URL='https://rzmijsyioxtmnfjpezvb.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6bWlqc3lpb3h0bW5manBlenZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2ODE4NjYsImV4cCI6MjA5NDI1Nzg2Nn0.qVqe9UivFlN8E-s2p6bYLlJCQy5LNkt5ObY19g6G1cg';
+const db=supabase.createClient(SB_URL,SB_KEY);
+const $=id=>document.getElementById(id);
+
+let CU=null,CP=null;
+let VEHS={},FOTOS=[];
+let HIST_F='hoy';
+let MAP=null,MAP_MARKER=null;
+let PEON_ACTIVO=false;
+
+// Estado del check
+let CS={dc:[false,false],ca:[false],ve:[false,false,false,false,false,false],
+        chofer:null,carga:null,vehiculo:null,gps:null};
+
+// HELPERS
+const fd=d=>d?new Date(d+'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}):'—';
+const dh=d=>{if(!d)return 9999;return Math.round((new Date(d+'T12:00:00')-new Date())/86400000)};
+const bdg=e=>`<span class="badge ${e==='ok'?'b-ok':e==='warn'?'b-warn':'b-err'}">${e==='ok'?'OK':e==='warn'?'⚠':e==='err'?'✕':'—'}</span>`;
+
+let ttm;
+function toast(m,d=2800){
+  const t=$('toast');t.textContent=m;t.style.opacity='1';t.style.transform='translateX(-50%) translateY(0)';
+  clearTimeout(ttm);ttm=setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(20px)';},d);
+}
+function hideSplash(){const s=$('splash');s.classList.add('hide');setTimeout(()=>s.style.display='none',400)}
+
+// AUTH
+async function doLogin(){
+  const email=$('li-email').value.trim(),pass=$('li-pass').value;
+  const btn=$('li-btn');
+  if(!email||!pass){showErr('Completá email y contraseña');return}
+  btn.disabled=true;btn.textContent='Ingresando...';
+  $('li-err').classList.remove('show');
+  const{data,error}=await db.auth.signInWithPassword({email,password:pass});
+  btn.disabled=false;btn.textContent='Ingresar';
+  if(error){showErr('Email o contraseña incorrectos');return}
+  await afterLogin(data.user);
+}
+function showErr(m){$('li-err').textContent=m;$('li-err').classList.add('show')}
+
+async function afterLogin(user){
+  CU=user;
+  const{data:p}=await db.from('profiles').select('*').eq('id',user.id).maybeSingle();
+  CP=p;
+  if(!p){
+    await db.from('profiles').upsert({id:user.id,email:user.email,
+      nombre:user.user_metadata?.nombre||user.email.split('@')[0],
+      rol:user.user_metadata?.rol||'operador',activo:true},{onConflict:'id'});
+    const{data:p2}=await db.from('profiles').select('*').eq('id',user.id).maybeSingle();
+    CP=p2;
+  }
+  setupUI();
+  await loadData();
+  iniciarReloj();
+  hideSplash();
+  $('login').classList.remove('show');
+  $('app').classList.add('show');
+}
+
+async function doLogout(){
+  await db.auth.signOut();CU=null;CP=null;
+  $('app').classList.remove('show');
+  $('login').classList.add('show');
+}
+
+function setupUI(){
+  const nombre=CP?.nombre||CU?.email?.split('@')[0]||'Op';
+  const ini=nombre.split(' ').slice(0,2).map(n=>n[0]||'').join('').toUpperCase();
+  $('h-av').textContent=ini;
+  $('h-title').textContent=nombre.split(' ')[0];
+  $('h-sub').textContent='Operador de playa';
+  $('sh-name').textContent=nombre;
+  $('sh-role').textContent=CP?.rol||'operador';
+  // Fecha
+  const today=new Date();
+  $('ch-fecha').textContent='Check — '+today.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+}
+
+function iniciarReloj(){
+  function tick(){
+    const h=new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    const el=$('ch-hora');if(el)el.textContent='⏱ '+h;
+  }
+  tick();setInterval(tick,1000);
+}
+
+// DATA
+async function loadData(){
+  const paisId=CP?.pais_id||null;
+  let qv=db.from('vehiculos').select('*').eq('activo',true).order('patente');
+  if(paisId) qv=qv.eq('pais_id',paisId);
+  const[{data:vehs},{data:emps},{data:clis}]=await Promise.all([
+    qv,
+    db.from('empresas').select('id,nombre').eq('activo',true).order('nombre'),
+    db.from('clientes').select('id,nombre').eq('activo',true).order('nombre'),
+  ]);
+  // Cache vehículos
+  VEHS={};(vehs||[]).forEach(v=>VEHS[v.id]=v);
+  // Popular select empresa
+  const se=$('sel-empresa');
+  se.innerHTML='<option value="">Todas las empresas</option>';
+  (emps||[]).forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.nombre;se.appendChild(o);});
+  // Popular select vehículo
+  llenarVehiculos(vehs||[]);
+  // Popular select cliente
+  const sc=$('sel-cliente');
+  sc.innerHTML='<option value="">Sin cliente</option>';
+  (clis||[]).forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.nombre;sc.appendChild(o);});
+}
+
+function llenarVehiculos(lista){
+  const sv=$('sel-vehiculo');
+  sv.innerHTML='<option value="">Seleccioná vehículo</option>';
+  lista.forEach(v=>{const o=document.createElement('option');o.value=v.id;o.textContent=v.patente+' — '+v.marca+' '+v.modelo;sv.appendChild(o);});
+}
+
+function filtrarVehiculos(empId){
+  const todos=Object.values(VEHS);
+  const filtrados=empId?todos.filter(v=>v.empresa_id===empId):todos;
+  llenarVehiculos(filtrados);
+  onVehiculoChange('');
+}
+
+function onVehiculoChange(vid){
+  const v=VEHS[vid];
+  // Advertencia nuevo
+  const wn=$('warn-nuevo');
+  if(v?.created_at){
+    const dias=Math.floor((new Date()-new Date(v.created_at))/86400000);
+    if(dias<=15){
+      wn.style.display='block';
+      $('warn-nuevo-sub').textContent=`Dado de alta hace ${dias} días. Quedan ${15-dias} días de seguimiento especial.`;
+    } else wn.style.display='none';
+  } else wn.style.display='none';
+  // GPS
+  const gc=$('gps-card');
+  if(v?.link_gps||v?.nombre_empresa_gps){
+    gc.style.display='block';
+    $('gps-nombre-label').textContent='📍 '+(v.nombre_empresa_gps||'GPS');
+    const lb=$('gps-link-btn');
+    if(v.link_gps){lb.href=v.link_gps;lb.style.display='inline';}
+    else lb.style.display='none';
+  } else gc.style.display='none';
+}
+
+// CHECK
+function togCheck(id){
+  const el=$(id);if(!el)return;
+  const isOn=el.classList.contains('on');
+  el.classList.toggle('on',!isOn);
+  el.textContent=!isOn?'✓':'';
+}
+
+function setChip(group,el,val){
+  const parent=el.parentElement;
+  parent.querySelectorAll('.echip').forEach(c=>{c.className='echip';delete c.dataset.val});
+  el.classList.add('s-'+val);el.dataset.val=val;
+  CS[group]=val;
+}
+
+function getChip(group){
+  return document.querySelector(`.ew-chips .echip[data-val], .gps-chips .echip[data-val]`);
+}
+
+function setPeon(activo){
+  PEON_ACTIVO=activo;
+  $('peon-si').className='peon-opt'+(activo?' active':'');
+  $('peon-no').className='peon-opt'+(!activo?' active':'');
+  $('peon-nombre-wrap').style.display=activo?'block':'none';
+}
+
+function handleFoto(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      const MAX=900;let w=img.width,h=img.height;
+      if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      FOTOS.push(canvas.toDataURL('image/jpeg',.72));
+      renderFotos();toast('📷 Foto agregada');
+    };img.src=ev.target.result;
+  };reader.readAsDataURL(file);e.target.value='';
+}
+
+function renderFotos(){
+  const g=$('fotos-grid');
+  g.innerHTML=FOTOS.map((f,i)=>`
+    <div class="foto-thumb">
+      <img src="${f}">
+      <button class="foto-del" onclick="FOTOS.splice(${i},1);renderFotos()">✕</button>
+    </div>`).join('');
+}
+
+function getChipVal(selector){
+  const el=document.querySelector(selector+' .echip[data-val]');
+  return el?.dataset.val||null;
+}
+
+async function guardarCheck(){
+  const vid=$('sel-vehiculo').value;
+  if(!vid){toast('⚠ Seleccioná un vehículo');return}
+  const chofer=getChipVal('.estado-wrap:nth-of-type(1)');
+  const carga=getChipVal('.estado-wrap:nth-of-type(2)');
+  const vehiculo=getChipVal('.estado-wrap:nth-of-type(3)');
+  if(!chofer||!carga||!vehiculo){toast('⚠ Completá el estado de todas las secciones');return}
+  const btn=$('submit-btn');
+  btn.disabled=true;btn.textContent='Guardando...';
+  const obs=$('obs').value.trim();
+  const precinto=$('precinto').value.trim();
+  const ef=[chofer,carga,vehiculo].includes('err')?'err':[chofer,carga,vehiculo].includes('warn')?'warn':'ok';
+  const gpsChip=document.querySelector('.gps-chips .echip[data-val]');
+  const v=VEHS[vid];
+  // Subir fotos
+  const fotosUrls=[];
+  for(const foto of FOTOS){
+    try{
+      const blob=await(await fetch(foto)).blob();
+      const fname=`checks/${vid}/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+      const{data,error}=await db.storage.from('fleet-fotos').upload(fname,blob,{contentType:'image/jpeg',upsert:true});
+      if(!error){const{data:url}=db.storage.from('fleet-fotos').getPublicUrl(fname);fotosUrls.push(url.publicUrl);}
+    }catch(e){}
+  }
+  const{error}=await db.from('checks_diarios').insert({
+    vehiculo_id:vid,
+    pais_id:v?.pais_id||CP?.pais_id||null,
+    fecha:new Date().toISOString().split('T')[0],
+    hora_check:new Date().toTimeString().slice(0,8),
+    doc_chofer_ok:$('dc0').classList.contains('on')&&$('dc1').classList.contains('on'),
+    doc_chofer_estado:chofer,
+    carga_ok:$('ca0').classList.contains('on'),
+    carga_estado:carga,
+    precinto_numero:precinto||null,
+    vehiculo_ok:['ve0','ve1','ve2','ve3','ve4','ve5'].every(id=>$(id).classList.contains('on')),
+    vehiculo_estado:vehiculo,
+    estado_final:ef,
+    gps_estado:gpsChip?.dataset.val||null,
+    sale_con_peon:PEON_ACTIVO,
+    nombre_peon:PEON_ACTIVO?($('peon-nombre').value.trim()||null):null,
+    cliente_id:$('sel-cliente').value||null,
+    link_gps_check:v?.link_gps||null,
+    empresa_gps:v?.nombre_empresa_gps||null,
+    observaciones:obs||null,
+    registrado_por:CP?.nombre||CU?.email,
+    fotos:fotosUrls.length?fotosUrls:null,
+  });
+  if(error){btn.disabled=false;btn.textContent='Confirmar check del día';toast('Error: '+error.message);return}
+  // Mostrar success
+  const checkContent=$('p-check');
+  checkContent.innerHTML=`
+    <div class="success">
+      <div class="success-icon">${ef==='ok'?'✅':ef==='warn'?'⚠️':'❌'}</div>
+      <div class="success-title" style="color:${ef==='ok'?'var(--green)':ef==='warn'?'var(--amber)':'var(--red)'}">
+        ${ef==='ok'?'¡Check OK!':ef==='warn'?'Con observación':'Con problemas'}
+      </div>
+      <div class="success-sub">
+        ${v?.patente||''} · ${new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}
+        ${precinto?`<br>🔒 Precinto ${precinto}`:''}
+        ${PEON_ACTIVO?`<br>👷 Peón${$('peon-nombre').value?' · '+$('peon-nombre').value:''}`:''}
+      </div>
+      <button class="success-btn" onclick="resetCheck()">✅ Nuevo check</button>
+      <button class="success-btn success-btn-sec" onclick="goPage('historial')">🕐 Ver historial</button>
+    </div>`;
+}
+
+function resetCheck(){
+  // Recargar la página de check completa
+  location.reload();
+}
+
+// HISTORIAL
+function setHF(f,el){
+  HIST_F=f;
+  document.querySelectorAll('.hf').forEach(x=>x.classList.remove('active'));
+  el.classList.add('active');
+  loadHistorial();
+}
+
+async function loadHistorial(){
+  const el=$('hist-list');
+  el.innerHTML='<div class="loader"><div class="spin"></div>Cargando...</div>';
+  const today=new Date().toISOString().split('T')[0];
+  let desde=today;
+  if(HIST_F==='semana'){const d=new Date();d.setDate(d.getDate()-7);desde=d.toISOString().split('T')[0]}
+  if(HIST_F==='mes'){const d=new Date();d.setDate(d.getDate()-30);desde=d.toISOString().split('T')[0]}
+  const{data,error}=await db.from('checks_diarios')
+    .select('*, vehiculos(patente,marca,modelo), clientes(nombre)')
+    .eq('registrado_por',CP?.nombre||CU?.email)
+    .gte('fecha',desde)
+    .order('fecha',{ascending:false})
+    .order('created_at',{ascending:false})
+    .limit(50);
+  if(error||!data?.length){
+    el.innerHTML='<div class="empty"><div class="empty-icon">📋</div>Sin checks en este período.</div>';return;
+  }
+  el.innerHTML=data.map(h=>{
+    const ef=h.estado_final;
+    const color=ef==='ok'?'var(--green)':ef==='warn'?'var(--amber)':'var(--red)';
+    return `<div class="hist-item" style="border-left:4px solid ${color}">
+      <div class="hi-top">
+        <div>
+          <div class="hi-pat">${h.vehiculos?.patente||'—'}</div>
+          <div class="hi-meta">${h.vehiculos?.marca||''} ${h.vehiculos?.modelo||''} · ${fd(h.fecha)} ${h.hora_check?.slice(0,5)||''}</div>
+          ${h.clientes?.nombre?`<div style="font-size:11px;color:var(--blue);margin-top:2px">👤 ${h.clientes.nombre}</div>`:''}
+        </div>
+        ${bdg(ef)}
+      </div>
+      <div class="hi-estados">
+        <span class="hi-chip ${h.doc_chofer_estado==='ok'?'b-ok':'b-warn'}">Chofer ${h.doc_chofer_estado==='ok'?'✓':'⚠'}</span>
+        <span class="hi-chip ${h.carga_estado==='ok'?'b-ok':'b-warn'}">Carga ${h.carga_estado==='ok'?'✓':'⚠'}</span>
+        <span class="hi-chip ${h.vehiculo_estado==='ok'?'b-ok':'b-warn'}">Vehículo ${h.vehiculo_estado==='ok'?'✓':'⚠'}</span>
+      </div>
+      ${h.precinto_numero?`<div style="font-size:12px;margin-top:5px">🔒 Precinto: <strong>${h.precinto_numero}</strong></div>`:''}
+      ${h.sale_con_peon?`<div style="font-size:12px;margin-top:3px">👷 Peón${h.nombre_peon?' · '+h.nombre_peon:''}</div>`:''}
+      ${h.observaciones?`<div class="hi-obs">📝 ${h.observaciones}</div>`:''}
+      ${h.fotos?.length?`<div class="hi-photos">${h.fotos.map(f=>`<img class="hi-photo" src="${f}" onclick="window.open('${f}','_blank')">`).join('')}</div>`:''}
+      <div class="hi-footer">👤 ${h.registrado_por||'—'}</div>
+    </div>`;
+  }).join('');
+}
+
+// MAPA
+function initMapa(){
+  setTimeout(()=>{
+    if(!MAP){
+      MAP=L.map('op-map').setView([-34.6,-58.4],13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+        attribution:'© OpenStreetMap',maxZoom:19
+      }).addTo(MAP);
+    }
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(pos=>{
+        const{latitude:lat,longitude:lng,accuracy}=pos.coords;
+        MAP.setView([lat,lng],15);
+        const icon=L.divIcon({
+          html:`<div style="background:var(--blue);color:white;padding:5px 10px;border-radius:12px;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.3)">📍 Yo</div>`,
+          className:'',iconAnchor:[25,12]
+        });
+        if(MAP_MARKER)MAP_MARKER.setLatLng([lat,lng]);
+        else MAP_MARKER=L.marker([lat,lng],{icon}).addTo(MAP);
+        $('map-info').innerHTML=`
+          <div class="mi-row"><span class="mi-label">Latitud</span><span class="mi-val">${lat.toFixed(6)}</span></div>
+          <div class="mi-row"><span class="mi-label">Longitud</span><span class="mi-val">${lng.toFixed(6)}</span></div>
+          <div class="mi-row"><span class="mi-label">Precisión</span><span class="mi-val">${Math.round(accuracy)} m</span></div>`;
+      },()=>{
+        $('map-info').innerHTML='<div style="color:var(--amber);font-size:13px;text-align:center">⚠ Habilitá el GPS del dispositivo</div>';
+      },{enableHighAccuracy:true,timeout:10000});
+    }
+    MAP.invalidateSize();
+  },200);
+}
+
+// NAVEGACIÓN
+function goPage(p){
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));
+  $('p-'+p).classList.add('active');
+  $('tab-'+p).classList.add('active');
+  if(p==='historial') loadHistorial();
+  if(p==='mapa') initMapa();
+}
+
+// USER SHEET
+function showSheet(){$('ov-sheet').classList.add('show')}
+function closeSheet(){$('ov-sheet').classList.remove('show')}
+
+// INIT
+$('li-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+setPeon(false);
+
+(async()=>{
+  const{data:{session}}=await db.auth.getSession();
+  if(session?.user)await afterLogin(session.user);
+  else{hideSplash();$('login').classList.add('show');}
+  db.auth.onAuthStateChange((ev,s)=>{
+    if(ev==='SIGNED_OUT'){$('app').classList.remove('show');$('login').classList.add('show');}
+  });
+})();
+</script>
+</body>
+</html>
