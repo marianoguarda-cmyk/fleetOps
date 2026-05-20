@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FleetOps Op">
+<meta name="theme-color" content="#185FA5">
+<link rel="manifest" href="manifest.json">
+<title>FleetOps Operador</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --blue:#185FA5;--blue-light:#E6F1FB;--blue-dark:#0C447C;
+  --green:#3B6D11;--green-light:#EAF3DE;
+  --amber:#854F0B;--amber-light:#FAEEDA;
+  --red:#A32D2D;--red-light:#FCEBEB;
+  --bg:#f7f7f5;--bg2:#ffffff;--bg3:#f0efe9;
+  --text:#1a1a18;--text2:#666660;--text3:#999993;
+  --border:#e5e4de;--radius:12px;--radius-sm:8px;
+  --safe-top:env(safe-area-inset-top);
+  --safe-bottom:env(safe-area-inset-bottom);
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow:hidden}
+
+/* SPLASH */
+#splash{position:fixed;inset:0;background:var(--blue);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999;transition:opacity .3s}
+#splash.hide{opacity:0;pointer-events:none}
+.splash-icon{width:80px;height:80px;background:rgba(255,255,255,.2);border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:44px}
+.splash-title{color:white;font-size:26px;font-weight:700}
+.splash-sub{color:rgba(255,255,255,.7);font-size:14px}
+.spin-w{width:24px;height:24px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;margin-top:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* LOGIN */
+#login-screen{display:none;position:fixed;inset:0;background:var(--blue);flex-direction:column;align-items:center;justify-content:center;padding:24px;z-index:100}
+#login-screen.show{display:flex}
+.login-card{background:white;border-radius:20px;padding:28px 24px;width:100%;max-width:380px}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:24px;justify-content:center}
+.login-logo-icon{width:44px;height:44px;background:var(--blue);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px}
+.login-logo-name{font-size:20px;font-weight:700;color:var(--blue)}
+.login-logo-sub{font-size:12px;color:var(--text2)}
+.login-field{margin-bottom:14px}
+.login-label{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;display:block}
+.login-input{width:100%;padding:14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:16px;background:var(--bg);color:var(--text);outline:none}
+.login-input:focus{border-color:var(--blue)}
+.login-btn{width:100%;padding:15px;background:var(--blue);color:white;border:none;border-radius:var(--radius-sm);font-size:16px;font-weight:600;cursor:pointer;margin-top:6px}
+.login-btn:active{background:var(--blue-dark)}
+.login-btn:disabled{opacity:.6}
+.login-err{background:var(--red-light);color:var(--red);border-radius:var(--radius-sm);padding:10px 12px;font-size:13px;margin-top:10px;display:none;text-align:center}
+.login-err.show{display:block}
+
+/* APP */
+.app{display:none;flex-direction:column;height:100dvh}
+.app.show{display:flex}
+
+/* HEADER */
+.header{background:var(--blue);padding:calc(var(--safe-top) + 10px) 16px 10px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.header-back{background:rgba(255,255,255,.2);border:none;color:white;width:34px;height:34px;border-radius:8px;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;display:none}
+.header-icon{width:32px;height:32px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.header-info{flex:1}
+.header-title{color:white;font-size:15px;font-weight:600}
+.header-sub{color:rgba(255,255,255,.7);font-size:11px;margin-top:1px}
+.header-avatar{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;cursor:pointer;flex-shrink:0}
+
+/* BOTTOM NAV */
+.bottom-nav{background:var(--bg2);border-top:1px solid var(--border);display:flex;padding:6px 0 calc(var(--safe-bottom) + 6px);flex-shrink:0}
+.nav-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer;border:none;background:none;color:var(--text3);transition:color .12s;position:relative}
+.nav-tab.active{color:var(--blue)}
+.nav-tab-icon{font-size:22px;line-height:1}
+.nav-tab-label{font-size:10px;font-weight:500}
+.nav-badge{position:absolute;top:2px;right:calc(50% - 18px);background:var(--red);color:white;font-size:10px;font-weight:700;padding:1px 5px;border-radius:10px;min-width:16px;text-align:center}
+
+/* CONTENT */
+.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.page{display:none}
+.page.active{display:block}
+
+/* HOME PAGE */
+.home-wrap{padding:16px}
+.day-header{background:var(--blue);border-radius:var(--radius);padding:16px;margin-bottom:16px;color:white}
+.dh-title{font-size:18px;font-weight:700;margin-bottom:3px}
+.dh-sub{font-size:13px;opacity:.8}
+.dh-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px}
+.dh-stat{background:rgba(255,255,255,.15);border-radius:8px;padding:10px;text-align:center}
+.dh-stat-val{font-size:22px;font-weight:700}
+.dh-stat-label{font-size:11px;opacity:.8;margin-top:2px}
+
+.quick-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.qa-btn{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;display:flex;flex-direction:column;gap:6px;transition:all .12s}
+.qa-btn:active{transform:scale(.97);background:var(--bg3)}
+.qa-icon{font-size:28px}
+.qa-title{font-size:14px;font-weight:600}
+.qa-sub{font-size:12px;color:var(--text2)}
+.qa-full{grid-column:1/-1;flex-direction:row;align-items:center;gap:12px}
+.qa-full .qa-icon{font-size:32px}
+
+.pending-section{margin-bottom:16px}
+.section-title{font-size:13px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.veh-row{background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--radius);padding:13px 14px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .12s}
+.veh-row:active{transform:scale(.98)}
+.veh-row.done{border-color:#97C459;background:var(--green-light)}
+.veh-row.warn{border-color:#EF9F27}
+.veh-row.err{border-color:#F09595;background:var(--red-light)}
+.vr-icon{width:40px;height:40px;border-radius:10px;background:var(--blue-light);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.vr-icon.done{background:var(--green-light)}
+.vr-info{flex:1}
+.vr-patente{font-size:15px;font-weight:700}
+.vr-desc{font-size:12px;color:var(--text2);margin-top:2px}
+.vr-badge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
+
+/* QR SCANNER */
+.qr-page{padding:16px}
+.qr-viewfinder{background:#000;border-radius:var(--radius);overflow:hidden;position:relative;aspect-ratio:1;margin-bottom:14px}
+.qr-viewfinder video{width:100%;height:100%;object-fit:cover}
+.qr-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.qr-frame{width:200px;height:200px;border:3px solid white;border-radius:16px;box-shadow:0 0 0 9999px rgba(0,0,0,.4)}
+.qr-corners::before,.qr-corners::after{content:'';position:absolute;width:30px;height:30px;border-color:var(--blue);border-style:solid}
+.qr-label{text-align:center;font-size:14px;color:var(--text2);margin-bottom:16px}
+.qr-manual{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.qr-manual-title{font-size:13px;font-weight:600;margin-bottom:10px}
+.qr-search-row{display:flex;gap:8px}
+.qr-search-input{flex:1;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:16px;background:var(--bg);color:var(--text);outline:none}
+.qr-search-input:focus{border-color:var(--blue)}
+.qr-search-btn{background:var(--blue);color:white;border:none;border-radius:var(--radius-sm);padding:12px 16px;font-size:14px;font-weight:600;cursor:pointer}
+.qr-results{margin-top:10px}
+
+/* CHECK FORM */
+.check-wrap{padding:16px}
+.check-veh-card{background:var(--blue);border-radius:var(--radius);padding:14px;margin-bottom:14px;color:white;display:flex;align-items:center;gap:12px}
+.cvc-icon{width:44px;height:44px;background:rgba(255,255,255,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+.cvc-patente{font-size:20px;font-weight:700;letter-spacing:2px}
+.cvc-desc{font-size:12px;opacity:.8;margin-top:3px}
+
+.check-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
+.cs-header{padding:13px 14px;font-size:14px;font-weight:600;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px}
+.cs-item{display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--border);cursor:pointer}
+.cs-item:last-child{border-bottom:none}
+.cs-item:active{background:var(--bg3)}
+.cs-check{width:24px;height:24px;border:2px solid var(--border);border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .12s}
+.cs-check.checked{background:var(--blue);border-color:var(--blue);color:white}
+.cs-label{font-size:14px;flex:1;line-height:1.3}
+
+.estado-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px}
+.ew-title{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:10px}
+.ew-chips{display:flex;gap:8px}
+.echip{flex:1;padding:11px 6px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--bg);text-align:center;font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);transition:all .12s}
+.echip:active{transform:scale(.96)}
+.echip.s-ok{background:var(--green-light);border-color:#97C459;color:var(--green)}
+.echip.s-warn{background:var(--amber-light);border-color:#EF9F27;color:var(--amber)}
+.echip.s-err{background:var(--red-light);border-color:#F09595;color:var(--red)}
+
+/* PHOTOS */
+.photos-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px}
+.pw-title{font-size:13px;font-weight:600;margin-bottom:10px}
+.photos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.photo-thumb{aspect-ratio:1;border-radius:8px;overflow:hidden;position:relative;background:var(--bg3);border:1px solid var(--border)}
+.photo-thumb img{width:100%;height:100%;object-fit:cover}
+.photo-del{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);color:white;border:none;border-radius:50%;width:22px;height:22px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.add-photo-btn{background:var(--bg3);border:1.5px dashed var(--border2);border-radius:var(--radius-sm);padding:14px;text-align:center;cursor:pointer;font-size:13px;color:var(--text2);display:flex;align-items:center;justify-content:center;gap:8px}
+.add-photo-btn:active{background:var(--border)}
+
+.obs-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px}
+.obs-label{font-size:13px;font-weight:600;margin-bottom:8px}
+.obs-input{width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;background:var(--bg);color:var(--text);resize:none;height:80px;outline:none}
+.obs-input:focus{border-color:var(--blue)}
+
+.submit-btn{width:100%;padding:16px;background:var(--blue);color:white;border:none;border-radius:var(--radius);font-size:16px;font-weight:600;cursor:pointer;margin-bottom:20px}
+.submit-btn:active{background:var(--blue-dark)}
+.submit-btn:disabled{opacity:.6}
+
+/* SUCCESS */
+.success-wrap{padding:24px;display:flex;flex-direction:column;align-items:center;text-align:center;min-height:60vh;justify-content:center}
+.sw-icon{font-size:72px;margin-bottom:16px}
+.sw-title{font-size:22px;font-weight:700;margin-bottom:8px}
+.sw-sub{font-size:14px;color:var(--text2);margin-bottom:24px;line-height:1.5}
+.sw-actions{display:flex;flex-direction:column;gap:10px;width:100%}
+.sw-btn{padding:14px;border-radius:var(--radius);font-size:15px;font-weight:600;cursor:pointer;border:none;text-align:center}
+.sw-btn-primary{background:var(--blue);color:white}
+.sw-btn-secondary{background:var(--bg2);border:1px solid var(--border);color:var(--text)}
+
+/* HISTORIAL */
+.hist-wrap{padding:16px}
+.hist-filters{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px}
+.hf-chip{padding:7px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;color:var(--text2)}
+.hf-chip.active{background:var(--blue);color:white;border-color:var(--blue)}
+.hist-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:13px 14px;margin-bottom:10px;cursor:pointer}
+.hist-item:active{background:var(--bg3)}
+.hi-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px}
+.hi-patente{font-size:15px;font-weight:700}
+.hi-meta{font-size:12px;color:var(--text2);margin-top:2px}
+.hi-chips{display:flex;gap:6px;flex-wrap:wrap}
+.hi-chip{font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px}
+.hi-op{font-size:11px;color:var(--text3);margin-top:6px}
+.hi-photos{display:flex;gap:6px;margin-top:8px;overflow-x:auto}
+.hi-photo{width:56px;height:56px;border-radius:6px;object-fit:cover;flex-shrink:0}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:flex-end;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--bg2);border-radius:20px 20px 0 0;padding:20px 20px calc(var(--safe-bottom)+20px);width:100%;max-height:80vh;overflow-y:auto}
+.modal-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:14px}
+.modal-item{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.modal-item:last-child{border-bottom:none}
+.modal-item:active{color:var(--blue)}
+
+/* BADGE */
+.badge{display:inline-flex;align-items:center;font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px}
+.b-ok{background:var(--green-light);color:var(--green)}
+.b-warn{background:var(--amber-light);color:var(--amber)}
+.b-err{background:var(--red-light);color:var(--red)}
+.b-pend{background:var(--bg3);color:var(--text2)}
+
+/* TOAST */
+.toast{position:fixed;bottom:calc(var(--safe-bottom)+80px);left:50%;transform:translateX(-50%) translateY(20px);background:#1a1a18;color:white;padding:12px 20px;border-radius:30px;font-size:14px;font-weight:500;z-index:9999;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* LOADER */
+.loader{display:flex;align-items:center;justify-content:center;padding:40px;gap:10px;color:var(--text2);font-size:14px}
+.spin{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+.empty{text-align:center;padding:40px 24px;color:var(--text2);font-size:14px}
+.empty-icon{font-size:40px;margin-bottom:12px}
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="splash-icon">🔍</div>
+  <div class="splash-title">FleetOps</div>
+  <div class="splash-sub">Panel del operador</div>
+  <div class="spin-w"></div>
+</div>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">🔍</div>
+      <div>
+        <div class="login-logo-name">FleetOps</div>
+        <div class="login-logo-sub">Operador de playa</div>
+      </div>
+    </div>
+    <div class="login-field">
+      <label class="login-label">Email</label>
+      <input class="login-input" type="email" id="li-email" placeholder="tu@email.com" autocomplete="email" inputmode="email">
+    </div>
+    <div class="login-field">
+      <label class="login-label">Contraseña</label>
+      <input class="login-input" type="password" id="li-pass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="login-btn" id="li-btn" onclick="doLogin()">Ingresar</button>
+    <div class="login-err" id="li-err"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app">
+  <div class="header" id="main-header">
+    <div class="header-icon">🔍</div>
+    <div class="header-info">
+      <div class="header-title" id="h-title">Operador</div>
+      <div class="header-sub" id="h-sub">FleetOps</div>
+    </div>
+    <div class="header-avatar" id="h-avatar" onclick="showUserMenu()">?</div>
+  </div>
+
+  <div class="content">
+    <!-- HOME -->
+    <div class="page active" id="p-home">
+      <div class="home-wrap">
+        <div class="day-header">
+          <div class="dh-title" id="dh-title">Buenos días</div>
+          <div class="dh-sub" id="dh-fecha"></div>
+          <div class="dh-stats">
+            <div class="dh-stat"><div class="dh-stat-val" id="stat-total">—</div><div class="dh-stat-label">Total</div></div>
+            <div class="dh-stat"><div class="dh-stat-val" id="stat-done" style="color:#90EE90">—</div><div class="dh-stat-label">Revisados</div></div>
+            <div class="dh-stat"><div class="dh-stat-val" id="stat-pend" style="color:#FFD700">—</div><div class="dh-stat-label">Pendientes</div></div>
+          </div>
+        </div>
+
+        <div class="quick-actions">
+          <div class="qa-btn" onclick="goPage('scanner')">
+            <div class="qa-icon">📷</div>
+            <div class="qa-title">Escanear QR</div>
+            <div class="qa-sub">Apuntá al código del vehículo</div>
+          </div>
+          <div class="qa-btn" onclick="goPage('buscar')">
+            <div class="qa-icon">🔍</div>
+            <div class="qa-title">Buscar patente</div>
+            <div class="qa-sub">Ingresá la patente manualmente</div>
+          </div>
+          <div class="qa-btn qa-full" onclick="goPage('lista')">
+            <div class="qa-icon">📋</div>
+            <div>
+              <div class="qa-title">Lista de vehículos</div>
+              <div class="qa-sub">Ver todos los pendientes del día</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pending-section">
+          <div class="section-title">
+            <span>Últimos revisados</span>
+            <span id="refresh-btn" onclick="loadHome()" style="color:var(--blue);font-size:12px;cursor:pointer;text-transform:none;font-weight:500">↻ Actualizar</span>
+          </div>
+          <div id="recent-checks"><div class="loader"><div class="spin"></div>Cargando...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCANNER -->
+    <div class="page" id="p-scanner">
+      <div class="qr-page">
+        <div class="qr-viewfinder" id="qr-viewfinder">
+          <video id="qr-video" autoplay muted playsinline></video>
+          <div class="qr-overlay">
+            <div class="qr-frame"></div>
+          </div>
+        </div>
+        <div class="qr-label">Apuntá la cámara al código QR del vehículo</div>
+        <div class="qr-manual">
+          <div class="qr-manual-title">O ingresá la patente manualmente</div>
+          <div class="qr-search-row">
+            <input class="qr-search-input" type="text" id="qr-patente-input" placeholder="Ej: AB 123 CD" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+            <button class="qr-search-btn" onclick="buscarPorPatente($('qr-patente-input').value)">Buscar</button>
+          </div>
+          <div id="qr-results"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BUSCAR -->
+    <div class="page" id="p-buscar">
+      <div class="qr-page">
+        <div class="qr-manual">
+          <div class="qr-manual-title" style="font-size:15px;font-weight:600;margin-bottom:12px">🔍 Buscar vehículo</div>
+          <div class="qr-search-row">
+            <input class="qr-search-input" type="text" id="buscar-input" placeholder="Patente, marca o modelo..." oninput="buscarVehiculos(this.value)">
+          </div>
+          <div id="buscar-results" style="margin-top:12px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LISTA -->
+    <div class="page" id="p-lista">
+      <div style="padding:16px">
+        <div class="section-title" style="margin-bottom:12px">
+          <span>Todos los vehículos</span>
+          <select id="lista-filtro" onchange="renderLista()" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:20px;background:var(--bg2);color:var(--text);font-weight:500">
+            <option value="todos">Todos</option>
+            <option value="pendiente">Pendientes</option>
+            <option value="ok">Con check OK</option>
+            <option value="warn">Con alerta</option>
+          </select>
+        </div>
+        <div id="lista-vehiculos"><div class="loader"><div class="spin"></div>Cargando...</div></div>
+      </div>
+    </div>
+
+    <!-- CHECK FORM -->
+    <div class="page" id="p-check">
+      <div class="check-wrap" id="check-form-content"></div>
+    </div>
+
+    <!-- HISTORIAL -->
+    <div class="page" id="p-historial">
+      <div class="hist-wrap">
+        <div class="hist-filters">
+          <div class="hf-chip active" onclick="filterHist('hoy',this)">Hoy</div>
+          <div class="hf-chip" onclick="filterHist('semana',this)">Esta semana</div>
+          <div class="hf-chip" onclick="filterHist('mes',this)">Este mes</div>
+          <div class="hf-chip" onclick="filterHist('mios',this)">Mis checks</div>
+        </div>
+        <div id="hist-list"><div class="loader"><div class="spin"></div>Cargando...</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-tab active" onclick="goPage('home')" id="tab-home">
+      <div class="nav-tab-icon">🏠</div>
+      <div class="nav-tab-label">Inicio</div>
+    </button>
+    <button class="nav-tab" onclick="goPage('scanner')" id="tab-scanner">
+      <div class="nav-tab-icon">📷</div>
+      <div class="nav-tab-label">Escanear</div>
+    </button>
+    <button class="nav-tab" onclick="goPage('lista')" id="tab-lista">
+      <div class="nav-tab-icon">📋</div>
+      <div class="nav-tab-label">Lista</div>
+      <div class="nav-badge" id="badge-pend" style="display:none"></div>
+    </button>
+    <button class="nav-tab" onclick="goPage('historial')" id="tab-historial">
+      <div class="nav-tab-icon">🕐</div>
+      <div class="nav-tab-label">Historial</div>
+    </button>
+  </div>
+</div>
+
+<!-- MODAL usuario -->
+<div class="modal-overlay" id="modal-user" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-user-name">Usuario</div>
+    <div class="modal-item" onclick="closeModal();doLogout()">
+      <span style="font-size:20px">↩</span>
+      <span style="font-size:15px;color:var(--red)">Cerrar sesión</span>
+    </div>
+  </div>
+</div>
+
+<input type="file" accept="image/*" capture="environment" id="photo-input" style="display:none" onchange="handlePhoto(event)">
+<div class="toast" id="the-toast"></div>
+
+<script>
+const SB_URL='https://rzmijsyioxtmnfjpezvb.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6bWlqc3lpb3h0bW5manBlenZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2ODE4NjYsImV4cCI6MjA5NDI1Nzg2Nn0.qVqe9UivFlN8E-s2p6bYLlJCQy5LNkt5ObY19g6G1cg';
+const db=supabase.createClient(SB_URL,SB_KEY);
+const $=id=>document.getElementById(id);
+
+let CU=null,CP=null;
+let VEHICULOS_CACHE=[];
+let CHECKS_HOY={};
+let CHECK_VEH=null; // vehículo en revisión actual
+let CHECK_FOTOS=[]; // base64 fotos
+let CHECK_STATE={dc:[false,false,false,false],ca:[false,false,false,false],ve:[false,false,false,false,false,false],chofer:null,carga:null,vehiculo:null,obs:''};
+let QR_STREAM=null;
+let HIST_FILTER='hoy';
+
+// HELPERS
+const fd=d=>d?new Date(d+'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}):'—';
+const dh=d=>{if(!d)return 9999;return Math.round((new Date(d+'T12:00:00')-new Date())/86400000)};
+const ev=d=>{const n=dh(d);return n<0?'err':n<=30?'warn':'ok'};
+const bdg=e=>`<span class="badge ${e==='ok'?'b-ok':e==='warn'?'b-warn':e==='err'?'b-err':'b-pend'}">${e==='ok'?'OK':e==='warn'?'Alerta':e==='err'?'Crítico':'Pendiente'}</span>`;
+const hora=()=>new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+
+let ttm;
+function toast(msg,dur=2800){
+  const t=$('the-toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(ttm);ttm=setTimeout(()=>t.classList.remove('show'),dur);
+}
+function hideSplash(){const s=$('splash');s.classList.add('hide');setTimeout(()=>s.style.display='none',400)}
+
+// AUTH
+async function doLogin(){
+  const email=$('li-email').value.trim(),pass=$('li-pass').value;
+  const btn=$('li-btn');
+  if(!email||!pass){showErr('Completá email y contraseña');return}
+  btn.disabled=true;btn.textContent='Ingresando...';
+  $('li-err').classList.remove('show');
+  const{data,error}=await db.auth.signInWithPassword({email,password:pass});
+  btn.disabled=false;btn.textContent='Ingresar';
+  if(error){showErr('Email o contraseña incorrectos');return}
+  await afterLogin(data.user);
+}
+function showErr(m){const e=$('li-err');e.textContent=m;e.classList.add('show')}
+
+async function afterLogin(user){
+  CU=user;
+  const{data:p}=await db.from('profiles').select('*').eq('id',user.id).maybeSingle();
+  CP=p;
+  if(!p){
+    await db.from('profiles').upsert({id:user.id,email:user.email,nombre:user.user_metadata?.nombre||user.email.split('@')[0],rol:'operador',activo:true},{onConflict:'id'});
+    const{data:p2}=await db.from('profiles').select('*').eq('id',user.id).maybeSingle();
+    CP=p2;
+  }
+  setupHeader();
+  await loadData();
+  hideSplash();
+  $('login-screen').classList.remove('show');
+  $('app').classList.add('show');
+  loadHome();
+}
+
+function setupHeader(){
+  const nombre=CP?.nombre||CU?.email?.split('@')[0]||'Operador';
+  const ini=nombre.split(' ').slice(0,2).map(n=>n[0]||'').join('').toUpperCase();
+  $('h-title').textContent=nombre.split(' ')[0];
+  $('h-sub').textContent='Operador de playa';
+  $('h-avatar').textContent=ini;
+  $('modal-user-name').textContent=nombre+' · '+(CP?.rol||'operador');
+}
+
+async function doLogout(){
+  stopQR();
+  await db.auth.signOut();
+  CU=null;CP=null;VEHICULOS_CACHE=[];CHECKS_HOY={};
+  $('app').classList.remove('show');
+  $('login-screen').classList.add('show');
+}
+
+async function loadData(){
+  const[{data:veh},{data:checks}]=await Promise.all([
+    db.from('vehiculos').select('*').eq('activo',true).order('patente'),
+    db.from('checks_diarios').select('*').eq('fecha',new Date().toISOString().split('T')[0])
+  ]);
+  VEHICULOS_CACHE=veh||[];
+  CHECKS_HOY={};
+  (checks||[]).forEach(c=>{CHECKS_HOY[c.vehiculo_id]=c});
+}
+
+// HOME
+async function loadHome(){
+  await loadData();
+  const today=new Date();
+  const h=today.getHours();
+  const saludo=h<12?'Buenos días':h<19?'Buenas tardes':'Buenas noches';
+  $('dh-title').textContent=saludo+', '+(CP?.nombre||'Operador').split(' ')[0];
+  $('dh-fecha').textContent=today.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+  const total=VEHICULOS_CACHE.length;
+  const done=Object.keys(CHECKS_HOY).length;
+  const pend=total-done;
+  $('stat-total').textContent=total;
+  $('stat-done').textContent=done;
+  $('stat-pend').textContent=pend;
+  if(pend>0){$('badge-pend').textContent=pend;$('badge-pend').style.display='block';}
+  else{$('badge-pend').style.display='none';}
+
+  // Últimos checks del día
+  const recentChecks=Object.values(CHECKS_HOY).slice(0,4);
+  const rc=$('recent-checks');
+  if(!recentChecks.length){
+    rc.innerHTML='<div class="empty"><div class="empty-icon">📋</div>No hay checks registrados hoy todavía.</div>';
+    return;
+  }
+  rc.innerHTML=recentChecks.map(c=>{
+    const v=VEHICULOS_CACHE.find(x=>x.id===c.vehiculo_id);
+    return `<div class="veh-row ${c.estado_final}" onclick="verCheck('${c.id}')">
+      <div class="vr-icon done">${c.estado_final==='ok'?'✅':c.estado_final==='warn'?'⚠️':'❌'}</div>
+      <div class="vr-info">
+        <div class="vr-patente">${v?.patente||'—'}</div>
+        <div class="vr-desc">${v?.marca||''} ${v?.modelo||''} · ${c.registrado_por||'Operador'}</div>
+      </div>
+      ${bdg(c.estado_final)}
+    </div>`;
+  }).join('');
+}
+
+// NAVIGATION
+let prevPage='home';
+function goPage(page){
+  // Detener QR si salimos
+  if(prevPage==='scanner'&&page!=='scanner') stopQR();
+
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  $('p-'+page).classList.add('active');
+  $('tab-'+page)?.classList.add('active');
+  prevPage=page;
+
+  if(page==='scanner') startQR();
+  if(page==='lista') renderLista();
+  if(page==='historial') loadHistorial();
+  if(page==='home') loadHome();
+}
+
+// QR SCANNER
+async function startQR(){
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    QR_STREAM=stream;
+    const video=$('qr-video');
+    video.srcObject=stream;
+    video.play();
+    // Polling para detectar QR (simulado — en producción usar jsQR)
+    // Por ahora el operador usa la búsqueda manual
+  }catch(e){
+    $('qr-viewfinder').innerHTML=`<div style="background:#111;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;padding:20px;text-align:center"><div style="font-size:32px">📷</div><div style="color:white;font-size:13px">Permiso de cámara requerido.<br>Usá la búsqueda manual.</div></div>`;
+  }
+}
+
+function stopQR(){
+  if(QR_STREAM){QR_STREAM.getTracks().forEach(t=>t.stop());QR_STREAM=null;}
+}
+
+// BUSCAR VEHÍCULO
+async function buscarPorPatente(patente){
+  if(!patente.trim()){toast('Ingresá una patente');return}
+  const p=patente.trim().toUpperCase();
+  const v=VEHICULOS_CACHE.find(x=>x.patente===p||x.patente.replace(/\s/g,''===p.replace(/\s/g,'')));
+  if(!v){
+    // Buscar en BD
+    const{data}=await db.from('vehiculos').select('*').ilike('patente','%'+p+'%').eq('activo',true).limit(5);
+    if(!data?.length){
+      $('qr-results').innerHTML='<div style="padding:12px;color:var(--red);font-size:14px">⚠ No se encontró ningún vehículo con esa patente.</div>';
+      return;
+    }
+    renderSearchResults(data,'qr-results');
+    return;
+  }
+  seleccionarVehiculo(v);
+}
+
+async function buscarVehiculos(q){
+  const el=$('buscar-results');
+  if(!q||q.length<2){el.innerHTML='';return}
+  const results=VEHICULOS_CACHE.filter(v=>
+    v.patente?.toLowerCase().includes(q.toLowerCase())||
+    v.marca?.toLowerCase().includes(q.toLowerCase())||
+    v.modelo?.toLowerCase().includes(q.toLowerCase())
+  );
+  if(!results.length){el.innerHTML='<div style="color:var(--text2);font-size:13px;padding:8px">Sin resultados</div>';return}
+  renderSearchResults(results,'buscar-results');
+}
+
+function renderSearchResults(vehicles,containerId){
+  const el=$(containerId);
+  el.innerHTML=vehicles.map(v=>{
+    const check=CHECKS_HOY[v.id];
+    return `<div class="veh-row ${check?check.estado_final:''}" onclick="seleccionarVehiculo(${JSON.stringify(v).replace(/"/g,'&quot;')})" style="margin-top:8px">
+      <div class="vr-icon ${check?'done':''}">
+        ${check?(check.estado_final==='ok'?'✅':check.estado_final==='warn'?'⚠️':'❌'):'🚛'}
+      </div>
+      <div class="vr-info">
+        <div class="vr-patente">${v.patente}</div>
+        <div class="vr-desc">${v.marca||''} ${v.modelo||''} · ${v.anio||''}</div>
+      </div>
+      ${check?bdg(check.estado_final):'<span class="badge b-pend">Pendiente</span>'}
+    </div>`;
+  }).join('');
+}
+
+// LISTA
+function renderLista(){
+  const filtro=$('lista-filtro').value;
+  let vehiculos=[...VEHICULOS_CACHE];
+  if(filtro==='pendiente') vehiculos=vehiculos.filter(v=>!CHECKS_HOY[v.id]);
+  else if(filtro==='ok') vehiculos=vehiculos.filter(v=>CHECKS_HOY[v.id]?.estado_final==='ok');
+  else if(filtro==='warn') vehiculos=vehiculos.filter(v=>CHECKS_HOY[v.id]?.estado_final==='warn'||CHECKS_HOY[v.id]?.estado_final==='err');
+
+  const el=$('lista-vehiculos');
+  if(!vehiculos.length){el.innerHTML='<div class="empty"><div class="empty-icon">✅</div>No hay vehículos en esta categoría.</div>';return}
+  el.innerHTML=vehiculos.map(v=>{
+    const check=CHECKS_HOY[v.id];
+    const es=ev(v.venc_seguro),ev2=ev(v.venc_vtv);
+    return `<div class="veh-row ${check?check.estado_final:''}" onclick="seleccionarVehiculo(${JSON.stringify(v).replace(/"/g,'&quot;')})">
+      <div class="vr-icon ${check?'done':''}">
+        ${check?(check.estado_final==='ok'?'✅':check.estado_final==='warn'?'⚠️':'❌'):'🚛'}
+      </div>
+      <div class="vr-info">
+        <div class="vr-patente">${v.patente}</div>
+        <div class="vr-desc">${v.marca||''} ${v.modelo||''}</div>
+        <div style="display:flex;gap:6px;margin-top:4px">
+          ${es!=='ok'?`<span style="font-size:10px;background:var(--amber-light);color:var(--amber);padding:2px 6px;border-radius:8px">Seg. ${dh(v.venc_seguro)}d</span>`:''}
+          ${ev2!=='ok'?`<span style="font-size:10px;background:var(--amber-light);color:var(--amber);padding:2px 6px;border-radius:8px">VTV ${dh(v.venc_vtv)}d</span>`:''}
+        </div>
+      </div>
+      ${check?bdg(check.estado_final):'<span class="badge b-pend">Pendiente</span>'}
+    </div>`;
+  }).join('');
+}
+
+// SELECCIONAR VEHÍCULO → IR AL CHECK
+function seleccionarVehiculo(v){
+  stopQR();
+  CHECK_VEH=v;
+  CHECK_FOTOS=[];
+  CHECK_STATE={dc:[false,false,false,false],ca:[false,false,false,false],ve:[false,false,false,false,false,false],chofer:null,carga:null,vehiculo:null,obs:''};
+  renderCheckForm();
+  goPage('check');
+}
+
+// CHECK FORM
+function renderCheckForm(){
+  const v=CHECK_VEH;
+  if(!v){$('check-form-content').innerHTML='<div class="empty">Sin vehículo seleccionado</div>';return}
+  const check=CHECKS_HOY[v.id];
+  const es=ev(v.venc_seguro),ev2=ev(v.venc_vtv);
+
+  if(check&&!CHECK_STATE._editing){
+    // Ya tiene check — mostrar resultado
+    $('check-form-content').innerHTML=`
+      <div class="check-veh-card">
+        <div class="cvc-icon">✅</div>
+        <div>
+          <div class="cvc-patente">${v.patente}</div>
+          <div class="cvc-desc">Check ya registrado hoy</div>
+        </div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+          <div style="text-align:center;padding:12px;background:var(--bg3);border-radius:var(--radius-sm)">
+            <div style="font-size:12px;color:var(--text2);margin-bottom:4px">Chofer</div>
+            ${bdg(check.doc_chofer_estado)}
+          </div>
+          <div style="text-align:center;padding:12px;background:var(--bg3);border-radius:var(--radius-sm)">
+            <div style="font-size:12px;color:var(--text2);margin-bottom:4px">Carga</div>
+            ${bdg(check.carga_estado)}
+          </div>
+          <div style="text-align:center;padding:12px;background:var(--bg3);border-radius:var(--radius-sm)">
+            <div style="font-size:12px;color:var(--text2);margin-bottom:4px">Vehículo</div>
+            ${bdg(check.vehiculo_estado)}
+          </div>
+          <div style="text-align:center;padding:12px;background:var(--bg3);border-radius:var(--radius-sm)">
+            <div style="font-size:12px;color:var(--text2);margin-bottom:4px">Estado final</div>
+            ${bdg(check.estado_final)}
+          </div>
+        </div>
+        ${check.observaciones?`<div style="font-size:13px;color:var(--text2);padding:10px;background:var(--bg3);border-radius:var(--radius-sm)">📝 ${check.observaciones}</div>`:''}
+        <div style="font-size:12px;color:var(--text3);margin-top:10px">Registrado por: ${check.registrado_por||'—'} · ${fd(check.fecha)}</div>
+      </div>
+      <button onclick="CHECK_STATE._editing=true;renderCheckForm()" style="width:100%;padding:14px;background:var(--amber-light);color:var(--amber);border:1.5px solid #EF9F27;border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px">
+        ✏️ Hacer nuevo check (sobreescribir)
+      </button>
+      <button onclick="goPage('lista')" style="width:100%;padding:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;color:var(--text);margin-bottom:20px">
+        ← Volver a la lista
+      </button>`;
+    return;
+  }
+
+  $('check-form-content').innerHTML=`
+    <div class="check-veh-card">
+      <div class="cvc-icon">🚛</div>
+      <div>
+        <div class="cvc-patente">${v.patente}</div>
+        <div class="cvc-desc">${v.marca||''} ${v.modelo||''} · ${v.anio||''}</div>
+      </div>
+    </div>
+
+    ${(es!=='ok'||ev2!=='ok')?`<div style="background:var(--amber-light);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;font-size:13px;color:var(--amber)">
+      ⚠️ ${es!=='ok'?`Seguro vence en ${dh(v.venc_seguro)} días. `:''}${ev2!=='ok'?`VTV vence en ${dh(v.venc_vtv)} días.`:''}
+    </div>`:''}
+
+    <div class="check-section">
+      <div class="cs-header">🪪 Documentación del chofer</div>
+      ${['Licencia de conducir vigente','Libreta de conducir actualizada','DNI presente','Habilitación especial (si aplica)'].map((item,i)=>`
+        <div class="cs-item" onclick="toggleDC(${i})">
+          <div class="cs-check ${CHECK_STATE.dc[i]?'checked':''}" id="dc-${i}">${CHECK_STATE.dc[i]?'✓':''}</div>
+          <div class="cs-label">${item}</div>
+        </div>`).join('')}
+    </div>
+    <div class="estado-wrap">
+      <div class="ew-title">Estado del chofer</div>
+      <div class="ew-chips">
+        <div class="echip ${CHECK_STATE.chofer==='ok'?'s-ok':''}" onclick="setE('chofer','ok')">✓ OK</div>
+        <div class="echip ${CHECK_STATE.chofer==='warn'?'s-warn':''}" onclick="setE('chofer','warn')">⚠ Obs.</div>
+        <div class="echip ${CHECK_STATE.chofer==='err'?'s-err':''}" onclick="setE('chofer','err')">✕ No apto</div>
+      </div>
+    </div>
+
+    <div class="check-section">
+      <div class="cs-header">📦 Carga / mercadería</div>
+      ${['Remito / documentación','Carga asegurada sin exceso','Mercadería en buen estado','Distribución correcta'].map((item,i)=>`
+        <div class="cs-item" onclick="toggleCA(${i})">
+          <div class="cs-check ${CHECK_STATE.ca[i]?'checked':''}" id="ca-${i}">${CHECK_STATE.ca[i]?'✓':''}</div>
+          <div class="cs-label">${item}</div>
+        </div>`).join('')}
+    </div>
+    <div class="estado-wrap">
+      <div class="ew-title">Estado de la carga</div>
+      <div class="ew-chips">
+        <div class="echip ${CHECK_STATE.carga==='ok'?'s-ok':''}" onclick="setE('carga','ok')">✓ OK</div>
+        <div class="echip ${CHECK_STATE.carga==='warn'?'s-warn':''}" onclick="setE('carga','warn')">⚠ Obs.</div>
+        <div class="echip ${CHECK_STATE.carga==='err'?'s-err':''}" onclick="setE('carga','err')">✕ Rechazado</div>
+      </div>
+    </div>
+
+    <div class="check-section">
+      <div class="cs-header">🚛 Estado del vehículo</div>
+      ${['Carrocería sin daños','Espejos y vidrios OK','Sin pérdida de fluidos','Limpieza general','Extintor vigente','Botiquín presente'].map((item,i)=>`
+        <div class="cs-item" onclick="toggleVE(${i})">
+          <div class="cs-check ${CHECK_STATE.ve[i]?'checked':''}" id="ve-${i}">${CHECK_STATE.ve[i]?'✓':''}</div>
+          <div class="cs-label">${item}</div>
+        </div>`).join('')}
+    </div>
+    <div class="estado-wrap">
+      <div class="ew-title">Estado final del vehículo</div>
+      <div class="ew-chips">
+        <div class="echip ${CHECK_STATE.vehiculo==='ok'?'s-ok':''}" onclick="setE('vehiculo','ok')">✓ Listo</div>
+        <div class="echip ${CHECK_STATE.vehiculo==='warn'?'s-warn':''}" onclick="setE('vehiculo','warn')">⚠ Con obs.</div>
+        <div class="echip ${CHECK_STATE.vehiculo==='err'?'s-err':''}" onclick="setE('vehiculo','err')">✕ No sale</div>
+      </div>
+    </div>
+
+    <div class="photos-wrap">
+      <div class="pw-title">📷 Fotos de novedades o daños</div>
+      <div class="photos-grid" id="photos-grid">${renderFotos()}</div>
+      <div class="add-photo-btn" onclick="$('photo-input').click()">
+        <span style="font-size:20px">📷</span> Sacar foto
+      </div>
+    </div>
+
+    <div class="obs-wrap">
+      <div class="obs-label">📝 Observaciones</div>
+      <textarea class="obs-input" id="obs-txt" placeholder="Novedades, daños, comentarios...">${CHECK_STATE.obs}</textarea>
+    </div>
+
+    <button class="submit-btn" id="submit-btn" onclick="guardarCheck()">
+      Confirmar revisión
+    </button>
+    <div style="height:16px"></div>
+  `;
+}
+
+function renderFotos(){
+  return CHECK_FOTOS.map((f,i)=>`
+    <div class="photo-thumb">
+      <img src="${f}" alt="foto ${i+1}">
+      <button class="photo-del" onclick="CHECK_FOTOS.splice(${i},1);$('photos-grid').innerHTML=renderFotos()">✕</button>
+    </div>`).join('');
+}
+
+function handlePhoto(e){
+  const file=e.target.files[0];
+  if(!file) return;
+  // Comprimir imagen antes de subir
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      const MAX=800;
+      let w=img.width,h=img.height;
+      if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      const compressed=canvas.toDataURL('image/jpeg',0.7);
+      CHECK_FOTOS.push(compressed);
+      const grid=$('photos-grid');
+      if(grid) grid.innerHTML=renderFotos();
+      toast('📷 Foto agregada');
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value='';
+}
+
+function toggleDC(i){CHECK_STATE.dc[i]=!CHECK_STATE.dc[i];const el=$(`dc-${i}`);if(el){el.className='cs-check '+(CHECK_STATE.dc[i]?'checked':'');el.textContent=CHECK_STATE.dc[i]?'✓':''}}
+function toggleCA(i){CHECK_STATE.ca[i]=!CHECK_STATE.ca[i];const el=$(`ca-${i}`);if(el){el.className='cs-check '+(CHECK_STATE.ca[i]?'checked':'');el.textContent=CHECK_STATE.ca[i]?'✓':''}}
+function toggleVE(i){CHECK_STATE.ve[i]=!CHECK_STATE.ve[i];const el=$(`ve-${i}`);if(el){el.className='cs-check '+(CHECK_STATE.ve[i]?'checked':'');el.textContent=CHECK_STATE.ve[i]?'✓':''}}
+
+function setE(field,val){
+  CHECK_STATE[field]=val;
+  renderCheckForm();
+}
+
+async function guardarCheck(){
+  if(!CHECK_VEH){toast('Sin vehículo seleccionado');return}
+  if(!CHECK_STATE.chofer||!CHECK_STATE.carga||!CHECK_STATE.vehiculo){
+    toast('⚠ Completá el estado de todas las secciones');return;
+  }
+  const btn=$('submit-btn');
+  if(btn){btn.disabled=true;btn.textContent='Guardando...';}
+  const obs=$('obs-txt')?.value||CHECK_STATE.obs;
+  const estados=[CHECK_STATE.chofer,CHECK_STATE.carga,CHECK_STATE.vehiculo];
+  const ef=estados.includes('err')?'err':estados.includes('warn')?'warn':'ok';
+
+  // Subir fotos a Supabase Storage si hay
+  const fotosUrls=[];
+  for(const foto of CHECK_FOTOS){
+    try{
+      const blob=await(await fetch(foto)).blob();
+      const fname=`checks/${CHECK_VEH.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+      const{data,error}=await db.storage.from('fleet-fotos').upload(fname,blob,{contentType:'image/jpeg',upsert:true});
+      if(!error&&data){
+        const{data:url}=db.storage.from('fleet-fotos').getPublicUrl(fname);
+        fotosUrls.push(url.publicUrl);
+      }
+    }catch(e){console.warn('Error subiendo foto:',e)}
+  }
+
+  const{error}=await db.from('checks_diarios').insert({
+    vehiculo_id:CHECK_VEH.id,
+    fecha:new Date().toISOString().split('T')[0],
+    doc_chofer_ok:CHECK_STATE.dc.every(Boolean),
+    doc_chofer_estado:CHECK_STATE.chofer,
+    carga_ok:CHECK_STATE.ca.every(Boolean),
+    carga_estado:CHECK_STATE.carga,
+    vehiculo_ok:CHECK_STATE.ve.every(Boolean),
+    vehiculo_estado:CHECK_STATE.vehiculo,
+    estado_final:ef,
+    observaciones:obs,
+    registrado_por:CP?.nombre||CU?.email,
+    fotos:fotosUrls.length?fotosUrls:null,
+  });
+
+  if(error){
+    if(btn){btn.disabled=false;btn.textContent='Confirmar revisión';}
+    toast('Error: '+error.message);return;
+  }
+
+  // Actualizar cache local
+  CHECKS_HOY[CHECK_VEH.id]={vehiculo_id:CHECK_VEH.id,estado_final:ef,doc_chofer_estado:CHECK_STATE.chofer,carga_estado:CHECK_STATE.carga,vehiculo_estado:CHECK_STATE.vehiculo,observaciones:obs,registrado_por:CP?.nombre||CU?.email,fecha:new Date().toISOString().split('T')[0]};
+
+  // Mostrar success
+  $('check-form-content').innerHTML=`
+    <div class="success-wrap">
+      <div class="sw-icon">${ef==='ok'?'✅':ef==='warn'?'⚠️':'❌'}</div>
+      <div class="sw-title" style="color:${ef==='ok'?'var(--green)':ef==='warn'?'var(--amber)':'var(--red)'}">
+        ${ef==='ok'?'¡Check OK!':ef==='warn'?'Check con observación':'Check con problemas'}
+      </div>
+      <div class="sw-sub">${CHECK_VEH.patente} — ${CHECK_VEH.marca||''} ${CHECK_VEH.modelo||''}<br>Registrado a las ${hora()}</div>
+      <div class="sw-actions">
+        <button class="sw-btn sw-btn-primary" onclick="goPage('lista')">📋 Siguiente vehículo</button>
+        <button class="sw-btn sw-btn-secondary" onclick="goPage('scanner')">📷 Escanear otro QR</button>
+        <button class="sw-btn sw-btn-secondary" onclick="goPage('home')">🏠 Volver al inicio</button>
+      </div>
+    </div>`;
+
+  // Badge actualizado
+  const pend=VEHICULOS_CACHE.length-Object.keys(CHECKS_HOY).length;
+  if(pend>0){$('badge-pend').textContent=pend;$('badge-pend').style.display='block';}
+  else{$('badge-pend').style.display='none';}
+}
+
+// HISTORIAL
+async function filterHist(f,el){
+  HIST_FILTER=f;
+  document.querySelectorAll('.hf-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  await loadHistorial();
+}
+
+async function loadHistorial(){
+  const el=$('hist-list');
+  el.innerHTML='<div class="loader"><div class="spin"></div>Cargando...</div>';
+  const today=new Date().toISOString().split('T')[0];
+  let desde=today;
+  if(HIST_FILTER==='semana'){const d=new Date();d.setDate(d.getDate()-7);desde=d.toISOString().split('T')[0];}
+  if(HIST_FILTER==='mes'){const d=new Date();d.setDate(d.getDate()-30);desde=d.toISOString().split('T')[0];}
+
+  let q=db.from('checks_diarios').select('*, vehiculos(patente,marca,modelo)').order('fecha',{ascending:false}).order('created_at',{ascending:false}).limit(50).gte('fecha',desde);
+  if(HIST_FILTER==='mios') q=q.eq('registrado_por',CP?.nombre||CU?.email);
+
+  const{data,error}=await q;
+  if(error||!data?.length){el.innerHTML='<div class="empty"><div class="empty-icon">📋</div>Sin registros en este período.</div>';return}
+
+  el.innerHTML=data.map(h=>`
+    <div class="hist-item">
+      <div class="hi-top">
+        <div>
+          <div class="hi-patente">${h.vehiculos?.patente||'—'}</div>
+          <div class="hi-meta">${h.vehiculos?.marca||''} ${h.vehiculos?.modelo||''} · ${fd(h.fecha)}</div>
+        </div>
+        ${bdg(h.estado_final)}
+      </div>
+      <div class="hi-chips">
+        <span class="hi-chip ${h.doc_chofer_estado==='ok'?'b-ok':h.doc_chofer_estado==='warn'?'b-warn':'b-err'}">Chofer ${h.doc_chofer_estado==='ok'?'✓':'⚠'}</span>
+        <span class="hi-chip ${h.carga_estado==='ok'?'b-ok':h.carga_estado==='warn'?'b-warn':'b-err'}">Carga ${h.carga_estado==='ok'?'✓':'⚠'}</span>
+        <span class="hi-chip ${h.vehiculo_estado==='ok'?'b-ok':h.vehiculo_estado==='warn'?'b-warn':'b-err'}">Vehículo ${h.vehiculo_estado==='ok'?'✓':'⚠'}</span>
+      </div>
+      ${h.observaciones?`<div style="font-size:12px;color:var(--text2);margin-top:7px;padding:8px;background:var(--bg3);border-radius:6px">📝 ${h.observaciones}</div>`:''}
+      ${h.fotos?.length?`<div class="hi-photos">${h.fotos.map(f=>`<img class="hi-photo" src="${f}" onclick="window.open('${f}','_blank')">`).join('')}</div>`:''}
+      <div class="hi-op">👤 ${h.registrado_por||'—'}</div>
+    </div>`).join('');
+}
+
+// MODAL USUARIO
+function showUserMenu(){$('modal-user').classList.add('show')}
+function closeModal(){document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.remove('show'))}
+
+// INIT
+(async()=>{
+  const{data:{session}}=await db.auth.getSession();
+  if(session?.user){await afterLogin(session.user);}
+  else{hideSplash();$('login-screen').classList.add('show');}
+  db.auth.onAuthStateChange((event,session)=>{
+    if(event==='SIGNED_OUT'){stopQR();$('app').classList.remove('show');$('login-screen').classList.add('show');}
+  });
+})();
+
+$('li-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+</script>
+</body>
+</html>
