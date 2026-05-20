@@ -864,14 +864,32 @@ function verDetalle(v){
 }
 
 function editarV(v){
-  $('mv-title').textContent='Editar vehículo';$('mv-id').value=v.id;
-  ['tipo','patente','marca','modelo','anio','color','chasis','motor','aseguradora','poliza'].forEach(k=>{const el=$('mv-'+k);if(el)el.value=v[k==='chasis'?'nro_chasis':k==='motor'?'nro_motor':k==='poliza'?'nro_poliza':k]||''});
-  $('mv-venc-seguro').value=v.venc_seguro||'';$('mv-venc-vtv').value=v.venc_vtv||'';$('mv-venc-hab').value=v.venc_habilitacion_municipal||'';$('mv-permiso').value=v.nro_permiso_transporte||'';$('mv-obs').value=v.observaciones||'';
-  if($('mv-gps-empresa'))$('mv-gps-empresa').value=v.nombre_empresa_gps||'';
-  if($('mv-gps-link'))$('mv-gps-link').value=v.link_gps||'';
-  // Guardar empresa_id para restaurar después de que openModal cargue el select
-  if($('mv-empresa')) $('mv-empresa').dataset.pendingVal = v.empresa_id||'';
-  openModal('vehiculo');
+  // Guardar datos pending ANTES de openModal (que es async y recarga selects)
+  const mvId = $('mv-id');
+  if(mvId) mvId.value = v.id;
+  // Guardar empresa y pais como pending para restaurar después del await
+  const mvEmp = $('mv-empresa');
+  if(mvEmp) mvEmp.dataset.pendingVal = v.empresa_id||'';
+  const mvPais = $('mv-pais');
+  if(mvPais) mvPais.dataset.pendingVal = v.pais_id||'';
+  // Abrir modal (async - carga selects)
+  openModal('vehiculo').then(()=>{
+    // Restaurar todos los campos después de que el modal terminó de cargar
+    $('mv-title').textContent='Editar vehículo';
+    ['tipo','patente','marca','modelo','anio','color','chasis','motor','aseguradora','poliza'].forEach(k=>{
+      const el=$('mv-'+k);
+      if(el) el.value=v[k==='chasis'?'nro_chasis':k==='motor'?'nro_motor':k==='poliza'?'nro_poliza':k]||'';
+    });
+    $('mv-venc-seguro').value=v.venc_seguro||'';
+    $('mv-venc-vtv').value=v.venc_vtv||'';
+    $('mv-venc-hab').value=v.venc_habilitacion_municipal||'';
+    $('mv-permiso').value=v.nro_permiso_transporte||'';
+    $('mv-obs').value=v.observaciones||'';
+    if($('mv-gps-empresa')) $('mv-gps-empresa').value=v.nombre_empresa_gps||'';
+    if($('mv-gps-link')) $('mv-gps-link').value=v.link_gps||'';
+    if($('mv-empresa')&&v.empresa_id) $('mv-empresa').value=v.empresa_id;
+    if($('mv-pais')&&v.pais_id) $('mv-pais').value=v.pais_id;
+  });
 }
 
 async function elimV(id){
@@ -1678,7 +1696,11 @@ async function openModal(id){
   }
   $('ov-'+id).classList.add('open');
 }
-function closeModal(id){$('ov-'+id).classList.remove('open')}
+function closeModal(id){
+  $('ov-'+id).classList.remove('open');
+  // Reset mv-id cuando se cierra el modal de vehículo para que el próximo sea "nuevo"
+  if(id==='vehiculo') setTimeout(()=>{if($('mv-id'))$('mv-id').value='';},300);
+}
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open')}));
 
 // INIT
