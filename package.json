@@ -1,8 +1,4 @@
 {
   "name": "fleetops",
-  "version": "1.0.0",
-  "description": "FleetOps - Sistema de gestión de flota",
-  "scripts": {
-    "build": "echo 'No build needed'"
-  }
+  "version": "1.0.0"
 }
