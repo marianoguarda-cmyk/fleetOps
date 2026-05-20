@@ -5,9 +5,15 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Servir archivos estáticos desde /public
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
+}));
 
-// Todas las rutas devuelven index.html (SPA)
+// Todas las rutas devuelven index.html
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
