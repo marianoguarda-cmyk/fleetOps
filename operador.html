@@ -442,9 +442,9 @@ function abrirIDB(){
   return new Promise((resolve, reject)=>{
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = e => {
-      const db = e.target.result;
-      if(!db.objectStoreNames.contains('checks_pendientes')){
-        const store = db.createObjectStore('checks_pendientes', {keyPath:'_local_id', autoIncrement:true});
+      const idbDb = e.target.result;
+      if(!idbDb.objectStoreNames.contains('checks_pendientes')){
+        const store = idbDb.createObjectStore('checks_pendientes', {keyPath:'_local_id', autoIncrement:true});
         store.createIndex('fecha','fecha',{unique:false});
       }
     };
@@ -454,9 +454,9 @@ function abrirIDB(){
 }
 
 async function guardarCheckLocal(checkData){
-  const db = await abrirIDB();
+  const idbDb = await abrirIDB();
   return new Promise((resolve, reject)=>{
-    const tx = db.transaction('checks_pendientes','readwrite');
+    const tx = idbDb.transaction('checks_pendientes','readwrite');
     const store = tx.objectStore('checks_pendientes');
     const req = store.add({...checkData, _sync_status:'pendiente', _created_local: new Date().toISOString()});
     req.onsuccess = () => resolve(req.result);
@@ -465,9 +465,9 @@ async function guardarCheckLocal(checkData){
 }
 
 async function obtenerChecksPendientes(){
-  const db = await abrirIDB();
+  const idbDb = await abrirIDB();
   return new Promise((resolve, reject)=>{
-    const tx = db.transaction('checks_pendientes','readonly');
+    const tx = idbDb.transaction('checks_pendientes','readonly');
     const store = tx.objectStore('checks_pendientes');
     const req = store.getAll();
     req.onsuccess = () => resolve(req.result.filter(c=>c._sync_status==='pendiente'));
@@ -476,9 +476,9 @@ async function obtenerChecksPendientes(){
 }
 
 async function marcarCheckSincronizado(localId){
-  const db = await abrirIDB();
+  const idbDb = await abrirIDB();
   return new Promise((resolve, reject)=>{
-    const tx = db.transaction('checks_pendientes','readwrite');
+    const tx = idbDb.transaction('checks_pendientes','readwrite');
     const store = tx.objectStore('checks_pendientes');
     const getReq = store.get(localId);
     getReq.onsuccess = () => {
