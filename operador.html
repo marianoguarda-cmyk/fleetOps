@@ -9,6 +9,18 @@
 <meta name="theme-color" content="#185FA5">
 <title>FleetOps Operador</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// Registrar Service Worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').then(reg=>{
+    console.log('SW registrado');
+    // Escuchar mensajes del SW para sincronizar
+    navigator.serviceWorker.addEventListener('message', e=>{
+      if(e.data?.type==='SYNC_CHECKS') sincronizarPendientes();
+    });
+  }).catch(err=>console.warn('SW error:',err));
+}
+</script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
@@ -419,6 +431,144 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
 <div id="toast" style="position:fixed;bottom:calc(var(--safe-bottom)+80px);left:50%;transform:translateX(-50%) translateY(20px);background:#1a1a18;color:white;padding:11px 18px;border-radius:30px;font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center"></div>
 
 <script>
+// ═══════════════════════════════════════════════════════
+// OFFLINE: IndexedDB para guardar checks sin conexión
+// ═══════════════════════════════════════════════════════
+const DB_NAME = 'fleetops-offline';
+const DB_VERSION = 1;
+let idb = null;
+
+function abrirIDB(){
+  return new Promise((resolve, reject)=>{
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains('checks_pendientes')){
+        const store = db.createObjectStore('checks_pendientes', {keyPath:'_local_id', autoIncrement:true});
+        store.createIndex('fecha','fecha',{unique:false});
+      }
+    };
+    req.onsuccess = e => { idb = e.target.result; resolve(idb); };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function guardarCheckLocal(checkData){
+  const db = await abrirIDB();
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction('checks_pendientes','readwrite');
+    const store = tx.objectStore('checks_pendientes');
+    const req = store.add({...checkData, _sync_status:'pendiente', _created_local: new Date().toISOString()});
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function obtenerChecksPendientes(){
+  const db = await abrirIDB();
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction('checks_pendientes','readonly');
+    const store = tx.objectStore('checks_pendientes');
+    const req = store.getAll();
+    req.onsuccess = () => resolve(req.result.filter(c=>c._sync_status==='pendiente'));
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function marcarCheckSincronizado(localId){
+  const db = await abrirIDB();
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction('checks_pendientes','readwrite');
+    const store = tx.objectStore('checks_pendientes');
+    const getReq = store.get(localId);
+    getReq.onsuccess = () => {
+      const item = getReq.result;
+      if(item){ item._sync_status='sincronizado'; store.put(item); }
+      resolve();
+    };
+    getReq.onerror = () => reject(getReq.error);
+  });
+}
+
+async function contarPendientes(){
+  try{
+    const pendientes = await obtenerChecksPendientes();
+    return pendientes.length;
+  }catch(e){ return 0; }
+}
+
+// Detectar conexión
+let estaOnline = navigator.onLine;
+window.addEventListener('online', ()=>{
+  estaOnline = true;
+  mostrarEstadoConexion(true);
+  setTimeout(sincronizarPendientes, 1000);
+});
+window.addEventListener('offline', ()=>{
+  estaOnline = false;
+  mostrarEstadoConexion(false);
+});
+
+function mostrarEstadoConexion(online){
+  let bar = document.getElementById('offline-bar');
+  if(!bar){
+    bar = document.createElement('div');
+    bar.id = 'offline-bar';
+    bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9998;padding:8px 16px;text-align:center;font-size:13px;font-weight:600;transition:all .3s';
+    document.body.appendChild(bar);
+  }
+  if(online){
+    bar.style.background = '#EAF3DE';
+    bar.style.color = '#3B6D11';
+    bar.textContent = '✓ Conexión restaurada — sincronizando...';
+    setTimeout(()=>{ if(bar) bar.style.display='none'; }, 3000);
+  } else {
+    bar.style.background = '#FAEEDA';
+    bar.style.color = '#854F0B';
+    bar.style.display = 'block';
+    bar.textContent = '⚠ Sin conexión — los checks se guardan localmente';
+  }
+}
+
+async function sincronizarPendientes(){
+  if(!estaOnline) return;
+  const pendientes = await obtenerChecksPendientes();
+  if(!pendientes.length) return;
+  let sincronizados = 0;
+  for(const check of pendientes){
+    try{
+      const {_local_id, _sync_status, _created_local, ...checkData} = check;
+      const{error} = await db.from('checks_diarios').insert(checkData);
+      if(!error){
+        await marcarCheckSincronizado(_local_id);
+        sincronizados++;
+      }
+    }catch(e){ console.warn('Error sync check:', e); }
+  }
+  if(sincronizados > 0){
+    toast(`✓ ${sincronizados} check${sincronizados>1?'s':''} sincronizado${sincronizados>1?'s':''}`);
+    actualizarBadgePendientes();
+  }
+}
+
+async function actualizarBadgePendientes(){
+  const n = await contarPendientes();
+  let badge = document.getElementById('offline-badge');
+  if(n > 0){
+    if(!badge){
+      badge = document.createElement('div');
+      badge.id = 'offline-badge';
+      badge.style.cssText = 'position:fixed;bottom:calc(env(safe-area-inset-bottom) + 75px);right:16px;background:#854F0B;color:white;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:700;z-index:500;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer';
+      badge.onclick = sincronizarPendientes;
+      document.body.appendChild(badge);
+    }
+    badge.textContent = `⏳ ${n} check${n>1?'s':''} pendiente${n>1?'s':''}`;
+    badge.style.display = 'block';
+  } else if(badge){
+    badge.style.display = 'none';
+  }
+}
+
 const SB_URL='https://rzmijsyioxtmnfjpezvb.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6bWlqc3lpb3h0bW5manBlenZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2ODE4NjYsImV4cCI6MjA5NDI1Nzg2Nn0.qVqe9UivFlN8E-s2p6bYLlJCQy5LNkt5ObY19g6G1cg';
 const db=supabase.createClient(SB_URL,SB_KEY);
@@ -474,6 +624,8 @@ async function afterLogin(user){
   setupUI();
   await loadData();
   iniciarReloj();
+  // Sincronizar checks pendientes al entrar
+  setTimeout(sincronizarPendientes, 2000);
   hideSplash();
   $('login').classList.remove('show');
   $('app').classList.add('show');
@@ -636,17 +788,9 @@ async function guardarCheck(){
   const ef=[chofer,carga,vehiculo].includes('err')?'err':[chofer,carga,vehiculo].includes('warn')?'warn':'ok';
   const gpsChip=document.querySelector('.gps-chips .echip[data-val]');
   const v=VEHS[vid];
-  // Subir fotos
-  const fotosUrls=[];
-  for(const foto of FOTOS){
-    try{
-      const blob=await(await fetch(foto)).blob();
-      const fname=`checks/${vid}/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
-      const{data,error}=await db.storage.from('fleet-fotos').upload(fname,blob,{contentType:'image/jpeg',upsert:true});
-      if(!error){const{data:url}=db.storage.from('fleet-fotos').getPublicUrl(fname);fotosUrls.push(url.publicUrl);}
-    }catch(e){}
-  }
-  const{error}=await db.from('checks_diarios').insert({
+
+  // Armar objeto del check
+  const checkData = {
     vehiculo_id:vid,
     pais_id:v?.pais_id||CP?.pais_id||null,
     fecha:new Date().toISOString().split('T')[0],
@@ -667,9 +811,33 @@ async function guardarCheck(){
     empresa_gps:v?.nombre_empresa_gps||null,
     observaciones:obs||null,
     registrado_por:CP?.nombre||CU?.email,
-    fotos:fotosUrls.length?fotosUrls:null,
-  });
-  if(error){btn.disabled=false;btn.textContent='Confirmar check del día';toast('Error: '+error.message);return}
+    fotos:null, // fotos se suben si hay conexión
+  };
+
+  // Si hay conexión: subir fotos y guardar en Supabase
+  if(estaOnline){
+    const fotosUrls=[];
+    for(const foto of FOTOS){
+      try{
+        const blob=await(await fetch(foto)).blob();
+        const fname=`checks/${vid}/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+        const{data,error}=await db.storage.from('fleet-fotos').upload(fname,blob,{contentType:'image/jpeg',upsert:true});
+        if(!error){const{data:url}=db.storage.from('fleet-fotos').getPublicUrl(fname);fotosUrls.push(url.publicUrl);}
+      }catch(e){}
+    }
+    checkData.fotos = fotosUrls.length ? fotosUrls : null;
+    const{error}=await db.from('checks_diarios').insert(checkData);
+    if(error){btn.disabled=false;btn.textContent='Confirmar check del día';toast('Error: '+error.message);return}
+  } else {
+    // Sin conexión: guardar localmente
+    await guardarCheckLocal(checkData);
+    actualizarBadgePendientes();
+    // Registrar sync para cuando vuelva la conexión
+    if('serviceWorker' in navigator && 'SyncManager' in window){
+      const reg = await navigator.serviceWorker.ready;
+      await reg.sync.register('sync-checks').catch(()=>{});
+    }
+  }
   // Mostrar success
   const checkContent=$('p-check');
   checkContent.innerHTML=`
@@ -794,6 +962,12 @@ $('li-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
 setPeon(false);
 
 (async()=>{
+  // Inicializar IndexedDB
+  await abrirIDB().catch(e=>console.warn('IDB error:',e));
+  // Mostrar badge si hay pendientes
+  actualizarBadgePendientes();
+  // Mostrar estado offline si aplica
+  if(!navigator.onLine) mostrarEstadoConexion(false);
   const{data:{session}}=await db.auth.getSession();
   if(session?.user)await afterLogin(session.user);
   else{hideSplash();$('login').classList.add('show');}
