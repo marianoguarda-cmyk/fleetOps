@@ -306,7 +306,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
       </div>
       <div class="estado-wrap">
         <div class="ew-title">Estado del chofer</div>
-        <div class="ew-chips">
+        <div class="ew-chips" id="chips-chofer">
           <button class="echip" onclick="setChip('chofer',this,'ok')">✓ OK</button>
           <button class="echip" onclick="setChip('chofer',this,'warn')">⚠ Obs.</button>
           <button class="echip" onclick="setChip('chofer',this,'err')">✕ No apto</button>
@@ -324,7 +324,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
       </div>
       <div class="estado-wrap">
         <div class="ew-title">Estado de la carga</div>
-        <div class="ew-chips">
+        <div class="ew-chips" id="chips-carga">
           <button class="echip" onclick="setChip('carga',this,'ok')">✓ OK</button>
           <button class="echip" onclick="setChip('carga',this,'warn')">⚠ Obs.</button>
           <button class="echip" onclick="setChip('carga',this,'err')">✕ Rechazado</button>
@@ -343,7 +343,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
       </div>
       <div class="estado-wrap">
         <div class="ew-title">Estado final del vehículo</div>
-        <div class="ew-chips">
+        <div class="ew-chips" id="chips-vehiculo">
           <button class="echip" onclick="setChip('vehiculo',this,'ok')">✓ Listo</button>
           <button class="echip" onclick="setChip('vehiculo',this,'warn')">⚠ Con obs.</button>
           <button class="echip" onclick="setChip('vehiculo',this,'err')">✕ No sale</button>
@@ -769,17 +769,17 @@ function renderFotos(){
     </div>`).join('');
 }
 
-function getChipVal(selector){
-  const el=document.querySelector(selector+' .echip[data-val]');
+function getChipVal(id){
+  const el=document.querySelector('#'+id+' .echip[data-val]');
   return el?.dataset.val||null;
 }
 
 async function guardarCheck(){
   const vid=$('sel-vehiculo').value;
   if(!vid){toast('⚠ Seleccioná un vehículo');return}
-  const chofer=getChipVal('.estado-wrap:nth-of-type(1)');
-  const carga=getChipVal('.estado-wrap:nth-of-type(2)');
-  const vehiculo=getChipVal('.estado-wrap:nth-of-type(3)');
+  const chofer=getChipVal('chips-chofer');
+  const carga=getChipVal('chips-carga');
+  const vehiculo=getChipVal('chips-vehiculo');
   if(!chofer||!carga||!vehiculo){toast('⚠ Completá el estado de todas las secciones');return}
   const btn=$('submit-btn');
   btn.disabled=true;btn.textContent='Guardando...';
