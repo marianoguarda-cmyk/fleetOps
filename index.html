@@ -1839,7 +1839,7 @@ async function loadPlanificacion(){
   const hoy = fechaStr(new Date());
 
   grid.innerHTML = dias.map(fecha => {
-    const key = fecha + '_' + (empresaId||'');
+    const key = fecha + '_' + (clienteId||'');
     const plan = planMap[key];
     const planificados = plan?.vehiculos_planificados || 0;
     const checks = checksMap[fecha] || 0;
