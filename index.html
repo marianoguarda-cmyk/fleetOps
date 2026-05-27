@@ -297,10 +297,10 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
           </div>
         </div>
 
-        <!-- Filtro empresa -->
+        <!-- Filtro cliente -->
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
-          <select id="plan-empresa-sel" style="font-size:13px;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2)" onchange="loadPlanificacion()">
-            <option value="">Todas las empresas</option>
+          <select id="plan-cliente-sel" style="font-size:13px;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2)" onchange="loadPlanificacion()">
+            <option value="">Todos los clientes</option>
           </select>
           <div id="plan-lock-info" style="font-size:12px;color:var(--text2)"></div>
         </div>
@@ -1791,20 +1791,20 @@ function semanaSiguiente(){
   loadPlanificacion();
 }
 
-async function initPlanEmpresa(){
-  const sel = $('plan-empresa-sel');
+async function initPlanCliente(){
+  const sel = $('plan-cliente-sel');
   if(!sel) return;
-  if(!EMPRESAS_CACHE.length){
-    const{data}=await withPais(db.from('empresas').select('id,nombre').eq('activo',true)).order('nombre');
-    EMPRESAS_CACHE = data || [];
+  if(!CLIENTES_CACHE.length){
+    const{data}=await withPais(db.from('clientes').select('id,nombre').eq('activo',true)).order('nombre');
+    CLIENTES_CACHE = data || [];
   }
-  sel.innerHTML = '<option value="">Todas las empresas</option>' +
-    EMPRESAS_CACHE.map(e=>`<option value="${e.id}">${e.nombre}</option>`).join('');
+  sel.innerHTML = '<option value="">Todos los clientes</option>' +
+    CLIENTES_CACHE.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
 }
 
 async function loadPlanificacion(){
   if(!PLAN_SEMANA_INICIO) PLAN_SEMANA_INICIO = getLunesDeSemana(new Date());
-  await initPlanEmpresa();
+  await initPlanCliente();
 
   // Calcular los 7 días de la semana
   const dias = [];
@@ -1818,14 +1818,14 @@ async function loadPlanificacion(){
   const lbl = $('plan-semana-label');
   if(lbl) lbl.textContent = formatFecha(dias[0]) + ' — ' + formatFecha(dias[6]);
 
-  const empresaId = $('plan-empresa-sel')?.value || null;
+  const clienteId = $('plan-cliente-sel')?.value || null;
 
   // Cargar planificación de la semana desde Supabase
   let q = withPais(db.from('planificacion').select('*').in('fecha', dias));
-  if(empresaId) q = q.eq('empresa_id', empresaId);
+  if(clienteId) q = q.eq('cliente_id', clienteId);
   const{data:planData} = await q;
   const planMap = {};
-  (planData||[]).forEach(p => { planMap[p.fecha + '_' + (p.empresa_id||'')] = p; });
+  (planData||[]).forEach(p => { planMap[p.fecha + '_' + (p.cliente_id||'')] = p; });
 
   // Cargar checks del día para comparar
   const{data:checksData} = await withPais(db.from('checks_diarios').select('fecha').in('fecha', dias));
@@ -1861,7 +1861,7 @@ async function loadPlanificacion(){
           value="${planificados}"
           id="plan-input-${fecha}"
           style="width:100%;text-align:center;font-size:22px;font-weight:700;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:4px;color:var(--blue);background:var(--bg)"
-          onchange="guardarPlanDia('${fecha}','${plan?.id||''}','${empresaId||''}')"
+          onchange="guardarPlanDia('${fecha}','${plan?.id||''}','${clienteId||''}')"
         >
       ` : `
         <div style="font-size:28px;font-weight:700;color:var(--blue);margin-bottom:4px">${planificados}</div>
@@ -1877,7 +1877,7 @@ async function loadPlanificacion(){
   }).join('');
 
   // Resumen
-  const totalPlan = dias.reduce((s,f) => s + (planMap[f+'_'+(empresaId||'')]?.vehiculos_planificados||0), 0);
+  const totalPlan = dias.reduce((s,f) => s + (planMap[f+'_'+(clienteId||'')]?.vehiculos_planificados||0), 0);
   const totalChecks = dias.reduce((s,f) => s + (checksMap[f]||0), 0);
   const resumen = $('plan-resumen-content');
   if(resumen){
@@ -1899,7 +1899,7 @@ async function loadPlanificacion(){
   }
 }
 
-async function guardarPlanDia(fecha, planId, empresaId){
+async function guardarPlanDia(fecha, planId, clienteId){
   if(!isAdmin()){toast('Sin permisos','err');return}
   if(estaVencido(fecha)){toast('No se puede modificar — ya pasaron las 48hs','err');return}
   const input = $('plan-input-'+fecha);
@@ -1908,7 +1908,7 @@ async function guardarPlanDia(fecha, planId, empresaId){
   const paisId = getPaisId() || CP?.pais_id || null;
   const{error} = planId
     ? await db.from('planificacion').update({vehiculos_planificados:cantidad,updated_at:new Date().toISOString()}).eq('id',planId)
-    : await db.from('planificacion').upsert({fecha,vehiculos_planificados:cantidad,pais_id:paisId,empresa_id:empresaId||null,creado_por:CP?.nombre||CU?.email},{onConflict:'fecha,pais_id,empresa_id'});
+    : await db.from('planificacion').upsert({fecha,vehiculos_planificados:cantidad,pais_id:paisId,cliente_id:clienteId||null,creado_por:CP?.nombre||CU?.email},{onConflict:'fecha,pais_id,cliente_id'});
   if(error){toast('Error: '+error.message,'err');return}
   toast('✓ Guardado','ok');
   setTimeout(loadPlanificacion, 500);
