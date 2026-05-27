@@ -1790,10 +1790,11 @@ async function eliminarRegistro(tabla, id, recargar){
   if(!isSuperAdmin()){toast('Solo el Super Admin puede eliminar','err');return}
   const nombres={vehiculos:'vehículo',empresas:'empresa',conductores:'conductor',clientes:'cliente'};
   const nombre=nombres[tabla]||'registro';
-  if(!confirm(`¿Eliminar este ${nombre}? Esta acción no se puede deshacer.`)) return;
-  const{error}=await db.from(tabla).delete().eq('id',id);
-  if(error){toast('Error al eliminar: '+error.message,'err');return}
-  toast(`${nombre.charAt(0).toUpperCase()+nombre.slice(1)} eliminado ✓`,'ok');
+  if(!confirm(`¿Dar de baja este ${nombre}? Quedará inactivo y no aparecerá en los listados.`)) return;
+  // Soft delete: marcar como inactivo en lugar de borrar (evita errores de foreign key)
+  const{error}=await db.from(tabla).update({activo:false}).eq('id',id);
+  if(error){toast('Error: '+error.message,'err');return}
+  toast(`${nombre.charAt(0).toUpperCase()+nombre.slice(1)} dado de baja ✓`,'ok');
   if(recargar) recargar();
 }
 
