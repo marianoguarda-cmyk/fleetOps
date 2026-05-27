@@ -842,9 +842,7 @@ async function loadVehiculos(){
     empSelCheck.innerHTML='<option value="">— Todas las empresas —</option>'+EMPRESAS_CACHE.map(e=>`<option value="${e.id}">${e.nombre}</option>`).join('');
   }
   $('check-vehiculo-sel').innerHTML='<option value="">— Seleccioná un vehículo —</option>'+data.map(v=>`<option value="${v.id}">${v.patente} — ${v.marca} ${v.modelo}</option>`).join('');
-  // Filtrar vehículos del historial según país activo
-  const vehsFiltrados = data || [];
-  $('hist-filtro-v').innerHTML='<option value="">Todos los vehículos</option>'+vehsFiltrados.map(v=>`<option value="${v.id}">${v.patente}</option>`).join('');
+  $('hist-filtro-v').innerHTML='<option value="">Todos los vehículos</option>'+data.map(v=>`<option value="${v.id}">${v.patente}</option>`).join('');
   $('mc-vehiculo').innerHTML='<option value="">Sin asignar</option>'+data.map(v=>`<option value="${v.id}">${v.patente} — ${v.marca}</option>`).join('');
   el.innerHTML=data.map(v=>{const es=ev(v.venc_seguro),evv=ev(v.venc_vtv),ef=es==='err'||evv==='err'?'err':es==='warn'||evv==='warn'?'warn':'ok';
     return `<div class="tr tc-v" onclick="verDetalle(${JSON.stringify(v).replace(/"/g,'&quot;')})"><div class="v-icon ${v.tipo==='camion'?'vi-c':'vi-u'}">${v.tipo==='camion'?'🚛':'🚐'}</div><div><div style="font-weight:600">${v.patente}</div><div style="font-size:11px;color:var(--text2)">${v.marca||''} ${v.modelo||''} · ${v.anio||''}</div></div><div><span class="badge ${v.tipo==='camion'?'b-blue':'b-ok'}">${v.tipo==='camion'?'Camión':'Utilitario'}</span></div><div style="font-size:12px">${v.empresas?.nombre||'—'}</div><div style="font-size:12px">${fd(v.venc_seguro)}<br><span style="color:var(--${es==='ok'?'green':es==='warn'?'amber':'red'})">${es==='ok'?'Vigente':es==='warn'?dh(v.venc_seguro)+' días':'Vencido'}</span></div><div style="font-size:12px">${fd(v.venc_vtv)}<br><span style="color:var(--${evv==='ok'?'green':evv==='warn'?'amber':'red'})">${evv==='ok'?'Vigente':evv==='warn'?dh(v.venc_vtv)+' días':'Vencido'}</span></div><div style="font-size:12px">${v.conductores?.nombre||'—'}</div><div>${bdg(ef)}</div><div><button class="btn btn-sm" onclick="event.stopPropagation();editarV(JSON.parse(decodeURIComponent(this.dataset.v)))" data-v="${encodeURIComponent(JSON.stringify(v))}" title="Editar">✏️</button></div></div>`;;}).join('');
@@ -1314,26 +1312,16 @@ async function crearUsuario(){
   if(pass.length<6){toast('Contraseña mínimo 6 caracteres','err');return}
   const btn=$('nu-btn');btn.disabled=true;btn.textContent='Creando...';
   const paisId=$('nu-pais')?.value||null;
-  try {
-    const res = await fetch('/api/crear-usuario', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({email, password: pass, nombre, rol, pais_id: paisId})
-    });
-    const data = await res.json();
-    if(!res.ok || data.error){
-      toast('Error: '+(data.error||'No se pudo crear el usuario'),'err');
-      btn.disabled=false;btn.textContent='✅ Crear usuario';return;
-    }
-    toast(`Usuario ${nombre} creado ✓`,'ok');
-    closeModal('nuevo-usuario');
-    ['nu-nombre','nu-email','nu-pass'].forEach(f=>$(f).value='');
-    btn.disabled=false;btn.textContent='✅ Crear usuario';
-    setTimeout(loadUsuarios,1000);
-  } catch(err) {
-    toast('Error de conexión: '+err.message,'err');
-    btn.disabled=false;btn.textContent='✅ Crear usuario';
+  const{data,error}=await db.auth.signUp({email,password:pass,options:{data:{nombre,rol,pais_id:paisId}}});
+  if(error){toast('Error: '+error.message,'err');btn.disabled=false;btn.textContent='✅ Crear usuario';return}
+  if(data.user){
+    await db.from('profiles').upsert({id:data.user.id,email,nombre,rol,pais_id:paisId||null,activo:true},{onConflict:'id'});
   }
+  toast(`Usuario ${nombre} creado ✓`,'ok');
+  closeModal('nuevo-usuario');
+  ['nu-nombre','nu-email','nu-pass'].forEach(f=>$(f).value='');
+  btn.disabled=false;btn.textContent='✅ Crear usuario';
+  setTimeout(loadUsuarios,1000);
 }
 
 
@@ -1507,7 +1495,7 @@ async function cambiarPais(paisId){
     const sec = active.id.replace('s-','');
     const L={dashboard:loadDashboard,vehiculos:loadVehiculos,historial:loadHistorial,
              conductores:loadConductores,alertas:loadAlertas,empresas:loadEmpresas,
-             clientes:loadClientes,satelital:loadSatelital};
+             clientes:loadClientes};
     if(L[sec]) L[sec]();
   }
   // Mostrar país activo en topbar sub
@@ -1517,8 +1505,6 @@ async function cambiarPais(paisId){
   } else {
     $('tb-sub').textContent = '🌎 Todos los países';
   }
-  // Actualizar selector de vehículos del historial
-  await loadVehiculos();
 }
 
 // ── PÁGINAS ───────────────────────────────────────────────────────────────
