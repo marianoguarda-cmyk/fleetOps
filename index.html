@@ -383,6 +383,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
         <div class="ph">
           <div style="font-size:15px;font-weight:600">Historial de checks</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="hist-filtro-pais" style="font-size:12px;width:auto;display:none" onchange="loadHistorial()"><option value="">🌎 Todos los países</option></select>
             <select id="hist-filtro-v" style="font-size:12px;width:auto" onchange="loadHistorial()"><option value="">Todos los vehículos</option></select>
             <select id="hist-filtro-fecha" style="font-size:12px;width:auto" onchange="loadHistorial()">
               <option value="hoy">Hoy</option>
@@ -751,12 +752,52 @@ async function afterLogin(user){
   goTo('dashboard');
 }
 
+// Banderas por código de país
+const BANDERAS={AR:'🇦🇷',MX:'🇲🇽',CL:'🇨🇱',PE:'🇵🇪',CO:'🇨🇴',UY:'🇺🇾'};
+function getFlag(paisId){
+  const p=PAISES_CACHE.find(x=>x.id===paisId);
+  return p?(BANDERAS[p.codigo]||'🌎')+' '+p.nombre:'';
+}
+
 function setupUI(){
   const nombre=CP?.nombre||CU?.email||'Usuario',rol=CP?.rol||'operador';
   const ini=nombre.split(' ').slice(0,2).map(n=>n[0]||'').join('').toUpperCase();
+  const rolLabel=rol==='super_admin'?'Super Admin':rol==='admin'?'Administrador':'Operador';
+  $('h-title').textContent=nombre.split(' ')[0];
   $('u-av').textContent=ini;$('u-name').textContent=nombre;
-  $('u-role').textContent=rol==='admin'?'Administrador':'Operador';
+  $('u-role').textContent=rolLabel;
+  // País del usuario en sidebar
+  const paisLabel=$('u-pais-label');
+  if(paisLabel){
+    if(isSuperAdmin()) paisLabel.textContent='🌎 Super Admin';
+    else if(CP?.pais_id) paisLabel.textContent=getFlag(CP.pais_id);
+  }
+  // Topbar sub con bandera
+  const sub=$('tb-sub');
+  if(sub){
+    if(isSuperAdmin()) sub.textContent='🌎 Todos los países';
+    else if(CP?.pais_id) sub.textContent=getFlag(CP.pais_id);
+  }
+  // Selector de país en topbar — solo super_admin
+  const sw=$('pais-selector-wrap');
+  if(sw){
+    if(isSuperAdmin()){
+      sw.style.display='block';
+      const sel=$('pais-selector');
+      if(sel) sel.innerHTML='<option value="">🌎 Todos los países</option>'+PAISES_CACHE.map(p=>`<option value="${p.id}">${BANDERAS[p.codigo]||''} ${p.nombre}</option>`).join('');
+      // Mostrar filtro de país en historial
+      const hfp=$('hist-filtro-pais');
+      if(hfp){
+        hfp.style.display='block';
+        hfp.innerHTML='<option value="">🌎 Todos los países</option>'+PAISES_CACHE.map(p=>`<option value="${p.id}">${BANDERAS[p.codigo]||''} ${p.nombre}</option>`).join('');
+      }
+    } else {
+      sw.style.display='none';
+    }
+  }
   document.querySelectorAll('.admin-only').forEach(el=>el.style.display=isAdmin()?'flex':'none');
+  if(isAdmin()||isSuperAdmin()) $('admin-menu-items').style.display='block';
+  popularSelectsPais();
 }
 
 async function doLogout(){
@@ -1086,11 +1127,19 @@ let HIST_DATA_CACHE = [];
 async function loadHistorial(){
   const el=$('historial-list');
   el.innerHTML='<div class="loader"><div class="spin"></div>Cargando...</div>';
-  // Recargar selector de vehículos filtrado por país activo
+  // País seleccionado en el filtro del historial (solo super_admin)
+  const paisFiltroId=$('hist-filtro-pais')?.value||null;
+  // Recargar selector de vehículos según el país filtrado
   const selV=$('hist-filtro-v');
   if(selV){
-    const{data:vehs}=await withPais(db.from('vehiculos').select('id,patente').eq('activo',true)).order('patente');
+    let qv=db.from('vehiculos').select('id,patente').eq('activo',true);
+    if(paisFiltroId) qv=qv.eq('pais_id',paisFiltroId);
+    else if(!isSuperAdmin()) qv=qv.eq('pais_id',CP?.pais_id||'');
+    const{data:vehs}=await qv.order('patente');
+    const vidActual=selV.value;
     selV.innerHTML='<option value="">Todos los vehículos</option>'+(vehs||[]).map(v=>`<option value="${v.id}">${v.patente}</option>`).join('');
+    // Restaurar selección si sigue siendo válida
+    if(vidActual&&(vehs||[]).find(v=>v.id===vidActual)) selV.value=vidActual;
   }
   const vid=$('hist-filtro-v')?.value;
   const fechaFiltro=$('hist-filtro-fecha')?.value||'hoy';
@@ -1100,9 +1149,15 @@ async function loadHistorial(){
   else if(fechaFiltro==='mes'){const d=new Date();d.setDate(d.getDate()-30);desde=d.toISOString().split('T')[0];}
   else if(fechaFiltro==='todo'){desde='2020-01-01';}
 
-  let q=withPais(db.from('checks_diarios')
-    .select('*, vehiculos(patente,marca,modelo,empresa_id,nombre_empresa_gps,link_gps,empresas(nombre)), clientes(nombre)'))
-    .order('fecha',{ascending:false}).order('created_at',{ascending:false})
+  // Aplicar filtro de país: usa el filtro del historial si es super_admin, sino usa withPais normal
+  let q=db.from('checks_diarios')
+    .select('*, vehiculos(patente,marca,modelo,empresa_id,nombre_empresa_gps,link_gps,empresas(nombre)), clientes(nombre)');
+  if(isSuperAdmin()){
+    if(paisFiltroId) q=q.eq('pais_id',paisFiltroId);
+  } else {
+    q=q.eq('pais_id',CP?.pais_id||'');
+  }
+  q=q.order('fecha',{ascending:false}).order('created_at',{ascending:false})
     .gte('fecha',desde).limit(200);
   if(vid) q=q.eq('vehiculo_id',vid);
   const{data,error}=await q;
@@ -1523,8 +1578,19 @@ async function cambiarPais(paisId){
   } else {
     $('tb-sub').textContent = '🌎 Todos los países';
   }
-  // Actualizar selector de vehículos del historial
-  await loadVehiculos();
+  // Actualizar topbar sub con bandera persistente
+  const sub=$('tb-sub');
+  if(sub){
+    if(paisId){
+      const p=PAISES_CACHE.find(x=>x.id===paisId);
+      sub.textContent=p?(BANDERAS[p.codigo]||'📍')+' '+p.nombre:'';
+    } else {
+      sub.textContent='🌎 Todos los países';
+    }
+  }
+  // Sincronizar filtro de país del historial con el selector global
+  const hfp=$('hist-filtro-pais');
+  if(hfp) hfp.value=paisId||'';
 }
 
 // ── PÁGINAS ───────────────────────────────────────────────────────────────
