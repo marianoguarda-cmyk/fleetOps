@@ -95,8 +95,8 @@ nav{padding:10px 8px;flex:1;overflow-y:auto}
 .tr{display:grid;padding:10px 14px;align-items:center;border-bottom:1px solid var(--border);font-size:13px;cursor:pointer;transition:background .1s;gap:10px}
 .tr:last-child{border-bottom:none}
 .tr:hover{background:var(--bg3)}
-.tc-v{grid-template-columns:28px 1fr 80px 90px 90px 80px 80px 65px 55px}
-.tc-c{grid-template-columns:32px 1fr 90px 110px 90px 65px 55px}
+.tc-v{grid-template-columns:28px 1fr 80px 90px 90px 80px 80px 65px 80px}
+.tc-c{grid-template-columns:32px 1fr 90px 110px 90px 65px 80px}
 .tc-h{grid-template-columns:95px 1fr 55px 70px 70px 70px 70px}
 .tc-u{grid-template-columns:32px 1fr 80px 90px 65px 90px}
 .form-section{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin:16px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--border)}
@@ -271,7 +271,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
         </div>
         <div class="ph"><div style="font-size:15px;font-weight:600">Vehículos en flota</div><button class="btn btn-primary" onclick="openModal('vehiculo')">+ Nuevo vehículo</button></div>
         <div class="data-table">
-          <div class="th tc-v"><div></div><div>Vehículo</div><div>Tipo</div><div>Empresa</div><div>Seguro</div><div>VTV</div><div>Conductor</div><div>Estado</div><div></div></div>
+          <div class="th tc-v"><div></div><div>Vehículo</div><div>Tipo</div><div>Empresa</div><div>Seguro</div><div>VTV</div><div>Conductor</div><div>Estado</div><div>Acc.</div></div>
           <div id="vehiculos-list"><div class="loader"><div class="spin"></div>Cargando...</div></div>
         </div>
       </div>
@@ -440,7 +440,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
           <button class="btn btn-primary" onclick="openModal('conductor')">+ Agregar conductor</button>
         </div>
         <div class="data-table">
-          <div class="th tc-c"><div></div><div>Conductor</div><div>Vehículo</div><div>Venc. licencia</div><div>Doc.</div><div>Estado</div><div></div></div>
+          <div class="th tc-c"><div></div><div>Conductor</div><div>Vehículo</div><div>Venc. licencia</div><div>Doc.</div><div>Estado</div><div>Acc.</div></div>
           <div id="conductores-list"><div class="loader"><div class="spin"></div>Cargando...</div></div>
         </div>
       </div>
@@ -1378,11 +1378,14 @@ async function loadEmpresas(){
   [$('mv-empresa'),$('mc-empresa')].forEach(sel=>{if(sel){sel.innerHTML='<option value="">Sin empresa</option>'+empOpts}});
   if(!data?.length){$('empresas-list').innerHTML='<div class="empty">No hay empresas registradas.</div>';return}
   $('empresas-list').innerHTML=data.map(e=>`
-    <div class="tr" style="grid-template-columns:1fr 110px 150px 80px" onclick="editarEmpresa(${JSON.stringify(e).replace(/"/g,'&quot;')})">
+    <div class="tr" style="grid-template-columns:1fr 110px 150px 110px" onclick="editarEmpresa(${JSON.stringify(e).replace(/"/g,'&quot;')})">
       <div><strong style="font-weight:600">${e.nombre}</strong>${e.direccion?`<br><span style="font-size:11px;color:var(--text2)">${e.direccion}</span>`:''}</div>
       <div style="font-size:12px">${e.cuit||'—'}</div>
       <div style="font-size:12px">${e.email||''}<br>${e.telefono||''}</div>
-      <div><button class="btn btn-sm" onclick="event.stopPropagation();editarEmpresa(${JSON.stringify(e).replace(/"/g,'&quot;')})">✏️ Editar</button></div>
+      <div style="display:flex;gap:4px">
+        <button class="btn btn-sm" onclick="event.stopPropagation();editarEmpresa(${JSON.stringify(e).replace(/"/g,'&quot;')})" title="Editar">✏️</button>
+        ${isSuperAdmin()?`<button class="btn btn-sm" style="background:var(--red-light);color:var(--red);border:1px solid #F09595" onclick="event.stopPropagation();eliminarRegistro('empresas','${e.id}',loadEmpresas)" title="Eliminar">🗑️</button>`:''}
+      </div>
     </div>`).join('');
 }
 
