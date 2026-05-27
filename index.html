@@ -229,14 +229,23 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
   </div>
 
   <div class="main">
-    <div class="topbar">
-      <div><div class="topbar-title" id="tb-title">Dashboard</div><div class="topbar-sub" id="tb-sub"></div></div>
-      <div class="topbar-right" id="tb-actions">
+    <div class="topbar" style="flex-wrap:wrap;gap:6px">
+      <div style="flex:1;min-width:0">
+        <div class="topbar-title" id="tb-title">Dashboard</div>
+        <div class="topbar-sub" id="tb-sub"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <!-- Indicador de país activo — siempre visible para super_admin -->
+        <div id="pais-indicator" style="display:none;background:var(--blue);color:white;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap">
+          🌎 Todos los países
+        </div>
+        <!-- Selector de país — solo super_admin -->
         <div id="pais-selector-wrap" style="display:none">
           <select id="pais-selector" style="font-size:12px;padding:5px 10px;border-radius:20px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);cursor:pointer" onchange="cambiarPais(this.value)">
             <option value="">🌎 Todos los países</option>
           </select>
         </div>
+        <div id="tb-actions"></div>
       </div>
     </div>
     <div class="content">
@@ -255,6 +264,12 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
       </div>
 
       <div class="section" id="s-vehiculos">
+        <div class="super-admin-pais-bar" style="display:none;background:var(--blue-light);border-radius:var(--radius);padding:8px 12px;margin-bottom:12px;display:none;align-items:center;gap:10px">
+          <span style="font-size:12px;font-weight:600;color:var(--blue)">🌎 Filtrar por país:</span>
+          <select class="sa-pais-filter" style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:white;color:var(--text)" onchange="cambiarPais(this.value)">
+            <option value="">Todos los países</option>
+          </select>
+        </div>
         <div class="ph"><div style="font-size:15px;font-weight:600">Vehículos en flota</div><button class="btn btn-primary" onclick="openModal('vehiculo')">+ Nuevo vehículo</button></div>
         <div class="data-table">
           <div class="th tc-v"><div></div><div>Vehículo</div><div>Tipo</div><div>Empresa</div><div>Seguro</div><div>VTV</div><div>Conductor</div><div>Estado</div><div></div></div>
@@ -399,6 +414,12 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
       </div>
 
       <div class="section" id="s-satelital">
+        <div class="super-admin-pais-bar" style="display:none;background:var(--blue-light);border-radius:var(--radius);padding:8px 12px;margin-bottom:12px;display:none;align-items:center;gap:10px">
+          <span style="font-size:12px;font-weight:600;color:var(--blue)">🌎 Filtrar por país:</span>
+          <select class="sa-pais-filter" style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:white;color:var(--text)" onchange="cambiarPais(this.value)">
+            <option value="">Todos los países</option>
+          </select>
+        </div>
         <div class="ph">
           <div style="font-size:15px;font-weight:600">📍 Accesos satelitales</div>
           <button class="btn btn-primary admin-only" onclick="openModal('gps')">+ Agregar GPS</button>
@@ -409,6 +430,12 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 
       <!-- CONDUCTORES -->
       <div class="section" id="s-conductores">
+        <div class="super-admin-pais-bar" style="display:none;background:var(--blue-light);border-radius:var(--radius);padding:8px 12px;margin-bottom:12px;display:none;align-items:center;gap:10px">
+          <span style="font-size:12px;font-weight:600;color:var(--blue)">🌎 Filtrar por país:</span>
+          <select class="sa-pais-filter" style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:white;color:var(--text)" onchange="cambiarPais(this.value)">
+            <option value="">Todos los países</option>
+          </select>
+        </div>
         <div class="ph">
           <div style="font-size:15px;font-weight:600">Conductores</div>
           <button class="btn btn-primary" onclick="openModal('conductor')">+ Agregar conductor</button>
@@ -431,6 +458,12 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 
       <!-- CLIENTES -->
       <div class="section" id="s-clientes">
+        <div class="super-admin-pais-bar" style="display:none;background:var(--blue-light);border-radius:var(--radius);padding:8px 12px;margin-bottom:12px;display:none;align-items:center;gap:10px">
+          <span style="font-size:12px;font-weight:600;color:var(--blue)">🌎 Filtrar por país:</span>
+          <select class="sa-pais-filter" style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:white;color:var(--text)" onchange="cambiarPais(this.value)">
+            <option value="">Todos los países</option>
+          </select>
+        </div>
         <div class="ph">
           <div style="font-size:15px;font-weight:600">Clientes</div>
           <button class="btn btn-primary" onclick="openModal('cliente')">+ Nuevo cliente</button>
@@ -445,6 +478,12 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 
       <!-- EMPRESAS -->
       <div class="section" id="s-empresas">
+        <div class="super-admin-pais-bar" style="display:none;background:var(--blue-light);border-radius:var(--radius);padding:8px 12px;margin-bottom:12px;display:none;align-items:center;gap:10px">
+          <span style="font-size:12px;font-weight:600;color:var(--blue)">🌎 Filtrar por país:</span>
+          <select class="sa-pais-filter" style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:white;color:var(--text)" onchange="cambiarPais(this.value)">
+            <option value="">Todos los países</option>
+          </select>
+        </div>
         <div class="ph">
           <div style="font-size:15px;font-weight:600">Empresas de transporte</div>
           <button class="btn btn-primary" onclick="openModal('empresa')">+ Nueva empresa</button>
@@ -780,22 +819,29 @@ function setupUI(){
     if(isSuperAdmin()) sub.textContent='🌎 Todos los países';
     else if(CP?.pais_id) sub.textContent=getFlag(CP.pais_id);
   }
-  // Selector de país en topbar — solo super_admin
+  // Selector y controles de país — solo super_admin
   const sw=$('pais-selector-wrap');
-  if(sw){
-    if(isSuperAdmin()){
-      sw.style.display='block';
-      const sel=$('pais-selector');
-      if(sel) sel.innerHTML='<option value="">🌎 Todos los países</option>'+PAISES_CACHE.map(p=>`<option value="${p.id}">${BANDERAS[p.codigo]||''} ${p.nombre}</option>`).join('');
-      // Mostrar filtro de país en historial
-      const hfp=$('hist-filtro-pais');
-      if(hfp){
-        hfp.style.display='block';
-        hfp.innerHTML='<option value="">🌎 Todos los países</option>'+PAISES_CACHE.map(p=>`<option value="${p.id}">${BANDERAS[p.codigo]||''} ${p.nombre}</option>`).join('');
-      }
-    } else {
-      sw.style.display='none';
-    }
+  const pi=$('pais-indicator');
+  if(isSuperAdmin()){
+    // Mostrar selector global en topbar
+    if(sw) sw.style.display='block';
+    // Mostrar indicador de país
+    if(pi){ pi.style.display='flex'; pi.textContent='🌎 Todos los países'; }
+    // Poblar opciones de país
+    const paisOpts='<option value="">🌎 Todos los países</option>'+PAISES_CACHE.map(p=>`<option value="${p.id}">${BANDERAS[p.codigo]||''} ${p.nombre}</option>`).join('');
+    const sel=$('pais-selector');
+    if(sel) sel.innerHTML=paisOpts;
+    // Poblar filtro de país del historial
+    const hfp=$('hist-filtro-pais');
+    if(hfp){ hfp.style.display='block'; hfp.innerHTML=paisOpts; }
+    // Mostrar y poblar filtros de país en todas las secciones
+    document.querySelectorAll('.sa-pais-filter').forEach(sel=>{
+      sel.parentElement.style.display='flex';
+      sel.innerHTML=paisOpts;
+    });
+  } else {
+    if(sw) sw.style.display='none';
+    if(pi) pi.style.display='none';
   }
   document.querySelectorAll('.admin-only').forEach(el=>{if(el)el.style.display=isAdmin()?'flex':'none'});
   const ami=$('admin-menu-items');if(ami&&(isAdmin()||isSuperAdmin()))ami.style.display='block';
