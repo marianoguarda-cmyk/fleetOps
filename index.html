@@ -746,7 +746,8 @@ async function afterLogin(user){
   await loadPaisesCache();
   // Si no es super_admin, fijar su país
   if(!isSuperAdmin()) PAIS_ACTIVO = CP?.pais_id || null;
-  setupUI();hideSplash();
+  try{ setupUI(); } catch(e){ console.error('setupUI error:',e); }
+  hideSplash();
   $('login-screen').classList.remove('show');
   $('app').classList.add('show');
   goTo('dashboard');
@@ -796,8 +797,8 @@ function setupUI(){
       sw.style.display='none';
     }
   }
-  document.querySelectorAll('.admin-only').forEach(el=>el.style.display=isAdmin()?'flex':'none');
-  if(isAdmin()||isSuperAdmin()) $('admin-menu-items').style.display='block';
+  document.querySelectorAll('.admin-only').forEach(el=>{if(el)el.style.display=isAdmin()?'flex':'none'});
+  const ami=$('admin-menu-items');if(ami&&(isAdmin()||isSuperAdmin()))ami.style.display='block';
   popularSelectsPais();
 }
 
@@ -1795,10 +1796,16 @@ const today=new Date();
 $('check-fecha-label').textContent='Check diario — '+today.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
 (async()=>{
-  const{data:{session}}=await db.auth.getSession();
-  if(session?.user){
-    await afterLogin(session.user);
-  } else {
+  try{
+    const{data:{session}}=await db.auth.getSession();
+    if(session?.user){
+      await afterLogin(session.user);
+    } else {
+      hideSplash();
+      $('login-screen').classList.add('show');
+    }
+  } catch(err){
+    console.error('Init error:', err);
     hideSplash();
     $('login-screen').classList.add('show');
   }
