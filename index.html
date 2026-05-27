@@ -1370,7 +1370,7 @@ async function guardarCliente(){
 async function loadEmpresas(){
   if(!isAdmin()){$('empresas-list').innerHTML='<div class="empty">Solo administradores</div>';return}
   $('empresas-list').innerHTML='<div class="loader"><div class="spin"></div>Cargando...</div>';
-  const{data,error:empErr}=await withPais(db.from('empresas').select('*')).order('nombre');
+  const{data,error:empErr}=await withPais(db.from('empresas').select('*').eq('activo',true)).order('nombre');
   if(empErr)console.error('empresas error:',empErr.message);
   EMPRESAS_CACHE=data||[];
   // Poblar selects de empresa en modales
@@ -1690,7 +1690,7 @@ async function loadPaises(){
 async function loadConductores(){
   const el=$('conductores-list');
   el.innerHTML='<div class="loader"><div class="spin"></div>Cargando...</div>';
-  const{data,error}=await withPais(db.from('conductores').select('*, vehiculos(patente), empresas(nombre)')).order('created_at',{ascending:false});
+  const{data,error}=await withPais(db.from('conductores').select('*, vehiculos(patente), empresas(nombre)').eq('activo',true)).order('created_at',{ascending:false});
   if(error){el.innerHTML=`<div class="empty">Error: ${error.message}</div>`;return}
   if(!data?.length){el.innerHTML='<div class="empty">Sin conductores. <button class="btn btn-sm btn-primary" onclick="openModal(&quot;conductor&quot;)">+ Agregar</button></div>';return}
   // Popular selects
