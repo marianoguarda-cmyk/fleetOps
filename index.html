@@ -763,10 +763,11 @@ function setupUI(){
   const nombre=CP?.nombre||CU?.email||'Usuario',rol=CP?.rol||'operador';
   const ini=nombre.split(' ').slice(0,2).map(n=>n[0]||'').join('').toUpperCase();
   const rolLabel=rol==='super_admin'?'Super Admin':rol==='admin'?'Administrador':'Operador';
-  $('h-title').textContent=nombre.split(' ')[0];
-  $('u-av').textContent=ini;$('u-name').textContent=nombre;
-  $('u-role').textContent=rolLabel;
-  // País del usuario en sidebar
+  // Sidebar user info
+  const uav=$('u-av');if(uav)uav.textContent=ini;
+  const uname=$('u-name');if(uname)uname.textContent=nombre;
+  const urole=$('u-role');if(urole)urole.textContent=rolLabel;
+  // País del usuario en sidebar con bandera
   const paisLabel=$('u-pais-label');
   if(paisLabel){
     if(isSuperAdmin()) paisLabel.textContent='🌎 Super Admin';
