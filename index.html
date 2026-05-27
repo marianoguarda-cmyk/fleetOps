@@ -198,6 +198,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
       <button class="nav-btn active" onclick="goTo('dashboard')">📊 Dashboard</button>
       <div class="nav-label">Operaciones</div>
       <button class="nav-btn" onclick="goTo('checklist')">✅ Check diario</button>
+      <button class="nav-btn" onclick="goTo('planificacion')">📅 Planificación</button>
       <button class="nav-btn" onclick="goTo('historial')">🕐 Historial</button>
       <button class="nav-btn" onclick="goTo('satelital')">📍 Satelital</button>
       <div class="nav-label">Recursos</div>
@@ -252,7 +253,9 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
       <div class="section active" id="s-dashboard">
         <div class="stats-grid">
           <div class="stat"><div class="stat-label">Vehículos activos</div><div class="stat-val" id="d-total" style="color:var(--blue)">—</div><div class="stat-sub">en flota</div></div>
+          <div class="stat"><div class="stat-label">Planificados hoy</div><div class="stat-val" id="d-planificados" style="color:var(--blue)">—</div><div class="stat-sub">esperados</div></div>
           <div class="stat"><div class="stat-label">Checks hoy</div><div class="stat-val" id="d-checks">—</div><div class="stat-sub">completados</div></div>
+          <div class="stat"><div class="stat-label">Cumplimiento</div><div class="stat-val" id="d-cumplimiento" style="color:var(--green)">—</div><div class="stat-sub">del día</div></div>
           <div class="stat"><div class="stat-label">Venc. próximos</div><div class="stat-val" id="d-venc" style="color:var(--amber)">—</div><div class="stat-sub">en 30 días</div></div>
           <div class="stat"><div class="stat-label">Alertas activas</div><div class="stat-val" id="d-alertas" style="color:var(--red)">—</div><div class="stat-sub">requieren atención</div></div>
         </div>
@@ -273,6 +276,42 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
         <div class="data-table">
           <div class="th tc-v"><div></div><div>Vehículo</div><div>Tipo</div><div>Empresa</div><div>Seguro</div><div>VTV</div><div>Conductor</div><div>Estado</div><div>Acc.</div></div>
           <div id="vehiculos-list"><div class="loader"><div class="spin"></div>Cargando...</div></div>
+        </div>
+      </div>
+
+      <!-- PLANIFICACIÓN -->
+      <div class="section" id="s-planificacion">
+        <div class="super-admin-pais-bar" style="display:none;background:var(--blue-light);border-radius:var(--radius);padding:8px 12px;margin-bottom:12px;align-items:center;gap:10px">
+          <span style="font-size:12px;font-weight:600;color:var(--blue)">🌎 Filtrar por país:</span>
+          <select class="sa-pais-filter" style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:white;color:var(--text)" onchange="cambiarPais(this.value)">
+            <option value="">Todos los países</option>
+          </select>
+        </div>
+
+        <div class="ph">
+          <div style="font-size:15px;font-weight:600">📅 Planificación de flota</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn" onclick="semanaAnterior()">← Semana anterior</button>
+            <span id="plan-semana-label" style="font-size:13px;font-weight:600;color:var(--blue)"></span>
+            <button class="btn" onclick="semanaSiguiente()">Semana siguiente →</button>
+          </div>
+        </div>
+
+        <!-- Filtro empresa -->
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+          <select id="plan-empresa-sel" style="font-size:13px;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2)" onchange="loadPlanificacion()">
+            <option value="">Todas las empresas</option>
+          </select>
+          <div id="plan-lock-info" style="font-size:12px;color:var(--text2)"></div>
+        </div>
+
+        <!-- Grilla semanal -->
+        <div id="plan-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:16px"></div>
+
+        <!-- Resumen semana -->
+        <div id="plan-resumen" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:10px">📊 Resumen de la semana</div>
+          <div id="plan-resumen-content"><div class="loader"><div class="spin"></div>Cargando...</div></div>
         </div>
       </div>
 
@@ -870,7 +909,7 @@ $('li-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
 $('li-email').addEventListener('keydown',e=>{if(e.key==='Enter')$('li-pass').focus()});
 
 // NAV
-const PAGES={dashboard:{title:'Dashboard',sub:'Vista general de la flota'},vehiculos:{title:'Vehículos',sub:'Toda la flota registrada'},checklist:{title:'Check diario',sub:'Revisión antes de la salida'},historial:{title:'Historial de checks',sub:'Registro completo de revisiones'},satelital:{title:'Accesos satelitales',sub:'Links GPS por vehículo y empresa'},conductores:{title:'Conductores',sub:'Gestión de choferes'},alertas:{title:'Alertas',sub:'Vencimientos y novedades'},empresas:{title:'Empresas de transporte',sub:'Gestión de empresas y flotas'},clientes:{title:'Clientes',sub:'Gestión de clientes'},paises:{title:'Países',sub:'Operaciones por país'},usuarios:{title:'Usuarios',sub:'Gestión de accesos al sistema'},config:{title:'Configuración',sub:'Ajustes de la aplicación'}};
+const PAGES={dashboard:{title:'Dashboard',sub:'Vista general de la flota'},vehiculos:{title:'Vehículos',sub:'Toda la flota registrada'},planificacion:{title:'Planificación de flota',sub:'Vehículos planificados por semana'},checklist:{title:'Check diario',sub:'Revisión antes de la salida'},historial:{title:'Historial de checks',sub:'Registro completo de revisiones'},satelital:{title:'Accesos satelitales',sub:'Links GPS por vehículo y empresa'},conductores:{title:'Conductores',sub:'Gestión de choferes'},alertas:{title:'Alertas',sub:'Vencimientos y novedades'},empresas:{title:'Empresas de transporte',sub:'Gestión de empresas y flotas'},clientes:{title:'Clientes',sub:'Gestión de clientes'},paises:{title:'Países',sub:'Operaciones por país'},usuarios:{title:'Usuarios',sub:'Gestión de accesos al sistema'},config:{title:'Configuración',sub:'Ajustes de la aplicación'}};
 
 function goTo(sec){
   if(sec==='usuarios'&&!isAdmin()){toast('Solo los administradores pueden ver esta sección','err');return}
@@ -888,22 +927,35 @@ function goTo(sec){
   if(sec==='paises') a.innerHTML='';
   if(sec==='clientes')a.innerHTML=`<button class="btn btn-primary" onclick="openModal('cliente')">+ Nuevo cliente</button>`;
   if(sec==='empresas')a.innerHTML=`<button class="btn btn-primary" onclick="openModal('empresa')">+ Nueva empresa</button>`;
-  const L={dashboard:loadDashboard,vehiculos:loadVehiculos,historial:loadHistorial,conductores:loadConductores,alertas:loadAlertas,satelital:loadSatelital,usuarios:loadUsuarios,empresas:loadEmpresas,clientes:loadClientes,checklist:initCheckSelects,paises:loadPaises};
+  const L={dashboard:loadDashboard,vehiculos:loadVehiculos,historial:loadHistorial,conductores:loadConductores,alertas:loadAlertas,satelital:loadSatelital,usuarios:loadUsuarios,empresas:loadEmpresas,clientes:loadClientes,checklist:initCheckSelects,paises:loadPaises,planificacion:loadPlanificacion};
   if(L[sec])L[sec]();
 }
 
 // DASHBOARD
 async function loadDashboard(){
   const today=new Date().toISOString().split('T')[0];
-  const[{data:veh,error:eveh},{data:chks,error:echks},{data:alts,error:ealts}]=await Promise.all([
+  const paisId = getPaisId() || CP?.pais_id || null;
+  const[{data:veh,error:eveh},{data:chks,error:echks},{data:alts,error:ealts},{data:plan}]=await Promise.all([
     withPais(db.from('vehiculos').select('*').eq('activo',true)),
     withPais(db.from('checks_diarios').select('*').eq('fecha',today)),
-    withPais(db.from('alertas').select('*').eq('resuelta',false))
+    withPais(db.from('alertas').select('*').eq('resuelta',false)),
+    withPais(db.from('planificacion').select('vehiculos_planificados').eq('fecha',today))
   ]);
   if(eveh)console.error('vehiculos error:',eveh.message);
   if(echks)console.error('checks error:',echks.message);
   if(ealts)console.error('alertas error:',ealts.message);
-  $('d-total').textContent=veh?.length??0;$('d-checks').textContent=chks?.length??0;$('d-alertas').textContent=alts?.length??0;
+  const totalPlan = (plan||[]).reduce((s,p)=>s+(p.vehiculos_planificados||0),0);
+  const totalChecks = chks?.length??0;
+  const cumplimiento = totalPlan>0 ? Math.round(totalChecks/totalPlan*100) : null;
+  $('d-total').textContent=veh?.length??0;
+  $('d-checks').textContent=totalChecks;
+  $('d-alertas').textContent=alts?.length??0;
+  const dp=$('d-planificados');if(dp)dp.textContent=totalPlan||'—';
+  const dc=$('d-cumplimiento');
+  if(dc){
+    dc.textContent=cumplimiento!==null?cumplimiento+'%':'—';
+    dc.style.color=cumplimiento===null?'var(--text2)':cumplimiento>=100?'var(--green)':cumplimiento>=50?'var(--amber)':'var(--red)';
+  }
   // Actualizar subtítulo con info de país
   if(isSuperAdmin()&&!PAIS_ACTIVO){$('tb-sub').textContent='🌎 Vista global · '+PAISES_CACHE.length+' países';}
   let v=0;veh?.forEach(x=>{if(ev(x.venc_seguro)!=='ok'||ev(x.venc_vtv)!=='ok')v++});$('d-venc').textContent=v;
@@ -1684,6 +1736,182 @@ async function loadPaises(){
           <div style="margin-top:10px;font-size:12px;color:var(--blue);font-weight:500">Ver operación →</div>
         </div>`).join('')}
     </div>`;
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════
+// PLANIFICACIÓN DE FLOTA
+// ══════════════════════════════════════════════════════════════════════════
+let PLAN_SEMANA_INICIO = null; // lunes de la semana actual
+
+function getLunesDeSemana(fecha){
+  const d = new Date(fecha);
+  const dia = d.getDay();
+  const diff = dia === 0 ? -6 : 1 - dia;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0,0,0,0);
+  return d;
+}
+
+function fechaStr(d){
+  return d.toISOString().split('T')[0];
+}
+
+function formatFecha(d){
+  return new Date(d+'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'});
+}
+
+function formatDiaNombre(d){
+  return new Date(d+'T12:00:00').toLocaleDateString('es-AR',{weekday:'short'}).toUpperCase();
+}
+
+function estaVencido(fechaStr){
+  // Verificar si ya pasaron 48hs desde el día planificado
+  const fecha = new Date(fechaStr + 'T00:00:00');
+  const limite = new Date(fecha.getTime() - 48*60*60*1000);
+  return new Date() > limite;
+}
+
+function semanaAnterior(){
+  PLAN_SEMANA_INICIO.setDate(PLAN_SEMANA_INICIO.getDate() - 7);
+  loadPlanificacion();
+}
+
+function semanaSiguiente(){
+  // Solo permitir hasta 2 semanas adelante
+  const maxFecha = new Date();
+  maxFecha.setDate(maxFecha.getDate() + 14);
+  const nuevaFecha = new Date(PLAN_SEMANA_INICIO);
+  nuevaFecha.setDate(nuevaFecha.getDate() + 7);
+  if(nuevaFecha > maxFecha){
+    toast('Solo se puede planificar hasta 2 semanas adelante','err');
+    return;
+  }
+  PLAN_SEMANA_INICIO = nuevaFecha;
+  loadPlanificacion();
+}
+
+async function initPlanEmpresa(){
+  const sel = $('plan-empresa-sel');
+  if(!sel) return;
+  if(!EMPRESAS_CACHE.length){
+    const{data}=await withPais(db.from('empresas').select('id,nombre').eq('activo',true)).order('nombre');
+    EMPRESAS_CACHE = data || [];
+  }
+  sel.innerHTML = '<option value="">Todas las empresas</option>' +
+    EMPRESAS_CACHE.map(e=>`<option value="${e.id}">${e.nombre}</option>`).join('');
+}
+
+async function loadPlanificacion(){
+  if(!PLAN_SEMANA_INICIO) PLAN_SEMANA_INICIO = getLunesDeSemana(new Date());
+  await initPlanEmpresa();
+
+  // Calcular los 7 días de la semana
+  const dias = [];
+  for(let i=0;i<7;i++){
+    const d = new Date(PLAN_SEMANA_INICIO);
+    d.setDate(d.getDate() + i);
+    dias.push(fechaStr(d));
+  }
+
+  // Label de semana
+  const lbl = $('plan-semana-label');
+  if(lbl) lbl.textContent = formatFecha(dias[0]) + ' — ' + formatFecha(dias[6]);
+
+  const empresaId = $('plan-empresa-sel')?.value || null;
+
+  // Cargar planificación de la semana desde Supabase
+  let q = withPais(db.from('planificacion').select('*').in('fecha', dias));
+  if(empresaId) q = q.eq('empresa_id', empresaId);
+  const{data:planData} = await q;
+  const planMap = {};
+  (planData||[]).forEach(p => { planMap[p.fecha + '_' + (p.empresa_id||'')] = p; });
+
+  // Cargar checks del día para comparar
+  const{data:checksData} = await withPais(db.from('checks_diarios').select('fecha').in('fecha', dias));
+  const checksMap = {};
+  (checksData||[]).forEach(c => { checksMap[c.fecha] = (checksMap[c.fecha]||0) + 1; });
+
+  // Renderizar grilla
+  const grid = $('plan-grid');
+  if(!grid) return;
+
+  const hoy = fechaStr(new Date());
+
+  grid.innerHTML = dias.map(fecha => {
+    const key = fecha + '_' + (empresaId||'');
+    const plan = planMap[key];
+    const planificados = plan?.vehiculos_planificados || 0;
+    const checks = checksMap[fecha] || 0;
+    const vencido = estaVencido(fecha);
+    const esFuturo = fecha > hoy;
+    const esHoy = fecha === hoy;
+    const puedeEditar = isAdmin() && !vencido;
+
+    const porcentaje = planificados > 0 ? Math.min(100, Math.round(checks/planificados*100)) : 0;
+    const color = planificados === 0 ? 'var(--border)' :
+                  checks >= planificados ? 'var(--green)' :
+                  checks > 0 ? 'var(--amber)' : 'var(--red)';
+
+    return `<div style="background:var(--bg2);border:1.5px solid ${esHoy?'var(--blue)':'var(--border)'};border-radius:var(--radius);padding:12px;text-align:center;${esHoy?'box-shadow:0 0 0 2px var(--blue-light)':''}">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:2px">${formatDiaNombre(fecha)}</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:${esHoy?'var(--blue)':'var(--text)'}">${formatFecha(fecha)}</div>
+      ${puedeEditar ? `
+        <input type="number" min="0" max="999"
+          value="${planificados}"
+          id="plan-input-${fecha}"
+          style="width:100%;text-align:center;font-size:22px;font-weight:700;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:4px;color:var(--blue);background:var(--bg)"
+          onchange="guardarPlanDia('${fecha}','${plan?.id||''}','${empresaId||''}')"
+        >
+      ` : `
+        <div style="font-size:28px;font-weight:700;color:var(--blue);margin-bottom:4px">${planificados}</div>
+      `}
+      <div style="font-size:11px;color:var(--text2);margin-top:6px">Planificados</div>
+      <div style="height:4px;background:var(--border);border-radius:2px;margin:8px 0">
+        <div style="height:4px;background:${color};border-radius:2px;width:${porcentaje}%;transition:width .3s"></div>
+      </div>
+      <div style="font-size:13px;font-weight:600;color:${color}">${checks} checks</div>
+      ${vencido && planificados > 0 ? '<div style="font-size:10px;color:var(--text3);margin-top:3px">🔒 Cerrado</div>' : ''}
+      ${!vencido && puedeEditar && planificados > 0 && !esHoy && esFuturo ? '<div style="font-size:10px;color:var(--amber);margin-top:3px">⏳ Editable hasta 48hs antes</div>' : ''}
+    </div>`;
+  }).join('');
+
+  // Resumen
+  const totalPlan = dias.reduce((s,f) => s + (planMap[f+'_'+(empresaId||'')]?.vehiculos_planificados||0), 0);
+  const totalChecks = dias.reduce((s,f) => s + (checksMap[f]||0), 0);
+  const resumen = $('plan-resumen-content');
+  if(resumen){
+    resumen.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+        <div style="background:var(--blue-light);border-radius:var(--radius);padding:12px;text-align:center">
+          <div style="font-size:24px;font-weight:700;color:var(--blue)">${totalPlan}</div>
+          <div style="font-size:12px;color:var(--text2)">Planificados esta semana</div>
+        </div>
+        <div style="background:var(--green-light);border-radius:var(--radius);padding:12px;text-align:center">
+          <div style="font-size:24px;font-weight:700;color:var(--green)">${totalChecks}</div>
+          <div style="font-size:12px;color:var(--text2)">Checks realizados</div>
+        </div>
+        <div style="background:${totalPlan>0&&totalChecks>=totalPlan?'var(--green-light)':'var(--amber-light)'};border-radius:var(--radius);padding:12px;text-align:center">
+          <div style="font-size:24px;font-weight:700;color:${totalPlan>0&&totalChecks>=totalPlan?'var(--green)':'var(--amber)'}">${totalPlan>0?Math.round(totalChecks/totalPlan*100):0}%</div>
+          <div style="font-size:12px;color:var(--text2)">Cumplimiento</div>
+        </div>
+      </div>`;
+  }
+}
+
+async function guardarPlanDia(fecha, planId, empresaId){
+  if(!isAdmin()){toast('Sin permisos','err');return}
+  if(estaVencido(fecha)){toast('No se puede modificar — ya pasaron las 48hs','err');return}
+  const input = $('plan-input-'+fecha);
+  if(!input) return;
+  const cantidad = parseInt(input.value)||0;
+  const paisId = getPaisId() || CP?.pais_id || null;
+  const{error} = planId
+    ? await db.from('planificacion').update({vehiculos_planificados:cantidad,updated_at:new Date().toISOString()}).eq('id',planId)
+    : await db.from('planificacion').upsert({fecha,vehiculos_planificados:cantidad,pais_id:paisId,empresa_id:empresaId||null,creado_por:CP?.nombre||CU?.email},{onConflict:'fecha,pais_id,empresa_id'});
+  if(error){toast('Error: '+error.message,'err');return}
+  toast('✓ Guardado','ok');
+  setTimeout(loadPlanificacion, 500);
 }
 
 // ── CONDUCTORES ───────────────────────────────────────────────────────────

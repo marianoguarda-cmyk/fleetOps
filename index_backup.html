@@ -95,8 +95,8 @@ nav{padding:10px 8px;flex:1;overflow-y:auto}
 .tr{display:grid;padding:10px 14px;align-items:center;border-bottom:1px solid var(--border);font-size:13px;cursor:pointer;transition:background .1s;gap:10px}
 .tr:last-child{border-bottom:none}
 .tr:hover{background:var(--bg3)}
-.tc-v{grid-template-columns:28px 1fr 80px 90px 90px 80px 80px 65px 55px}
-.tc-c{grid-template-columns:32px 1fr 90px 110px 90px 65px 55px}
+.tc-v{grid-template-columns:28px 1fr 80px 90px 90px 80px 80px 65px 80px}
+.tc-c{grid-template-columns:32px 1fr 90px 110px 90px 65px 80px}
 .tc-h{grid-template-columns:95px 1fr 55px 70px 70px 70px 70px}
 .tc-u{grid-template-columns:32px 1fr 80px 90px 65px 90px}
 .form-section{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin:16px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--border)}
@@ -152,6 +152,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 .empty{text-align:center;padding:40px;color:var(--text2);font-size:13px}
 .admin-only{display:none}
 .info-box{background:var(--blue-light);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--blue);margin-bottom:14px}
+.btn-danger{background:var(--red-light);color:var(--red);border:1px solid #F09595}
 </style>
 </head>
 <body>
@@ -229,14 +230,21 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
   </div>
 
   <div class="main">
-    <div class="topbar">
-      <div><div class="topbar-title" id="tb-title">Dashboard</div><div class="topbar-sub" id="tb-sub"></div></div>
-      <div class="topbar-right" id="tb-actions">
+    <div class="topbar" style="flex-wrap:wrap;gap:6px">
+      <div style="flex:1;min-width:0">
+        <div class="topbar-title" id="tb-title">Dashboard</div>
+        <div class="topbar-sub" id="tb-sub"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <!-- Indicador de país activo — solo cuando hay país seleccionado -->
+        <div id="pais-indicator" style="display:none;background:var(--blue);color:white;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap"></div>
+        <!-- Selector de país — solo super_admin -->
         <div id="pais-selector-wrap" style="display:none">
           <select id="pais-selector" style="font-size:12px;padding:5px 10px;border-radius:20px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);cursor:pointer" onchange="cambiarPais(this.value)">
             <option value="">🌎 Todos los países</option>
           </select>
         </div>
+        <div id="tb-actions"></div>
       </div>
     </div>
     <div class="content">
@@ -255,9 +263,15 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
       </div>
 
       <div class="section" id="s-vehiculos">
+        <div class="super-admin-pais-bar" style="display:none;background:var(--blue-light);border-radius:var(--radius);padding:8px 12px;margin-bottom:12px;display:none;align-items:center;gap:10px">
+          <span style="font-size:12px;font-weight:600;color:var(--blue)">🌎 Filtrar por país:</span>
+          <select class="sa-pais-filter" style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:white;color:var(--text)" onchange="cambiarPais(this.value)">
+            <option value="">Todos los países</option>
+          </select>
+        </div>
         <div class="ph"><div style="font-size:15px;font-weight:600">Vehículos en flota</div><button class="btn btn-primary" onclick="openModal('vehiculo')">+ Nuevo vehículo</button></div>
         <div class="data-table">
-          <div class="th tc-v"><div></div><div>Vehículo</div><div>Tipo</div><div>Empresa</div><div>Seguro</div><div>VTV</div><div>Conductor</div><div>Estado</div><div></div></div>
+          <div class="th tc-v"><div></div><div>Vehículo</div><div>Tipo</div><div>Empresa</div><div>Seguro</div><div>VTV</div><div>Conductor</div><div>Estado</div><div>Acc.</div></div>
           <div id="vehiculos-list"><div class="loader"><div class="spin"></div>Cargando...</div></div>
         </div>
       </div>
@@ -383,6 +397,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
         <div class="ph">
           <div style="font-size:15px;font-weight:600">Historial de checks</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="hist-filtro-pais" style="font-size:12px;width:auto;display:none" onchange="loadHistorial()"><option value="">🌎 Todos los países</option></select>
             <select id="hist-filtro-v" style="font-size:12px;width:auto" onchange="loadHistorial()"><option value="">Todos los vehículos</option></select>
             <select id="hist-filtro-fecha" style="font-size:12px;width:auto" onchange="loadHistorial()">
               <option value="hoy">Hoy</option>
@@ -398,6 +413,12 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
       </div>
 
       <div class="section" id="s-satelital">
+        <div class="super-admin-pais-bar" style="display:none;background:var(--blue-light);border-radius:var(--radius);padding:8px 12px;margin-bottom:12px;display:none;align-items:center;gap:10px">
+          <span style="font-size:12px;font-weight:600;color:var(--blue)">🌎 Filtrar por país:</span>
+          <select class="sa-pais-filter" style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:white;color:var(--text)" onchange="cambiarPais(this.value)">
+            <option value="">Todos los países</option>
+          </select>
+        </div>
         <div class="ph">
           <div style="font-size:15px;font-weight:600">📍 Accesos satelitales</div>
           <button class="btn btn-primary admin-only" onclick="openModal('gps')">+ Agregar GPS</button>
@@ -408,12 +429,18 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 
       <!-- CONDUCTORES -->
       <div class="section" id="s-conductores">
+        <div class="super-admin-pais-bar" style="display:none;background:var(--blue-light);border-radius:var(--radius);padding:8px 12px;margin-bottom:12px;display:none;align-items:center;gap:10px">
+          <span style="font-size:12px;font-weight:600;color:var(--blue)">🌎 Filtrar por país:</span>
+          <select class="sa-pais-filter" style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:white;color:var(--text)" onchange="cambiarPais(this.value)">
+            <option value="">Todos los países</option>
+          </select>
+        </div>
         <div class="ph">
           <div style="font-size:15px;font-weight:600">Conductores</div>
           <button class="btn btn-primary" onclick="openModal('conductor')">+ Agregar conductor</button>
         </div>
         <div class="data-table">
-          <div class="th tc-c"><div></div><div>Conductor</div><div>Vehículo</div><div>Venc. licencia</div><div>Doc.</div><div>Estado</div><div></div></div>
+          <div class="th tc-c"><div></div><div>Conductor</div><div>Vehículo</div><div>Venc. licencia</div><div>Doc.</div><div>Estado</div><div>Acc.</div></div>
           <div id="conductores-list"><div class="loader"><div class="spin"></div>Cargando...</div></div>
         </div>
       </div>
@@ -430,6 +457,12 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 
       <!-- CLIENTES -->
       <div class="section" id="s-clientes">
+        <div class="super-admin-pais-bar" style="display:none;background:var(--blue-light);border-radius:var(--radius);padding:8px 12px;margin-bottom:12px;display:none;align-items:center;gap:10px">
+          <span style="font-size:12px;font-weight:600;color:var(--blue)">🌎 Filtrar por país:</span>
+          <select class="sa-pais-filter" style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:white;color:var(--text)" onchange="cambiarPais(this.value)">
+            <option value="">Todos los países</option>
+          </select>
+        </div>
         <div class="ph">
           <div style="font-size:15px;font-weight:600">Clientes</div>
           <button class="btn btn-primary" onclick="openModal('cliente')">+ Nuevo cliente</button>
@@ -444,12 +477,18 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 
       <!-- EMPRESAS -->
       <div class="section" id="s-empresas">
+        <div class="super-admin-pais-bar" style="display:none;background:var(--blue-light);border-radius:var(--radius);padding:8px 12px;margin-bottom:12px;display:none;align-items:center;gap:10px">
+          <span style="font-size:12px;font-weight:600;color:var(--blue)">🌎 Filtrar por país:</span>
+          <select class="sa-pais-filter" style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:white;color:var(--text)" onchange="cambiarPais(this.value)">
+            <option value="">Todos los países</option>
+          </select>
+        </div>
         <div class="ph">
           <div style="font-size:15px;font-weight:600">Empresas de transporte</div>
           <button class="btn btn-primary" onclick="openModal('empresa')">+ Nueva empresa</button>
         </div>
         <div class="data-table">
-          <div class="th" style="grid-template-columns:1fr 110px 150px 80px"><div>Empresa</div><div>CUIT</div><div>Contacto</div><div>Acciones</div></div>
+          <div class="th" style="grid-template-columns:1fr 110px 150px 110px"><div>Empresa</div><div>CUIT</div><div>Contacto</div><div>Acciones</div></div>
           <div id="empresas-list"><div class="loader"><div class="spin"></div>Cargando...</div></div>
         </div>
       </div>
@@ -745,18 +784,67 @@ async function afterLogin(user){
   await loadPaisesCache();
   // Si no es super_admin, fijar su país
   if(!isSuperAdmin()) PAIS_ACTIVO = CP?.pais_id || null;
-  setupUI();hideSplash();
+  try{ setupUI(); } catch(e){ console.error('setupUI error:',e); }
+  hideSplash();
   $('login-screen').classList.remove('show');
   $('app').classList.add('show');
   goTo('dashboard');
 }
 
+// Banderas por código de país
+const BANDERAS={AR:'🇦🇷',MX:'🇲🇽',CL:'🇨🇱',PE:'🇵🇪',CO:'🇨🇴',UY:'🇺🇾'};
+function getFlag(paisId){
+  const p=PAISES_CACHE.find(x=>x.id===paisId);
+  return p?(BANDERAS[p.codigo]||'🌎')+' '+p.nombre:'';
+}
+
 function setupUI(){
   const nombre=CP?.nombre||CU?.email||'Usuario',rol=CP?.rol||'operador';
   const ini=nombre.split(' ').slice(0,2).map(n=>n[0]||'').join('').toUpperCase();
-  $('u-av').textContent=ini;$('u-name').textContent=nombre;
-  $('u-role').textContent=rol==='admin'?'Administrador':'Operador';
-  document.querySelectorAll('.admin-only').forEach(el=>el.style.display=isAdmin()?'flex':'none');
+  const rolLabel=rol==='super_admin'?'Super Admin':rol==='admin'?'Administrador':'Operador';
+  // Sidebar user info
+  const uav=$('u-av');if(uav)uav.textContent=ini;
+  const uname=$('u-name');if(uname)uname.textContent=nombre;
+  const urole=$('u-role');if(urole)urole.textContent=rolLabel;
+  // País del usuario en sidebar con bandera
+  const paisLabel=$('u-pais-label');
+  if(paisLabel){
+    if(isSuperAdmin()) paisLabel.textContent='🌎 Super Admin';
+    else if(CP?.pais_id) paisLabel.textContent=getFlag(CP.pais_id);
+  }
+  // Topbar sub con bandera
+  const sub=$('tb-sub');
+  if(sub){
+    if(isSuperAdmin()) sub.textContent='🌎 Todos los países';
+    else if(CP?.pais_id) sub.textContent=getFlag(CP.pais_id);
+  }
+  // Selector y controles de país — solo super_admin
+  const sw=$('pais-selector-wrap');
+  const pi=$('pais-indicator');
+  if(isSuperAdmin()){
+    // Mostrar selector global en topbar
+    if(sw) sw.style.display='block';
+    // Mostrar indicador de país
+    if(pi){ pi.style.display='none'; }
+    // Poblar opciones de país
+    const paisOpts='<option value="">🌎 Todos los países</option>'+PAISES_CACHE.map(p=>`<option value="${p.id}">${BANDERAS[p.codigo]||''} ${p.nombre}</option>`).join('');
+    const sel=$('pais-selector');
+    if(sel) sel.innerHTML=paisOpts;
+    // Poblar filtro de país del historial
+    const hfp=$('hist-filtro-pais');
+    if(hfp){ hfp.style.display='block'; hfp.innerHTML=paisOpts; }
+    // Mostrar y poblar filtros de país en todas las secciones
+    document.querySelectorAll('.sa-pais-filter').forEach(sel=>{
+      sel.parentElement.style.display='flex';
+      sel.innerHTML=paisOpts;
+    });
+  } else {
+    if(sw) sw.style.display='none';
+    if(pi) pi.style.display='none';
+  }
+  document.querySelectorAll('.admin-only').forEach(el=>{if(el)el.style.display=isAdmin()?'flex':'none'});
+  const ami=$('admin-menu-items');if(ami&&(isAdmin()||isSuperAdmin()))ami.style.display='block';
+  popularSelectsPais();
 }
 
 async function doLogout(){
@@ -842,10 +930,12 @@ async function loadVehiculos(){
     empSelCheck.innerHTML='<option value="">— Todas las empresas —</option>'+EMPRESAS_CACHE.map(e=>`<option value="${e.id}">${e.nombre}</option>`).join('');
   }
   $('check-vehiculo-sel').innerHTML='<option value="">— Seleccioná un vehículo —</option>'+data.map(v=>`<option value="${v.id}">${v.patente} — ${v.marca} ${v.modelo}</option>`).join('');
-  $('hist-filtro-v').innerHTML='<option value="">Todos los vehículos</option>'+data.map(v=>`<option value="${v.id}">${v.patente}</option>`).join('');
+  // Filtrar vehículos del historial según país activo
+  const vehsFiltrados = data || [];
+  $('hist-filtro-v').innerHTML='<option value="">Todos los vehículos</option>'+vehsFiltrados.map(v=>`<option value="${v.id}">${v.patente}</option>`).join('');
   $('mc-vehiculo').innerHTML='<option value="">Sin asignar</option>'+data.map(v=>`<option value="${v.id}">${v.patente} — ${v.marca}</option>`).join('');
   el.innerHTML=data.map(v=>{const es=ev(v.venc_seguro),evv=ev(v.venc_vtv),ef=es==='err'||evv==='err'?'err':es==='warn'||evv==='warn'?'warn':'ok';
-    return `<div class="tr tc-v" onclick="verDetalle(${JSON.stringify(v).replace(/"/g,'&quot;')})"><div class="v-icon ${v.tipo==='camion'?'vi-c':'vi-u'}">${v.tipo==='camion'?'🚛':'🚐'}</div><div><div style="font-weight:600">${v.patente}</div><div style="font-size:11px;color:var(--text2)">${v.marca||''} ${v.modelo||''} · ${v.anio||''}</div></div><div><span class="badge ${v.tipo==='camion'?'b-blue':'b-ok'}">${v.tipo==='camion'?'Camión':'Utilitario'}</span></div><div style="font-size:12px">${v.empresas?.nombre||'—'}</div><div style="font-size:12px">${fd(v.venc_seguro)}<br><span style="color:var(--${es==='ok'?'green':es==='warn'?'amber':'red'})">${es==='ok'?'Vigente':es==='warn'?dh(v.venc_seguro)+' días':'Vencido'}</span></div><div style="font-size:12px">${fd(v.venc_vtv)}<br><span style="color:var(--${evv==='ok'?'green':evv==='warn'?'amber':'red'})">${evv==='ok'?'Vigente':evv==='warn'?dh(v.venc_vtv)+' días':'Vencido'}</span></div><div style="font-size:12px">${v.conductores?.nombre||'—'}</div><div>${bdg(ef)}</div><div><button class="btn btn-sm" onclick="event.stopPropagation();editarV(JSON.parse(decodeURIComponent(this.dataset.v)))" data-v="${encodeURIComponent(JSON.stringify(v))}" title="Editar">✏️</button></div></div>`;;}).join('');
+    return `<div class="tr tc-v" onclick="verDetalle(${JSON.stringify(v).replace(/"/g,'&quot;')})"><div class="v-icon ${v.tipo==='camion'?'vi-c':'vi-u'}">${v.tipo==='camion'?'🚛':'🚐'}</div><div><div style="font-weight:600">${v.patente}</div><div style="font-size:11px;color:var(--text2)">${v.marca||''} ${v.modelo||''} · ${v.anio||''}</div></div><div><span class="badge ${v.tipo==='camion'?'b-blue':'b-ok'}">${v.tipo==='camion'?'Camión':'Utilitario'}</span></div><div style="font-size:12px">${v.empresas?.nombre||'—'}</div><div style="font-size:12px">${fd(v.venc_seguro)}<br><span style="color:var(--${es==='ok'?'green':es==='warn'?'amber':'red'})">${es==='ok'?'Vigente':es==='warn'?dh(v.venc_seguro)+' días':'Vencido'}</span></div><div style="font-size:12px">${fd(v.venc_vtv)}<br><span style="color:var(--${evv==='ok'?'green':evv==='warn'?'amber':'red'})">${evv==='ok'?'Vigente':evv==='warn'?dh(v.venc_vtv)+' días':'Vencido'}</span></div><div style="font-size:12px">${v.conductores?.nombre||'—'}</div><div>${bdg(ef)}</div><div style="display:flex;gap:4px"><button class="btn btn-sm" onclick="event.stopPropagation();editarV(JSON.parse(decodeURIComponent(this.dataset.v)))" data-v="${encodeURIComponent(JSON.stringify(v))}" title="Editar">✏️</button>${isSuperAdmin()?`<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();eliminarRegistro('vehiculos','${v.id}',loadVehiculos)" title="Eliminar">🗑️</button>`:''}</div></div>`;;}).join('');
 }
 
 async function guardarVehiculo(){
@@ -1084,6 +1174,20 @@ let HIST_DATA_CACHE = [];
 async function loadHistorial(){
   const el=$('historial-list');
   el.innerHTML='<div class="loader"><div class="spin"></div>Cargando...</div>';
+  // País seleccionado en el filtro del historial (solo super_admin)
+  const paisFiltroId=$('hist-filtro-pais')?.value||null;
+  // Recargar selector de vehículos según el país filtrado
+  const selV=$('hist-filtro-v');
+  if(selV){
+    let qv=db.from('vehiculos').select('id,patente').eq('activo',true);
+    if(paisFiltroId) qv=qv.eq('pais_id',paisFiltroId);
+    else if(!isSuperAdmin()) qv=qv.eq('pais_id',CP?.pais_id||'');
+    const{data:vehs}=await qv.order('patente');
+    const vidActual=selV.value;
+    selV.innerHTML='<option value="">Todos los vehículos</option>'+(vehs||[]).map(v=>`<option value="${v.id}">${v.patente}</option>`).join('');
+    // Restaurar selección si sigue siendo válida
+    if(vidActual&&(vehs||[]).find(v=>v.id===vidActual)) selV.value=vidActual;
+  }
   const vid=$('hist-filtro-v')?.value;
   const fechaFiltro=$('hist-filtro-fecha')?.value||'hoy';
   const today=new Date().toISOString().split('T')[0];
@@ -1092,9 +1196,15 @@ async function loadHistorial(){
   else if(fechaFiltro==='mes'){const d=new Date();d.setDate(d.getDate()-30);desde=d.toISOString().split('T')[0];}
   else if(fechaFiltro==='todo'){desde='2020-01-01';}
 
-  let q=withPais(db.from('checks_diarios')
-    .select('*, vehiculos(patente,marca,modelo,empresa_id,nombre_empresa_gps,link_gps,empresas(nombre)), clientes(nombre)'))
-    .order('fecha',{ascending:false}).order('created_at',{ascending:false})
+  // Aplicar filtro de país: usa el filtro del historial si es super_admin, sino usa withPais normal
+  let q=db.from('checks_diarios')
+    .select('*, vehiculos(patente,marca,modelo,empresa_id,nombre_empresa_gps,link_gps,empresas(nombre)), clientes(nombre)');
+  if(isSuperAdmin()){
+    if(paisFiltroId) q=q.eq('pais_id',paisFiltroId);
+  } else {
+    q=q.eq('pais_id',CP?.pais_id||'');
+  }
+  q=q.order('fecha',{ascending:false}).order('created_at',{ascending:false})
     .gte('fecha',desde).limit(200);
   if(vid) q=q.eq('vehiculo_id',vid);
   const{data,error}=await q;
@@ -1215,7 +1325,10 @@ async function loadClientes(){
       <div><div style="font-weight:600">${c.nombre}</div></div>
       <div style="font-size:12px">${c.direccion||'—'}</div>
       <div style="font-size:12px">${c.telefono||''}<br>${c.email||''}</div>
-      <div><button class="btn btn-sm" onclick="editarCliente(${JSON.stringify(c).replace(/"/g,'&quot;')})" title="Editar">✏️</button></div>
+      <div style="display:flex;gap:4px">
+        <button class="btn btn-sm" onclick="editarCliente(${JSON.stringify(c).replace(/"/g,'&quot;')})" title="Editar">✏️</button>
+        ${isSuperAdmin()?`<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();eliminarRegistro('clientes','${c.id}',loadClientes)" title="Eliminar">🗑️</button>`:''}
+      </div>
     </div>`).join('');
 }
 
@@ -1257,7 +1370,7 @@ async function guardarCliente(){
 async function loadEmpresas(){
   if(!isAdmin()){$('empresas-list').innerHTML='<div class="empty">Solo administradores</div>';return}
   $('empresas-list').innerHTML='<div class="loader"><div class="spin"></div>Cargando...</div>';
-  const{data,error:empErr}=await withPais(db.from('empresas').select('*')).order('nombre');
+  const{data,error:empErr}=await withPais(db.from('empresas').select('*').eq('activo',true)).order('nombre');
   if(empErr)console.error('empresas error:',empErr.message);
   EMPRESAS_CACHE=data||[];
   // Poblar selects de empresa en modales
@@ -1265,11 +1378,14 @@ async function loadEmpresas(){
   [$('mv-empresa'),$('mc-empresa')].forEach(sel=>{if(sel){sel.innerHTML='<option value="">Sin empresa</option>'+empOpts}});
   if(!data?.length){$('empresas-list').innerHTML='<div class="empty">No hay empresas registradas.</div>';return}
   $('empresas-list').innerHTML=data.map(e=>`
-    <div class="tr" style="grid-template-columns:1fr 110px 150px 80px" onclick="editarEmpresa(${JSON.stringify(e).replace(/"/g,'&quot;')})">
+    <div class="tr" style="grid-template-columns:1fr 110px 150px 110px" onclick="editarEmpresa(${JSON.stringify(e).replace(/"/g,'&quot;')})">
       <div><strong style="font-weight:600">${e.nombre}</strong>${e.direccion?`<br><span style="font-size:11px;color:var(--text2)">${e.direccion}</span>`:''}</div>
       <div style="font-size:12px">${e.cuit||'—'}</div>
       <div style="font-size:12px">${e.email||''}<br>${e.telefono||''}</div>
-      <div><button class="btn btn-sm" onclick="event.stopPropagation();editarEmpresa(${JSON.stringify(e).replace(/"/g,'&quot;')})">✏️ Editar</button></div>
+      <div style="display:flex;gap:4px">
+        <button class="btn btn-sm" onclick="event.stopPropagation();editarEmpresa(${JSON.stringify(e).replace(/"/g,'&quot;')})" title="Editar">✏️</button>
+        ${isSuperAdmin()?`<button class="btn btn-sm" style="background:var(--red-light);color:var(--red);border:1px solid #F09595" onclick="event.stopPropagation();eliminarRegistro('empresas','${e.id}',loadEmpresas)" title="Eliminar">🗑️</button>`:''}
+      </div>
     </div>`).join('');
 }
 
@@ -1312,16 +1428,26 @@ async function crearUsuario(){
   if(pass.length<6){toast('Contraseña mínimo 6 caracteres','err');return}
   const btn=$('nu-btn');btn.disabled=true;btn.textContent='Creando...';
   const paisId=$('nu-pais')?.value||null;
-  const{data,error}=await db.auth.signUp({email,password:pass,options:{data:{nombre,rol,pais_id:paisId}}});
-  if(error){toast('Error: '+error.message,'err');btn.disabled=false;btn.textContent='✅ Crear usuario';return}
-  if(data.user){
-    await db.from('profiles').upsert({id:data.user.id,email,nombre,rol,pais_id:paisId||null,activo:true},{onConflict:'id'});
+  try {
+    const res = await fetch('/api/crear-usuario', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email, password: pass, nombre, rol, pais_id: paisId})
+    });
+    const data = await res.json();
+    if(!res.ok || data.error){
+      toast('Error: '+(data.error||'No se pudo crear el usuario'),'err');
+      btn.disabled=false;btn.textContent='✅ Crear usuario';return;
+    }
+    toast(`Usuario ${nombre} creado ✓`,'ok');
+    closeModal('nuevo-usuario');
+    ['nu-nombre','nu-email','nu-pass'].forEach(f=>$(f).value='');
+    btn.disabled=false;btn.textContent='✅ Crear usuario';
+    setTimeout(loadUsuarios,1000);
+  } catch(err) {
+    toast('Error de conexión: '+err.message,'err');
+    btn.disabled=false;btn.textContent='✅ Crear usuario';
   }
-  toast(`Usuario ${nombre} creado ✓`,'ok');
-  closeModal('nuevo-usuario');
-  ['nu-nombre','nu-email','nu-pass'].forEach(f=>$(f).value='');
-  btn.disabled=false;btn.textContent='✅ Crear usuario';
-  setTimeout(loadUsuarios,1000);
 }
 
 
@@ -1467,7 +1593,7 @@ async function loadPaisesCache(){
 
 function paisOptsHTML(includeAll=false){
   const all = includeAll ? '<option value="">🌎 Todos los países</option>' : '<option value="">Seleccioná país</option>';
-  return all + PAISES_CACHE.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
+  return all + PAISES_CACHE.map(p=>`<option value="${p.id}">${BANDERAS[p.codigo]||'🌎'} ${p.nombre}</option>`).join('');
 }
 
 function popularSelectsPais(){
@@ -1495,16 +1621,29 @@ async function cambiarPais(paisId){
     const sec = active.id.replace('s-','');
     const L={dashboard:loadDashboard,vehiculos:loadVehiculos,historial:loadHistorial,
              conductores:loadConductores,alertas:loadAlertas,empresas:loadEmpresas,
-             clientes:loadClientes};
+             clientes:loadClientes,satelital:loadSatelital};
     if(L[sec]) L[sec]();
   }
   // Mostrar país activo en topbar sub
   if(paisId){
     const p = PAISES_CACHE.find(x=>x.id===paisId);
-    $('tb-sub').textContent = p ? '📍 ' + p.nombre : '';
+    $('tb-sub').textContent = p ? (BANDERAS[p.codigo]||'📍')+' '+p.nombre : '';
   } else {
     $('tb-sub').textContent = '🌎 Todos los países';
   }
+  // Actualizar topbar sub con bandera persistente
+  const sub=$('tb-sub');
+  if(sub){
+    if(paisId){
+      const p=PAISES_CACHE.find(x=>x.id===paisId);
+      sub.textContent=p?(BANDERAS[p.codigo]||'📍')+' '+p.nombre:'';
+    } else {
+      sub.textContent='🌎 Todos los países';
+    }
+  }
+  // Sincronizar filtro de país del historial con el selector global
+  const hfp=$('hist-filtro-pais');
+  if(hfp) hfp.value=paisId||'';
 }
 
 // ── PÁGINAS ───────────────────────────────────────────────────────────────
@@ -1551,7 +1690,7 @@ async function loadPaises(){
 async function loadConductores(){
   const el=$('conductores-list');
   el.innerHTML='<div class="loader"><div class="spin"></div>Cargando...</div>';
-  const{data,error}=await withPais(db.from('conductores').select('*, vehiculos(patente), empresas(nombre)')).order('created_at',{ascending:false});
+  const{data,error}=await withPais(db.from('conductores').select('*, vehiculos(patente), empresas(nombre)').eq('activo',true)).order('created_at',{ascending:false});
   if(error){el.innerHTML=`<div class="empty">Error: ${error.message}</div>`;return}
   if(!data?.length){el.innerHTML='<div class="empty">Sin conductores. <button class="btn btn-sm btn-primary" onclick="openModal(&quot;conductor&quot;)">+ Agregar</button></div>';return}
   // Popular selects
@@ -1570,7 +1709,7 @@ async function loadConductores(){
       <div style="font-size:12px">${fd(c.venc_licencia)}<br><span style="color:var(--${el2==='ok'?'green':el2==='warn'?'amber':'red'})">${el2==='ok'?'Vigente':el2==='warn'?dh(c.venc_licencia)+' días':'Vencida'}</span></div>
       <div>${bdg(el2)}</div>
       <div><span class="badge ${c.activo?'b-ok':'b-gray'}">${c.activo?'Activo':'Inactivo'}</span></div>
-      <div><button class="btn btn-sm" onclick="event.stopPropagation();editarCond(JSON.parse(decodeURIComponent(this.dataset.c)))" data-c="${encodeURIComponent(JSON.stringify(c))}" title="Editar">✏️</button></div>
+      <div style="display:flex;gap:4px"><button class="btn btn-sm" onclick="event.stopPropagation();editarCond(JSON.parse(decodeURIComponent(this.dataset.c)))" data-c="${encodeURIComponent(JSON.stringify(c))}" title="Editar">✏️</button>${isSuperAdmin()?`<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();eliminarRegistro('conductores','${c.id}',loadConductores)" title="Eliminar">🗑️</button>`:''}</div>
     </div>`;}).join('');
 }
 
@@ -1645,6 +1784,20 @@ async function toggleRol(uid,rolActual){
   toast(`Rol cambiado a ${nuevoRol} ✓`,'ok');loadUsuarios();
 }
 
+
+// ── ELIMINAR REGISTRO (solo Super Admin) ──────────────────────────────────
+async function eliminarRegistro(tabla, id, recargar){
+  if(!isSuperAdmin()){toast('Solo el Super Admin puede eliminar','err');return}
+  const nombres={vehiculos:'vehículo',empresas:'empresa',conductores:'conductor',clientes:'cliente'};
+  const nombre=nombres[tabla]||'registro';
+  if(!confirm(`¿Dar de baja este ${nombre}? Quedará inactivo y no aparecerá en los listados.`)) return;
+  // Soft delete: marcar como inactivo en lugar de borrar (evita errores de foreign key)
+  const{error}=await db.from(tabla).update({activo:false}).eq('id',id);
+  if(error){toast('Error: '+error.message,'err');return}
+  toast(`${nombre.charAt(0).toUpperCase()+nombre.slice(1)} dado de baja ✓`,'ok');
+  if(recargar) recargar();
+}
+
 // MODALES
 async function openModal(id){
   if(id==='vehiculo'){
@@ -1708,10 +1861,16 @@ const today=new Date();
 $('check-fecha-label').textContent='Check diario — '+today.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
 (async()=>{
-  const{data:{session}}=await db.auth.getSession();
-  if(session?.user){
-    await afterLogin(session.user);
-  } else {
+  try{
+    const{data:{session}}=await db.auth.getSession();
+    if(session?.user){
+      await afterLogin(session.user);
+    } else {
+      hideSplash();
+      $('login-screen').classList.add('show');
+    }
+  } catch(err){
+    console.error('Init error:', err);
     hideSplash();
     $('login-screen').classList.add('show');
   }
