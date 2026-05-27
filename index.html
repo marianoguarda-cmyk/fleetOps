@@ -1086,6 +1086,12 @@ let HIST_DATA_CACHE = [];
 async function loadHistorial(){
   const el=$('historial-list');
   el.innerHTML='<div class="loader"><div class="spin"></div>Cargando...</div>';
+  // Recargar selector de vehículos filtrado por país activo
+  const selV=$('hist-filtro-v');
+  if(selV){
+    const{data:vehs}=await withPais(db.from('vehiculos').select('id,patente').eq('activo',true)).order('patente');
+    selV.innerHTML='<option value="">Todos los vehículos</option>'+(vehs||[]).map(v=>`<option value="${v.id}">${v.patente}</option>`).join('');
+  }
   const vid=$('hist-filtro-v')?.value;
   const fechaFiltro=$('hist-filtro-fecha')?.value||'hoy';
   const today=new Date().toISOString().split('T')[0];
@@ -1479,7 +1485,7 @@ async function loadPaisesCache(){
 
 function paisOptsHTML(includeAll=false){
   const all = includeAll ? '<option value="">🌎 Todos los países</option>' : '<option value="">Seleccioná país</option>';
-  return all + PAISES_CACHE.map(p=>`<option value="${p.id}">${p.nombre}</option>`).join('');
+  return all + PAISES_CACHE.map(p=>`<option value="${p.id}">${BANDERAS[p.codigo]||'🌎'} ${p.nombre}</option>`).join('');
 }
 
 function popularSelectsPais(){
@@ -1513,7 +1519,7 @@ async function cambiarPais(paisId){
   // Mostrar país activo en topbar sub
   if(paisId){
     const p = PAISES_CACHE.find(x=>x.id===paisId);
-    $('tb-sub').textContent = p ? '📍 ' + p.nombre : '';
+    $('tb-sub').textContent = p ? (BANDERAS[p.codigo]||'📍')+' '+p.nombre : '';
   } else {
     $('tb-sub').textContent = '🌎 Todos los países';
   }
