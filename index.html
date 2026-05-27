@@ -152,6 +152,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 .empty{text-align:center;padding:40px;color:var(--text2);font-size:13px}
 .admin-only{display:none}
 .info-box{background:var(--blue-light);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--blue);margin-bottom:14px}
+.btn-danger{background:var(--red-light);color:var(--red);border:1px solid #F09595}
 </style>
 </head>
 <body>
@@ -235,10 +236,8 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
         <div class="topbar-sub" id="tb-sub"></div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-        <!-- Indicador de país activo — siempre visible para super_admin -->
-        <div id="pais-indicator" style="display:none;background:var(--blue);color:white;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap">
-          🌎 Todos los países
-        </div>
+        <!-- Indicador de país activo — solo cuando hay país seleccionado -->
+        <div id="pais-indicator" style="display:none;background:var(--blue);color:white;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap"></div>
         <!-- Selector de país — solo super_admin -->
         <div id="pais-selector-wrap" style="display:none">
           <select id="pais-selector" style="font-size:12px;padding:5px 10px;border-radius:20px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);cursor:pointer" onchange="cambiarPais(this.value)">
@@ -489,7 +488,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
           <button class="btn btn-primary" onclick="openModal('empresa')">+ Nueva empresa</button>
         </div>
         <div class="data-table">
-          <div class="th" style="grid-template-columns:1fr 110px 150px 80px"><div>Empresa</div><div>CUIT</div><div>Contacto</div><div>Acciones</div></div>
+          <div class="th" style="grid-template-columns:1fr 110px 150px 110px"><div>Empresa</div><div>CUIT</div><div>Contacto</div><div>Acciones</div></div>
           <div id="empresas-list"><div class="loader"><div class="spin"></div>Cargando...</div></div>
         </div>
       </div>
@@ -826,7 +825,7 @@ function setupUI(){
     // Mostrar selector global en topbar
     if(sw) sw.style.display='block';
     // Mostrar indicador de país
-    if(pi){ pi.style.display='flex'; pi.textContent='🌎 Todos los países'; }
+    if(pi){ pi.style.display='none'; }
     // Poblar opciones de país
     const paisOpts='<option value="">🌎 Todos los países</option>'+PAISES_CACHE.map(p=>`<option value="${p.id}">${BANDERAS[p.codigo]||''} ${p.nombre}</option>`).join('');
     const sel=$('pais-selector');
@@ -936,7 +935,7 @@ async function loadVehiculos(){
   $('hist-filtro-v').innerHTML='<option value="">Todos los vehículos</option>'+vehsFiltrados.map(v=>`<option value="${v.id}">${v.patente}</option>`).join('');
   $('mc-vehiculo').innerHTML='<option value="">Sin asignar</option>'+data.map(v=>`<option value="${v.id}">${v.patente} — ${v.marca}</option>`).join('');
   el.innerHTML=data.map(v=>{const es=ev(v.venc_seguro),evv=ev(v.venc_vtv),ef=es==='err'||evv==='err'?'err':es==='warn'||evv==='warn'?'warn':'ok';
-    return `<div class="tr tc-v" onclick="verDetalle(${JSON.stringify(v).replace(/"/g,'&quot;')})"><div class="v-icon ${v.tipo==='camion'?'vi-c':'vi-u'}">${v.tipo==='camion'?'🚛':'🚐'}</div><div><div style="font-weight:600">${v.patente}</div><div style="font-size:11px;color:var(--text2)">${v.marca||''} ${v.modelo||''} · ${v.anio||''}</div></div><div><span class="badge ${v.tipo==='camion'?'b-blue':'b-ok'}">${v.tipo==='camion'?'Camión':'Utilitario'}</span></div><div style="font-size:12px">${v.empresas?.nombre||'—'}</div><div style="font-size:12px">${fd(v.venc_seguro)}<br><span style="color:var(--${es==='ok'?'green':es==='warn'?'amber':'red'})">${es==='ok'?'Vigente':es==='warn'?dh(v.venc_seguro)+' días':'Vencido'}</span></div><div style="font-size:12px">${fd(v.venc_vtv)}<br><span style="color:var(--${evv==='ok'?'green':evv==='warn'?'amber':'red'})">${evv==='ok'?'Vigente':evv==='warn'?dh(v.venc_vtv)+' días':'Vencido'}</span></div><div style="font-size:12px">${v.conductores?.nombre||'—'}</div><div>${bdg(ef)}</div><div><button class="btn btn-sm" onclick="event.stopPropagation();editarV(JSON.parse(decodeURIComponent(this.dataset.v)))" data-v="${encodeURIComponent(JSON.stringify(v))}" title="Editar">✏️</button></div></div>`;;}).join('');
+    return `<div class="tr tc-v" onclick="verDetalle(${JSON.stringify(v).replace(/"/g,'&quot;')})"><div class="v-icon ${v.tipo==='camion'?'vi-c':'vi-u'}">${v.tipo==='camion'?'🚛':'🚐'}</div><div><div style="font-weight:600">${v.patente}</div><div style="font-size:11px;color:var(--text2)">${v.marca||''} ${v.modelo||''} · ${v.anio||''}</div></div><div><span class="badge ${v.tipo==='camion'?'b-blue':'b-ok'}">${v.tipo==='camion'?'Camión':'Utilitario'}</span></div><div style="font-size:12px">${v.empresas?.nombre||'—'}</div><div style="font-size:12px">${fd(v.venc_seguro)}<br><span style="color:var(--${es==='ok'?'green':es==='warn'?'amber':'red'})">${es==='ok'?'Vigente':es==='warn'?dh(v.venc_seguro)+' días':'Vencido'}</span></div><div style="font-size:12px">${fd(v.venc_vtv)}<br><span style="color:var(--${evv==='ok'?'green':evv==='warn'?'amber':'red'})">${evv==='ok'?'Vigente':evv==='warn'?dh(v.venc_vtv)+' días':'Vencido'}</span></div><div style="font-size:12px">${v.conductores?.nombre||'—'}</div><div>${bdg(ef)}</div><div style="display:flex;gap:4px"><button class="btn btn-sm" onclick="event.stopPropagation();editarV(JSON.parse(decodeURIComponent(this.dataset.v)))" data-v="${encodeURIComponent(JSON.stringify(v))}" title="Editar">✏️</button>${isSuperAdmin()?`<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();eliminarRegistro('vehiculos','${v.id}',loadVehiculos)" title="Eliminar">🗑️</button>`:''}</div></div>`;;}).join('');
 }
 
 async function guardarVehiculo(){
@@ -1326,7 +1325,10 @@ async function loadClientes(){
       <div><div style="font-weight:600">${c.nombre}</div></div>
       <div style="font-size:12px">${c.direccion||'—'}</div>
       <div style="font-size:12px">${c.telefono||''}<br>${c.email||''}</div>
-      <div><button class="btn btn-sm" onclick="editarCliente(${JSON.stringify(c).replace(/"/g,'&quot;')})" title="Editar">✏️</button></div>
+      <div style="display:flex;gap:4px">
+        <button class="btn btn-sm" onclick="editarCliente(${JSON.stringify(c).replace(/"/g,'&quot;')})" title="Editar">✏️</button>
+        ${isSuperAdmin()?`<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();eliminarRegistro('clientes','${c.id}',loadClientes)" title="Eliminar">🗑️</button>`:''}
+      </div>
     </div>`).join('');
 }
 
@@ -1704,7 +1706,7 @@ async function loadConductores(){
       <div style="font-size:12px">${fd(c.venc_licencia)}<br><span style="color:var(--${el2==='ok'?'green':el2==='warn'?'amber':'red'})">${el2==='ok'?'Vigente':el2==='warn'?dh(c.venc_licencia)+' días':'Vencida'}</span></div>
       <div>${bdg(el2)}</div>
       <div><span class="badge ${c.activo?'b-ok':'b-gray'}">${c.activo?'Activo':'Inactivo'}</span></div>
-      <div><button class="btn btn-sm" onclick="event.stopPropagation();editarCond(JSON.parse(decodeURIComponent(this.dataset.c)))" data-c="${encodeURIComponent(JSON.stringify(c))}" title="Editar">✏️</button></div>
+      <div style="display:flex;gap:4px"><button class="btn btn-sm" onclick="event.stopPropagation();editarCond(JSON.parse(decodeURIComponent(this.dataset.c)))" data-c="${encodeURIComponent(JSON.stringify(c))}" title="Editar">✏️</button>${isSuperAdmin()?`<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();eliminarRegistro('conductores','${c.id}',loadConductores)" title="Eliminar">🗑️</button>`:''}</div>
     </div>`;}).join('');
 }
 
@@ -1777,6 +1779,19 @@ async function toggleRol(uid,rolActual){
   const{error}=await db.from('profiles').update({rol:nuevoRol}).eq('id',uid);
   if(error){toast('Error: '+error.message,'err');return}
   toast(`Rol cambiado a ${nuevoRol} ✓`,'ok');loadUsuarios();
+}
+
+
+// ── ELIMINAR REGISTRO (solo Super Admin) ──────────────────────────────────
+async function eliminarRegistro(tabla, id, recargar){
+  if(!isSuperAdmin()){toast('Solo el Super Admin puede eliminar','err');return}
+  const nombres={vehiculos:'vehículo',empresas:'empresa',conductores:'conductor',clientes:'cliente'};
+  const nombre=nombres[tabla]||'registro';
+  if(!confirm(`¿Eliminar este ${nombre}? Esta acción no se puede deshacer.`)) return;
+  const{error}=await db.from(tabla).delete().eq('id',id);
+  if(error){toast('Error al eliminar: '+error.message,'err');return}
+  toast(`${nombre.charAt(0).toUpperCase()+nombre.slice(1)} eliminado ✓`,'ok');
+  if(recargar) recargar();
 }
 
 // MODALES
