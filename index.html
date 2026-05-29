@@ -1843,10 +1843,9 @@ async function loadPlanificacion(){
     const plan = planMap[key];
     const planificados = plan?.vehiculos_planificados || 0;
     const checks = checksMap[fecha] || 0;
-    const vencido = estaVencido(fecha);
     const esFuturo = fecha > hoy;
     const esHoy = fecha === hoy;
-    const puedeEditar = isAdmin() && !vencido;
+    const puedeEditar = isAdmin();
 
     const porcentaje = planificados > 0 ? Math.min(100, Math.round(checks/planificados*100)) : 0;
     const color = planificados === 0 ? 'var(--border)' :
@@ -1871,8 +1870,7 @@ async function loadPlanificacion(){
         <div style="height:4px;background:${color};border-radius:2px;width:${porcentaje}%;transition:width .3s"></div>
       </div>
       <div style="font-size:13px;font-weight:600;color:${color}">${checks} checks</div>
-      ${vencido && planificados > 0 ? '<div style="font-size:10px;color:var(--text3);margin-top:3px">🔒 Cerrado</div>' : ''}
-      ${!vencido && puedeEditar && planificados > 0 && !esHoy && esFuturo ? '<div style="font-size:10px;color:var(--amber);margin-top:3px">⏳ Editable hasta 48hs antes</div>' : ''}
+
     </div>`;
   }).join('');
 
@@ -1901,7 +1899,6 @@ async function loadPlanificacion(){
 
 async function guardarPlanDia(fecha, planId, clienteId){
   if(!isAdmin()){toast('Sin permisos','err');return}
-  if(estaVencido(fecha)){toast('No se puede modificar — ya pasaron las 48hs','err');return}
   const input = $('plan-input-'+fecha);
   if(!input) return;
   const cantidad = parseInt(input.value)||0;
@@ -1939,6 +1936,58 @@ async function loadConductores(){
       <div><span class="badge ${c.activo?'b-ok':'b-gray'}">${c.activo?'Activo':'Inactivo'}</span></div>
       <div style="display:flex;gap:4px"><button class="btn btn-sm" onclick="event.stopPropagation();editarCond(JSON.parse(decodeURIComponent(this.dataset.c)))" data-c="${encodeURIComponent(JSON.stringify(c))}" title="Editar">✏️</button>${isSuperAdmin()?`<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();eliminarRegistro('conductores','${c.id}',loadConductores)" title="Eliminar">🗑️</button>`:''}</div>
     </div>`;}).join('');
+}
+
+
+function editarCond(c){
+  $("mc-title").textContent="Editar conductor";
+  $("mc-id").value=c.id;
+  ["mc-nombre","mc-dni","mc-tel","mc-email","mc-licencia","mc-venc-lic","mc-venc-lib","mc-venc-psico"].forEach(f=>$(f).value="");
+  $("mc-nombre").value=c.nombre||"";
+  $("mc-dni").value=c.dni||"";
+  $("mc-tel").value=c.telefono||"";
+  $("mc-email").value=c.email||"";
+  $("mc-licencia").value=c.nro_licencia||"";
+  $("mc-cat").value=c.categoria_licencia||"B";
+  $("mc-venc-lic").value=c.venc_licencia||"";
+  $("mc-venc-lib").value=c.venc_libreta_sanitaria||"";
+  $("mc-venc-psico").value=c.venc_psicofisico||"";
+  openModal("conductor");
+  setTimeout(()=>{
+    if($("mc-vehiculo"))$("mc-vehiculo").value=c.vehiculo_id||"";
+    if($("mc-empresa"))$("mc-empresa").value=c.empresa_id||"";
+    if($("mc-pais")&&c.pais_id)$("mc-pais").value=c.pais_id;
+  },300);
+}
+
+async function guardarConductor(){
+  const id=$('mc-id').value;
+  const nombre=$('mc-nombre').value.trim();
+  if(!nombre){toast('El nombre es obligatorio','err');return}
+  const p={
+    nombre,
+    dni:$('mc-dni').value.trim()||null,
+    telefono:$('mc-tel').value.trim()||null,
+    email:$('mc-email').value.trim()||null,
+    nro_licencia:$('mc-licencia').value.trim()||null,
+    categoria_licencia:$('mc-cat').value,
+    venc_licencia:$('mc-venc-lic').value||null,
+    venc_libreta_sanitaria:$('mc-venc-lib').value||null,
+    venc_psicofisico:$('mc-venc-psico').value||null,
+    vehiculo_id:$('mc-vehiculo').value||null,
+    empresa_id:$('mc-empresa')?.value||null,
+    pais_id:$('mc-pais')?.value||getPaisId()||null,
+    activo:true
+  };
+  const{error}=id
+    ?await db.from('conductores').update(p).eq('id',id)
+    :await db.from('conductores').insert(p);
+  if(error){toast('Error: '+error.message,'err');return}
+  toast(id?'Conductor actualizado ✓':'Conductor registrado ✓','ok');
+  closeModal('conductor');
+  $('mc-id').value='';
+  $('mc-title').textContent='Nuevo conductor';
+  loadConductores();
 }
 
 // ── ALERTAS ───────────────────────────────────────────────────────────────
