@@ -788,20 +788,12 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
         <option value="">Cargando rastreadores...</option>
       </select>
     </div>
-    <div class="fg" style="margin-bottom:11px">
-      <label class="fl">Nombre del rastreador</label>
-      <input type="text" id="rast-nombre" placeholder="Ej: GPS Camión AR-001">
-    </div>
-    <div class="fg" style="margin-bottom:11px">
+    <input type="hidden" id="rast-nombre">
+    <input type="hidden" id="rast-pais">
+    <div class="fg" style="margin-bottom:16px">
       <label class="fl">Vehículo asignado</label>
       <select id="rast-vehiculo-sel" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg)">
         <option value="">Sin asignar</option>
-      </select>
-    </div>
-    <div class="fg" style="margin-bottom:16px">
-      <label class="fl">País</label>
-      <select id="rast-pais" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg)">
-        <option value="">Seleccioná país</option>
       </select>
     </div>
     <div style="display:flex;justify-content:flex-end;gap:8px">
@@ -1308,6 +1300,8 @@ async function guardarCheck(){
   const{error}=await db.from('checks_diarios').insert({vehiculo_id:vid,fecha:new Date().toISOString().split('T')[0],doc_chofer_ok:$('dc1').checked&&$('dc2').checked,doc_chofer_estado:dc,carga_ok:$('ca1').checked&&$('ca2').checked,carga_estado:cc,precinto_numero:$('precinto-num')?.value.trim()||null,vehiculo_ok:$('ve1').checked&&$('ve2').checked&&$('ve3').checked&&$('ve4').checked,vehiculo_estado:vc,estado_final:ef,observaciones:$('check-obs').value.trim(),registrado_por:CP?.nombre||CU?.email,
     link_gps_check:VEH_CACHE_CHECK[vid]?.link_gps||null,
     empresa_gps:VEH_CACHE_CHECK[vid]?.nombre_empresa_gps||null,
+    rastreador_gid:(()=>{const r=RASTREADORES_DB.find(x=>x.vehiculo_id===vid);return r?.gps_gid||null;})(),
+    rastreador_nombre:(()=>{const r=RASTREADORES_DB.find(x=>x.vehiculo_id===vid);return r?.nombre||r?.gps_id_dispositivo||null;})(),
     gps_estado:getChip('chips-gps')||null,
     cliente_id:$('check-cliente-sel')?.value||null,
     pais_id:getPaisId()||null,
@@ -1389,6 +1383,7 @@ async function loadHistorial(){
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         ${h.clientes?.nombre?`<span style="background:var(--blue-light);color:var(--blue);font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px">👤 ${h.clientes.nombre}</span>`:''}
         ${h.precinto_numero?`<span style="background:var(--bg3);color:var(--text2);font-size:12px;font-weight:500;padding:3px 10px;border-radius:20px">🔒 Precinto: ${h.precinto_numero}</span>`:''}
+      ${h.rastreador_nombre||h.rastreador_gid?`<span style="background:var(--blue-light);color:var(--blue);font-size:12px;font-weight:500;padding:3px 10px;border-radius:20px">🛰 ${h.rastreador_nombre||'GPS #'+h.rastreador_gid}</span>`:''}
         ${h.sale_con_peon?`<span style="background:#FFF0E6;color:#C05200;font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px">👷 Peón${h.nombre_peon?' · '+h.nombre_peon:''}</span>`:''}
         ${h.gps_estado?`<span style="background:${h.gps_estado==='ok'?'var(--green-light)':'var(--red-light)'};color:${h.gps_estado==='ok'?'var(--green)':'var(--red)'};font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px">📍 GPS ${h.gps_estado==='ok'?'Verificado':'Sin señal'}</span>`:''}
       </div>
@@ -2215,9 +2210,9 @@ async function abrirVincularRastreador(gid, dispositivoId, nombreActual){
 
 async function guardarRastreador(){
   const gpsGid=parseInt($('rast-gps-sel').value);
-  const nombre=$('rast-nombre').value.trim();
+  const nombre='';
   const vehiculoId=$('rast-vehiculo-sel').value||null;
-  const paisId=$('rast-pais')?.value||getPaisId()||null;
+  const paisId=getPaisId()||CP?.pais_id||null;
   const existId=$('rast-id').value;
   const gpsData=GPS_DATA_LIVE.find(g=>g.gps_gid===gpsGid);
   if(!gpsGid){toast('Seleccioná un rastreador','err');return}
