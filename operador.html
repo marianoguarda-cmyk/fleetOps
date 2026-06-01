@@ -7,20 +7,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="FleetOps Op">
 <meta name="theme-color" content="#185FA5">
+<link rel="manifest" href="manifest.json">
 <title>FleetOps Operador</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-// Registrar Service Worker
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/sw.js').then(reg=>{
-    console.log('SW registrado');
-    // Escuchar mensajes del SW para sincronizar
-    navigator.serviceWorker.addEventListener('message', e=>{
-      if(e.data?.type==='SYNC_CHECKS') sincronizarPendientes();
-    });
-  }).catch(err=>console.warn('SW error:',err));
-}
-</script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
@@ -92,7 +81,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
 /* CHECK HEADER */
 .check-header{background:var(--blue);border-radius:var(--radius);padding:14px 15px;margin-bottom:13px;color:white}
 .ch-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.ch-title{font-size:14px;font-weight:600}
+.ch-title{font-size:13px;font-weight:600}
 .ch-hora{background:rgba(255,255,255,.2);padding:5px 11px;border-radius:20px;font-size:12px;font-weight:600}
 .ch-selects{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .ch-sel-wrap{display:flex;flex-direction:column;gap:3px}
@@ -100,13 +89,24 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
 .ch-sel{width:100%;font-size:13px;background:rgba(255,255,255,.92);color:var(--text);border:none;border-radius:8px;padding:7px 9px;font-family:inherit;outline:none}
 .ch-sel-full{grid-column:1/-1}
 
-/* CHECK FORM */
+/* WARN NUEVO */
+.warn-nuevo{display:none;background:var(--amber-light);border:1.5px solid #EF9F27;border-radius:var(--radius);padding:12px 13px;margin-bottom:11px;color:var(--amber)}
+.wn-title{font-size:13px;font-weight:600;margin-bottom:3px}
+.wn-sub{font-size:12px;line-height:1.4}
+
+/* GPS CARD */
+.gps-card{background:var(--blue-light);border:1px solid var(--blue);border-radius:var(--radius);padding:12px 13px;margin-bottom:11px;display:none}
+.gps-title{font-size:13px;font-weight:600;color:var(--blue);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.gps-info{font-size:12px;color:var(--text2);margin-bottom:8px}
+.gps-chips{display:flex;gap:7px}
+
+/* CHECK SECTIONS */
 .check-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:11px;overflow:hidden}
 .cs-title{padding:11px 13px;font-size:13px;font-weight:600;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
 .cs-item{display:flex;align-items:center;gap:11px;padding:12px 13px;border-bottom:1px solid var(--border);cursor:pointer}
 .cs-item:last-child{border-bottom:none}
 .cs-item:active{background:var(--bg3)}
-.cs-check{width:22px;height:22px;border:2px solid var(--border);border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .12s}
+.cs-check{width:24px;height:24px;border:2px solid var(--border);border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .12s}
 .cs-check.on{background:var(--blue);border-color:var(--blue);color:white}
 .cs-label{font-size:14px;flex:1;line-height:1.3}
 .cs-input-row{padding:11px 13px;border-bottom:1px solid var(--border)}
@@ -123,11 +123,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
 .echip.s-ok{background:var(--green-light);border-color:#97C459;color:var(--green)}
 .echip.s-warn{background:var(--amber-light);border-color:#EF9F27;color:var(--amber)}
 .echip.s-err{background:var(--red-light);border-color:#F09595;color:var(--red)}
-
-/* GPS CARD */
-.gps-card{background:var(--blue-light);border:1px solid var(--blue);border-radius:var(--radius);padding:12px 13px;margin-bottom:11px}
-.gps-title{font-size:13px;font-weight:600;color:var(--blue);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
-.gps-chips{display:flex;gap:7px}
 
 /* PEON */
 .peon-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 13px;margin-bottom:11px}
@@ -150,11 +145,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
 .obs-label{font-size:12px;font-weight:600;margin-bottom:7px}
 .obs-input{width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;background:var(--bg);color:var(--text);resize:none;height:75px;outline:none}
 .obs-input:focus{border-color:var(--blue)}
-
-/* ADVERTENCIA NUEVO */
-.warn-nuevo{display:none;background:var(--amber-light);border:1.5px solid #EF9F27;border-radius:var(--radius);padding:12px 13px;margin-bottom:11px;color:var(--amber)}
-.wn-title{font-size:13px;font-weight:600;margin-bottom:3px}
-.wn-sub{font-size:12px;line-height:1.4}
 
 /* SUBMIT */
 .submit-btn{width:100%;padding:15px;background:var(--blue);color:white;border:none;border-radius:var(--radius);font-size:15px;font-weight:600;cursor:pointer;margin-bottom:20px;font-family:inherit}
@@ -181,12 +171,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
 .b-ok{background:var(--green-light);color:var(--green)}
 .b-warn{background:var(--amber-light);color:var(--amber)}
 .b-err{background:var(--red-light);color:var(--red)}
-.hi-estados{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:5px}
+.hi-chips{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:5px}
 .hi-chip{font-size:11px;font-weight:600;padding:3px 7px;border-radius:20px}
 .hi-obs{font-size:12px;color:var(--text2);margin-top:6px;padding:7px;background:var(--bg3);border-radius:6px}
-.hi-footer{font-size:11px;color:var(--text3);margin-top:5px}
+.hi-footer{font-size:11px;color:var(--text3);margin-top:5px;display:flex;flex-wrap:wrap;gap:8px}
 .hi-photos{display:flex;gap:5px;margin-top:7px;overflow-x:auto}
-.hi-photo{width:52px;height:52px;border-radius:6px;object-fit:cover;flex-shrink:0}
+.hi-photo{width:52px;height:52px;border-radius:6px;object-fit:cover;flex-shrink:0;cursor:pointer}
 
 /* MAPA */
 .map-page{padding:12px}
@@ -197,8 +187,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
 .mi-label{color:var(--text2)}
 .mi-val{font-weight:600}
 
-/* USER MENU */
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:flex-end}
+/* SHEET */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;align-items:flex-end}
 .overlay.show{display:flex}
 .sheet{background:var(--bg2);border-radius:20px 20px 0 0;padding:16px 18px calc(var(--safe-bottom)+18px);width:100%}
 .sh-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px}
@@ -206,11 +196,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
 .sh-role{font-size:13px;color:var(--text2);margin-bottom:14px}
 .sh-btn{display:flex;align-items:center;gap:10px;padding:12px 0;font-size:14px;cursor:pointer;border-top:1px solid var(--border)}
 
+/* OFFLINE BAR */
+#offline-bar{position:fixed;top:0;left:0;right:0;z-index:9998;padding:8px 16px;text-align:center;font-size:13px;font-weight:600;display:none}
+
 /* LOADER / EMPTY */
 .loader{display:flex;align-items:center;justify-content:center;padding:36px;gap:9px;color:var(--text2);font-size:13px}
 .spin{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
 .empty{text-align:center;padding:36px 20px;color:var(--text2);font-size:13px}
-.empty-icon{font-size:36px;margin-bottom:10px}
 </style>
 </head>
 <body>
@@ -234,6 +226,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
     <div class="login-err" id="li-err"></div>
   </div>
 </div>
+
+<div id="offline-bar"></div>
 
 <div class="app" id="app">
   <div class="header">
@@ -266,7 +260,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
           </div>
           <div class="ch-sel-wrap">
             <div class="ch-sel-label">Vehículo *</div>
-            <select class="ch-sel" id="sel-vehiculo" onchange="onVehiculoChange(this.value)">
+            <select class="ch-sel" id="sel-vehiculo" onchange="onVehChange(this.value)">
               <option value="">Seleccioná</option>
             </select>
           </div>
@@ -286,15 +280,16 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
       </div>
 
       <!-- GPS -->
-      <div class="gps-card" id="gps-card" style="display:none">
+      <div class="gps-card" id="gps-card">
         <div class="gps-title">
-          <span id="gps-nombre-label">📍 GPS</span>
-          <a id="gps-link-btn" href="#" target="_blank" style="color:var(--blue);font-size:12px;font-weight:600;display:none">Ver mapa →</a>
+          <span id="gps-label">📍 GPS del vehículo</span>
+          <a id="gps-maps-link" href="#" target="_blank" style="color:var(--blue);font-size:12px;display:none">Ver en Maps →</a>
         </div>
-        <div class="ew-title">Estado GPS</div>
+        <div class="gps-info" id="gps-info">Seleccioná un vehículo</div>
+        <div class="ew-title" style="margin-top:8px">Estado GPS</div>
         <div class="gps-chips">
-          <button class="echip" onclick="setChip('gps',this,'ok')">✓ Verificado</button>
-          <button class="echip" onclick="setChip('gps',this,'err')">✕ Sin señal</button>
+          <button class="echip" id="chip-gps-ok" onclick="setChipGPS('ok')">✓ Verificado</button>
+          <button class="echip" id="chip-gps-err" onclick="setChipGPS('err')">✕ Sin señal</button>
         </div>
       </div>
 
@@ -354,7 +349,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
       <div class="peon-wrap">
         <div class="peon-title">👷 ¿Sale con peón?</div>
         <div class="peon-row">
-          <button class="peon-opt" id="peon-no" onclick="setPeon(false)">No</button>
+          <button class="peon-opt active" id="peon-no" onclick="setPeon(false)">No</button>
           <button class="peon-opt" id="peon-si" onclick="setPeon(true)">Sí</button>
         </div>
         <div id="peon-nombre-wrap" style="display:none">
@@ -426,167 +421,25 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
 </div>
 
 <input type="file" accept="image/*" capture="environment" id="foto-input" style="display:none" onchange="handleFoto(event)">
-
-<!-- TOAST -->
 <div id="toast" style="position:fixed;bottom:calc(var(--safe-bottom)+80px);left:50%;transform:translateX(-50%) translateY(20px);background:#1a1a18;color:white;padding:11px 18px;border-radius:30px;font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center"></div>
 
 <script>
-// ═══════════════════════════════════════════════════════
-// OFFLINE: IndexedDB para guardar checks sin conexión
-// ═══════════════════════════════════════════════════════
-const DB_NAME = 'fleetops-offline';
-const DB_VERSION = 1;
-let idb = null;
-
-function abrirIDB(){
-  return new Promise((resolve, reject)=>{
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = e => {
-      const idbDb = e.target.result;
-      if(!idbDb.objectStoreNames.contains('checks_pendientes')){
-        const store = idbDb.createObjectStore('checks_pendientes', {keyPath:'_local_id', autoIncrement:true});
-        store.createIndex('fecha','fecha',{unique:false});
-      }
-    };
-    req.onsuccess = e => { idb = e.target.result; resolve(idb); };
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function guardarCheckLocal(checkData){
-  const idbDb = await abrirIDB();
-  return new Promise((resolve, reject)=>{
-    const tx = idbDb.transaction('checks_pendientes','readwrite');
-    const store = tx.objectStore('checks_pendientes');
-    const req = store.add({...checkData, _sync_status:'pendiente', _created_local: new Date().toISOString()});
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function obtenerChecksPendientes(){
-  const idbDb = await abrirIDB();
-  return new Promise((resolve, reject)=>{
-    const tx = idbDb.transaction('checks_pendientes','readonly');
-    const store = tx.objectStore('checks_pendientes');
-    const req = store.getAll();
-    req.onsuccess = () => resolve(req.result.filter(c=>c._sync_status==='pendiente'));
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function marcarCheckSincronizado(localId){
-  const idbDb = await abrirIDB();
-  return new Promise((resolve, reject)=>{
-    const tx = idbDb.transaction('checks_pendientes','readwrite');
-    const store = tx.objectStore('checks_pendientes');
-    const getReq = store.get(localId);
-    getReq.onsuccess = () => {
-      const item = getReq.result;
-      if(item){ item._sync_status='sincronizado'; store.put(item); }
-      resolve();
-    };
-    getReq.onerror = () => reject(getReq.error);
-  });
-}
-
-async function contarPendientes(){
-  try{
-    const pendientes = await obtenerChecksPendientes();
-    return pendientes.length;
-  }catch(e){ return 0; }
-}
-
-// Detectar conexión
-let estaOnline = navigator.onLine;
-window.addEventListener('online', ()=>{
-  estaOnline = true;
-  mostrarEstadoConexion(true);
-  setTimeout(sincronizarPendientes, 1000);
-});
-window.addEventListener('offline', ()=>{
-  estaOnline = false;
-  mostrarEstadoConexion(false);
-});
-
-function mostrarEstadoConexion(online){
-  let bar = document.getElementById('offline-bar');
-  if(!bar){
-    bar = document.createElement('div');
-    bar.id = 'offline-bar';
-    bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9998;padding:8px 16px;text-align:center;font-size:13px;font-weight:600;transition:all .3s';
-    document.body.appendChild(bar);
-  }
-  if(online){
-    bar.style.background = '#EAF3DE';
-    bar.style.color = '#3B6D11';
-    bar.textContent = '✓ Conexión restaurada — sincronizando...';
-    setTimeout(()=>{ if(bar) bar.style.display='none'; }, 3000);
-  } else {
-    bar.style.background = '#FAEEDA';
-    bar.style.color = '#854F0B';
-    bar.style.display = 'block';
-    bar.textContent = '⚠ Sin conexión — los checks se guardan localmente';
-  }
-}
-
-async function sincronizarPendientes(){
-  if(!estaOnline) return;
-  const pendientes = await obtenerChecksPendientes();
-  if(!pendientes.length) return;
-  let sincronizados = 0;
-  for(const check of pendientes){
-    try{
-      const {_local_id, _sync_status, _created_local, ...checkData} = check;
-      const{error} = await db.from('checks_diarios').insert(checkData);
-      if(!error){
-        await marcarCheckSincronizado(_local_id);
-        sincronizados++;
-      }
-    }catch(e){ console.warn('Error sync check:', e); }
-  }
-  if(sincronizados > 0){
-    toast(`✓ ${sincronizados} check${sincronizados>1?'s':''} sincronizado${sincronizados>1?'s':''}`);
-    actualizarBadgePendientes();
-  }
-}
-
-async function actualizarBadgePendientes(){
-  const n = await contarPendientes();
-  let badge = document.getElementById('offline-badge');
-  if(n > 0){
-    if(!badge){
-      badge = document.createElement('div');
-      badge.id = 'offline-badge';
-      badge.style.cssText = 'position:fixed;bottom:calc(env(safe-area-inset-bottom) + 75px);right:16px;background:#854F0B;color:white;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:700;z-index:500;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer';
-      badge.onclick = sincronizarPendientes;
-      document.body.appendChild(badge);
-    }
-    badge.textContent = `⏳ ${n} check${n>1?'s':''} pendiente${n>1?'s':''}`;
-    badge.style.display = 'block';
-  } else if(badge){
-    badge.style.display = 'none';
-  }
-}
-
 const SB_URL='https://rzmijsyioxtmnfjpezvb.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6bWlqc3lpb3h0bW5manBlenZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2ODE4NjYsImV4cCI6MjA5NDI1Nzg2Nn0.qVqe9UivFlN8E-s2p6bYLlJCQy5LNkt5ObY19g6G1cg';
 const db=supabase.createClient(SB_URL,SB_KEY);
 const $=id=>document.getElementById(id);
 
 let CU=null,CP=null;
-let VEHS={},FOTOS=[];
-let HIST_F='hoy';
+let VEHS={},FOTOS=[],HIST_F='hoy';
+let PEON_ACTIVO=false,GPS_ESTADO=null;
 let MAP=null,MAP_MARKER=null;
-let PEON_ACTIVO=false;
+let RASTREADORES=[];
+let GPS_LIVE=[];
 
-// Estado del check
-let CS={dc:[false,false],ca:[false],ve:[false,false,false,false,false,false],
-        chofer:null,carga:null,vehiculo:null,gps:null};
+// CHIPS state
+let CHIPS={chofer:null,carga:null,vehiculo:null};
 
-// HELPERS
 const fd=d=>d?new Date(d+'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}):'—';
-const dh=d=>{if(!d)return 9999;return Math.round((new Date(d+'T12:00:00')-new Date())/86400000)};
 const bdg=e=>`<span class="badge ${e==='ok'?'b-ok':e==='warn'?'b-warn':'b-err'}">${e==='ok'?'OK':e==='warn'?'⚠':e==='err'?'✕':'—'}</span>`;
 
 let ttm;
@@ -596,7 +449,91 @@ function toast(m,d=2800){
 }
 function hideSplash(){const s=$('splash');s.classList.add('hide');setTimeout(()=>s.style.display='none',400)}
 
-// AUTH
+// ── OFFLINE ────────────────────────────────────────────────────────────────
+let DB_IDB=null;
+const DB_NAME='fleetops-offline';
+
+async function abrirIDB(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(DB_NAME,1);
+    req.onupgradeneeded=e=>{
+      const idbDb=e.target.result;
+      if(!idbDb.objectStoreNames.contains('checks_pendientes')){
+        idbDb.createObjectStore('checks_pendientes',{keyPath:'_local_id',autoIncrement:true});
+      }
+    };
+    req.onsuccess=e=>{DB_IDB=e.target.result;resolve(DB_IDB)};
+    req.onerror=()=>reject(req.error);
+  });
+}
+
+async function guardarCheckLocal(data){
+  const idbDb=await abrirIDB();
+  return new Promise((resolve,reject)=>{
+    const tx=idbDb.transaction('checks_pendientes','readwrite');
+    const store=tx.objectStore('checks_pendientes');
+    const req=store.add({...data,_sync_status:'pendiente',_created_local:new Date().toISOString()});
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+
+async function obtenerPendientes(){
+  const idbDb=await abrirIDB();
+  return new Promise((resolve,reject)=>{
+    const tx=idbDb.transaction('checks_pendientes','readonly');
+    const req=tx.objectStore('checks_pendientes').getAll();
+    req.onsuccess=()=>resolve(req.result.filter(c=>c._sync_status==='pendiente'));
+    req.onerror=()=>reject(req.error);
+  });
+}
+
+async function marcarSincronizado(id){
+  const idbDb=await abrirIDB();
+  return new Promise((resolve,reject)=>{
+    const tx=idbDb.transaction('checks_pendientes','readwrite');
+    const store=tx.objectStore('checks_pendientes');
+    const getReq=store.get(id);
+    getReq.onsuccess=()=>{
+      const item=getReq.result;
+      if(item){item._sync_status='sincronizado';store.put(item);}
+      resolve();
+    };
+    getReq.onerror=()=>reject(getReq.error);
+  });
+}
+
+let estaOnline=navigator.onLine;
+window.addEventListener('online',()=>{estaOnline=true;mostrarConexion(true);setTimeout(sincronizar,1000)});
+window.addEventListener('offline',()=>{estaOnline=false;mostrarConexion(false)});
+
+function mostrarConexion(online){
+  const bar=$('offline-bar');
+  if(!bar) return;
+  if(online){
+    bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9998;padding:8px;text-align:center;font-size:13px;font-weight:600;background:#EAF3DE;color:#3B6D11;display:block';
+    bar.textContent='✓ Conexión restaurada — sincronizando...';
+    setTimeout(()=>{bar.style.display='none';},3000);
+  } else {
+    bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9998;padding:8px;text-align:center;font-size:13px;font-weight:600;background:#FAEEDA;color:#854F0B;display:block';
+    bar.textContent='⚠ Sin conexión — los checks se guardan localmente';
+  }
+}
+
+async function sincronizar(){
+  if(!estaOnline) return;
+  const pendientes=await obtenerPendientes().catch(()=>[]);
+  if(!pendientes.length) return;
+  let ok=0;
+  for(const check of pendientes){
+    const{_local_id,_sync_status,_created_local,...data}=check;
+    const{error}=await db.from('checks_diarios').insert(data);
+    if(!error){await marcarSincronizado(_local_id);ok++;}
+  }
+  if(ok>0) toast(`✓ ${ok} check${ok>1?'s':''} sincronizado${ok>1?'s':''}`);
+}
+
+// ── AUTH ────────────────────────────────────────────────────────────────────
 async function doLogin(){
   const email=$('li-email').value.trim(),pass=$('li-pass').value;
   const btn=$('li-btn');
@@ -615,17 +552,16 @@ async function afterLogin(user){
   const{data:p}=await db.from('profiles').select('*').eq('id',user.id).maybeSingle();
   CP=p;
   if(!p){
-    await db.from('profiles').upsert({id:user.id,email:user.email,
-      nombre:user.user_metadata?.nombre||user.email.split('@')[0],
-      rol:user.user_metadata?.rol||'operador',activo:true},{onConflict:'id'});
+    await db.from('profiles').upsert({id:user.id,email:user.email,nombre:user.user_metadata?.nombre||user.email.split('@')[0],rol:'operador',activo:true},{onConflict:'id'});
     const{data:p2}=await db.from('profiles').select('*').eq('id',user.id).maybeSingle();
     CP=p2;
   }
   setupUI();
   await loadData();
   iniciarReloj();
-  // Sincronizar checks pendientes al entrar
-  setTimeout(sincronizarPendientes, 2000);
+  await abrirIDB().catch(()=>{});
+  if(!navigator.onLine) mostrarConexion(false);
+  setTimeout(sincronizar,2000);
   hideSplash();
   $('login').classList.remove('show');
   $('app').classList.add('show');
@@ -645,57 +581,69 @@ function setupUI(){
   $('h-sub').textContent='Operador de playa';
   $('sh-name').textContent=nombre;
   $('sh-role').textContent=CP?.rol||'operador';
-  // Fecha
-  const today=new Date();
-  $('ch-fecha').textContent='Check — '+today.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+  // Fecha header
+  $('ch-fecha').textContent='Check — '+new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
 }
 
 function iniciarReloj(){
   function tick(){
-    const h=new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-    const el=$('ch-hora');if(el)el.textContent='⏱ '+h;
+    const el=$('ch-hora');
+    if(el) el.textContent='⏱ '+new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   }
   tick();setInterval(tick,1000);
 }
 
-// DATA
+// ── DATA ─────────────────────────────────────────────────────────────────────
 async function loadData(){
   const paisId=CP?.pais_id||null;
   let qv=db.from('vehiculos').select('*').eq('activo',true).order('patente');
   if(paisId) qv=qv.eq('pais_id',paisId);
-  const[{data:vehs},{data:emps},{data:clis}]=await Promise.all([
+
+  const[{data:vehs},{data:emps},{data:clis},{data:rasts}]=await Promise.all([
     qv,
     db.from('empresas').select('id,nombre').eq('activo',true).order('nombre'),
     db.from('clientes').select('id,nombre').eq('activo',true).order('nombre'),
+    db.from('rastreadores').select('*').eq('activo',true),
   ]);
-  // Cache vehículos
+
   VEHS={};(vehs||[]).forEach(v=>VEHS[v.id]=v);
-  // Popular select empresa
+  RASTREADORES=rasts||[];
+
+  // Cargar GPS en vivo
+  try{
+    const res=await fetch('/api/gps/transmissions');
+    const json=await res.json();
+    if(json.success) GPS_LIVE=json.data||[];
+  }catch(e){GPS_LIVE=[];}
+
+  // Popular empresas
   const se=$('sel-empresa');
   se.innerHTML='<option value="">Todas las empresas</option>';
-  (emps||[]).forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.nombre;se.appendChild(o);});
-  // Popular select vehículo
+  (emps||[]).forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.nombre;se.appendChild(o)});
+
+  // Popular vehículos
   llenarVehiculos(vehs||[]);
-  // Popular select cliente
+
+  // Popular clientes
   const sc=$('sel-cliente');
   sc.innerHTML='<option value="">Sin cliente</option>';
-  (clis||[]).forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.nombre;sc.appendChild(o);});
+  (clis||[]).forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.nombre;sc.appendChild(o)});
 }
 
 function llenarVehiculos(lista){
   const sv=$('sel-vehiculo');
   sv.innerHTML='<option value="">Seleccioná vehículo</option>';
-  lista.forEach(v=>{const o=document.createElement('option');o.value=v.id;o.textContent=v.patente+' — '+v.marca+' '+v.modelo;sv.appendChild(o);});
+  lista.forEach(v=>{const o=document.createElement('option');o.value=v.id;o.textContent=v.patente+' — '+v.marca+' '+v.modelo;sv.appendChild(o)});
 }
 
 function filtrarVehiculos(empId){
   const todos=Object.values(VEHS);
   const filtrados=empId?todos.filter(v=>v.empresa_id===empId):todos;
   llenarVehiculos(filtrados);
-  onVehiculoChange('');
+  onVehChange('');
 }
 
-function onVehiculoChange(vid){
+function onVehChange(vid){
   const v=VEHS[vid];
   // Advertencia nuevo
   const wn=$('warn-nuevo');
@@ -706,34 +654,61 @@ function onVehiculoChange(vid){
       $('warn-nuevo-sub').textContent=`Dado de alta hace ${dias} días. Quedan ${15-dias} días de seguimiento especial.`;
     } else wn.style.display='none';
   } else wn.style.display='none';
-  // GPS
+
+  // GPS card
   const gc=$('gps-card');
-  if(v?.link_gps||v?.nombre_empresa_gps){
+  if(vid){
     gc.style.display='block';
-    $('gps-nombre-label').textContent='📍 '+(v.nombre_empresa_gps||'GPS');
-    const lb=$('gps-link-btn');
-    if(v.link_gps){lb.href=v.link_gps;lb.style.display='inline';}
-    else lb.style.display='none';
-  } else gc.style.display='none';
+    // Buscar rastreador asignado
+    const rast=RASTREADORES.find(r=>r.vehiculo_id===vid);
+    const gpsLive=rast?GPS_LIVE.find(g=>g.gps_gid===rast.gps_gid):null;
+    if(rast&&gpsLive){
+      $('gps-label').textContent='🛰 '+( rast.nombre||rast.gps_id_dispositivo||'Rastreador');
+      const vel=gpsLive.gps_speed||0;
+      const ts=gpsLive.gps_tstamp?new Date(gpsLive.gps_tstamp):null;
+      const mins=ts?Math.round((new Date()-ts)/60000):999;
+      const estado=mins>30?'🔴 Sin reporte':vel>0?`🟢 En ruta · ${vel} km/h`:'🟡 Detenido';
+      $('gps-info').textContent=estado+(gpsLive.gps_ubicacion?' · '+gpsLive.gps_ubicacion:'');
+      if(gpsLive.gps_latitud&&gpsLive.gps_longitud){
+        const lnk=$('gps-maps-link');
+        lnk.href=`https://maps.google.com/?q=${gpsLive.gps_latitud},${gpsLive.gps_longitud}`;
+        lnk.style.display='inline';
+      }
+    } else if(v?.nombre_empresa_gps){
+      $('gps-label').textContent='📍 '+(v.nombre_empresa_gps||'GPS');
+      $('gps-info').textContent=v.link_gps?'Toca Ver en Maps →':'Sin datos en vivo';
+      if(v.link_gps){const lnk=$('gps-maps-link');lnk.href=v.link_gps;lnk.style.display='inline';lnk.textContent='Abrir portal →';}
+    } else {
+      $('gps-label').textContent='📍 GPS';
+      $('gps-info').textContent='Sin rastreador asignado a este vehículo';
+      $('gps-maps-link').style.display='none';
+    }
+  } else {
+    gc.style.display='none';
+  }
+  // Reset chips GPS
+  GPS_ESTADO=null;
+  ['chip-gps-ok','chip-gps-err'].forEach(id=>{const el=$(id);if(el)el.className='echip';});
 }
 
-// CHECK
+// ── CHECK ────────────────────────────────────────────────────────────────────
 function togCheck(id){
   const el=$(id);if(!el)return;
-  const isOn=el.classList.contains('on');
-  el.classList.toggle('on',!isOn);
-  el.textContent=!isOn?'✓':'';
+  const on=el.classList.contains('on');
+  el.classList.toggle('on',!on);
+  el.textContent=!on?'✓':'';
 }
 
 function setChip(group,el,val){
-  const parent=el.parentElement;
-  parent.querySelectorAll('.echip').forEach(c=>{c.className='echip';delete c.dataset.val});
-  el.classList.add('s-'+val);el.dataset.val=val;
-  CS[group]=val;
+  $('chips-'+group).querySelectorAll('.echip').forEach(c=>{c.className='echip';});
+  el.classList.add('s-'+val);
+  CHIPS[group]=val;
 }
 
-function getChip(group){
-  return document.querySelector(`.ew-chips .echip[data-val], .gps-chips .echip[data-val]`);
+function setChipGPS(val){
+  GPS_ESTADO=val;
+  $('chip-gps-ok').className='echip'+(val==='ok'?' s-ok':'');
+  $('chip-gps-err').className='echip'+(val==='err'?' s-err':'');
 }
 
 function setPeon(activo){
@@ -769,53 +744,49 @@ function renderFotos(){
     </div>`).join('');
 }
 
-function getChipVal(id){
-  const el=document.querySelector('#'+id+' .echip[data-val]');
-  return el?.dataset.val||null;
-}
-
 async function guardarCheck(){
   const vid=$('sel-vehiculo').value;
   if(!vid){toast('⚠ Seleccioná un vehículo');return}
-  const chofer=getChipVal('chips-chofer');
-  const carga=getChipVal('chips-carga');
-  const vehiculo=getChipVal('chips-vehiculo');
-  if(!chofer||!carga||!vehiculo){toast('⚠ Completá el estado de todas las secciones');return}
+  if(!CHIPS.chofer||!CHIPS.carga||!CHIPS.vehiculo){toast('⚠ Completá el estado de todas las secciones');return}
+
   const btn=$('submit-btn');
   btn.disabled=true;btn.textContent='Guardando...';
+
   const obs=$('obs').value.trim();
   const precinto=$('precinto').value.trim();
-  const ef=[chofer,carga,vehiculo].includes('err')?'err':[chofer,carga,vehiculo].includes('warn')?'warn':'ok';
-  const gpsChip=document.querySelector('.gps-chips .echip[data-val]');
+  const ef=[CHIPS.chofer,CHIPS.carga,CHIPS.vehiculo].includes('err')?'err':
+            [CHIPS.chofer,CHIPS.carga,CHIPS.vehiculo].includes('warn')?'warn':'ok';
   const v=VEHS[vid];
+  const rast=RASTREADORES.find(r=>r.vehiculo_id===vid);
 
-  // Armar objeto del check
-  const checkData = {
+  const checkData={
     vehiculo_id:vid,
     pais_id:v?.pais_id||CP?.pais_id||null,
     fecha:new Date().toISOString().split('T')[0],
     hora_check:new Date().toTimeString().slice(0,8),
     doc_chofer_ok:$('dc0').classList.contains('on')&&$('dc1').classList.contains('on'),
-    doc_chofer_estado:chofer,
+    doc_chofer_estado:CHIPS.chofer,
     carga_ok:$('ca0').classList.contains('on'),
-    carga_estado:carga,
+    carga_estado:CHIPS.carga,
     precinto_numero:precinto||null,
     vehiculo_ok:['ve0','ve1','ve2','ve3','ve4','ve5'].every(id=>$(id).classList.contains('on')),
-    vehiculo_estado:vehiculo,
+    vehiculo_estado:CHIPS.vehiculo,
     estado_final:ef,
-    gps_estado:gpsChip?.dataset.val||null,
+    gps_estado:GPS_ESTADO||null,
     sale_con_peon:PEON_ACTIVO,
     nombre_peon:PEON_ACTIVO?($('peon-nombre').value.trim()||null):null,
     cliente_id:$('sel-cliente').value||null,
     link_gps_check:v?.link_gps||null,
     empresa_gps:v?.nombre_empresa_gps||null,
+    rastreador_gid:rast?.gps_gid||null,
+    rastreador_nombre:rast?.nombre||rast?.gps_id_dispositivo||null,
     observaciones:obs||null,
     registrado_por:CP?.nombre||CU?.email,
-    fotos:null, // fotos se suben si hay conexión
+    fotos:null,
   };
 
-  // Si hay conexión: subir fotos y guardar en Supabase
   if(estaOnline){
+    // Subir fotos
     const fotosUrls=[];
     for(const foto of FOTOS){
       try{
@@ -825,19 +796,14 @@ async function guardarCheck(){
         if(!error){const{data:url}=db.storage.from('fleet-fotos').getPublicUrl(fname);fotosUrls.push(url.publicUrl);}
       }catch(e){}
     }
-    checkData.fotos = fotosUrls.length ? fotosUrls : null;
+    checkData.fotos=fotosUrls.length?fotosUrls:null;
     const{error}=await db.from('checks_diarios').insert(checkData);
     if(error){btn.disabled=false;btn.textContent='Confirmar check del día';toast('Error: '+error.message);return}
   } else {
-    // Sin conexión: guardar localmente
     await guardarCheckLocal(checkData);
-    actualizarBadgePendientes();
-    // Registrar sync para cuando vuelva la conexión
-    if('serviceWorker' in navigator && 'SyncManager' in window){
-      const reg = await navigator.serviceWorker.ready;
-      await reg.sync.register('sync-checks').catch(()=>{});
-    }
+    toast('⏳ Guardado localmente — se sincronizará al recuperar conexión');
   }
+
   // Mostrar success
   const checkContent=$('p-check');
   checkContent.innerHTML=`
@@ -850,18 +816,14 @@ async function guardarCheck(){
         ${v?.patente||''} · ${new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}
         ${precinto?`<br>🔒 Precinto ${precinto}`:''}
         ${PEON_ACTIVO?`<br>👷 Peón${$('peon-nombre').value?' · '+$('peon-nombre').value:''}`:''}
+        ${rast?`<br>🛰 ${rast.nombre||rast.gps_id_dispositivo}`:''}
       </div>
-      <button class="success-btn" onclick="resetCheck()">✅ Nuevo check</button>
+      <button class="success-btn" onclick="location.reload()">✅ Nuevo check</button>
       <button class="success-btn success-btn-sec" onclick="goPage('historial')">🕐 Ver historial</button>
     </div>`;
 }
 
-function resetCheck(){
-  // Recargar la página de check completa
-  location.reload();
-}
-
-// HISTORIAL
+// ── HISTORIAL ────────────────────────────────────────────────────────────────
 function setHF(f,el){
   HIST_F=f;
   document.querySelectorAll('.hf').forEach(x=>x.classList.remove('active'));
@@ -876,6 +838,7 @@ async function loadHistorial(){
   let desde=today;
   if(HIST_F==='semana'){const d=new Date();d.setDate(d.getDate()-7);desde=d.toISOString().split('T')[0]}
   if(HIST_F==='mes'){const d=new Date();d.setDate(d.getDate()-30);desde=d.toISOString().split('T')[0]}
+
   const{data,error}=await db.from('checks_diarios')
     .select('*, vehiculos(patente,marca,modelo), clientes(nombre)')
     .eq('registrado_por',CP?.nombre||CU?.email)
@@ -883,9 +846,11 @@ async function loadHistorial(){
     .order('fecha',{ascending:false})
     .order('created_at',{ascending:false})
     .limit(50);
+
   if(error||!data?.length){
-    el.innerHTML='<div class="empty"><div class="empty-icon">📋</div>Sin checks en este período.</div>';return;
+    el.innerHTML='<div class="empty">📋 Sin checks en este período.</div>';return;
   }
+
   el.innerHTML=data.map(h=>{
     const ef=h.estado_final;
     const color=ef==='ok'?'var(--green)':ef==='warn'?'var(--amber)':'var(--red)';
@@ -898,36 +863,37 @@ async function loadHistorial(){
         </div>
         ${bdg(ef)}
       </div>
-      <div class="hi-estados">
+      <div class="hi-chips">
         <span class="hi-chip ${h.doc_chofer_estado==='ok'?'b-ok':'b-warn'}">Chofer ${h.doc_chofer_estado==='ok'?'✓':'⚠'}</span>
         <span class="hi-chip ${h.carga_estado==='ok'?'b-ok':'b-warn'}">Carga ${h.carga_estado==='ok'?'✓':'⚠'}</span>
         <span class="hi-chip ${h.vehiculo_estado==='ok'?'b-ok':'b-warn'}">Vehículo ${h.vehiculo_estado==='ok'?'✓':'⚠'}</span>
       </div>
-      ${h.precinto_numero?`<div style="font-size:12px;margin-top:5px">🔒 Precinto: <strong>${h.precinto_numero}</strong></div>`:''}
-      ${h.sale_con_peon?`<div style="font-size:12px;margin-top:3px">👷 Peón${h.nombre_peon?' · '+h.nombre_peon:''}</div>`:''}
+      <div class="hi-footer">
+        ${h.precinto_numero?`<span>🔒 ${h.precinto_numero}</span>`:''}
+        ${h.sale_con_peon?`<span>👷${h.nombre_peon?' '+h.nombre_peon:''}</span>`:''}
+        ${h.rastreador_nombre||h.rastreador_gid?`<span>🛰 ${h.rastreador_nombre||'GPS #'+h.rastreador_gid}</span>`:''}
+        ${h.gps_estado?`<span>${h.gps_estado==='ok'?'📍 GPS OK':'📍 Sin señal'}</span>`:''}
+      </div>
       ${h.observaciones?`<div class="hi-obs">📝 ${h.observaciones}</div>`:''}
       ${h.fotos?.length?`<div class="hi-photos">${h.fotos.map(f=>`<img class="hi-photo" src="${f}" onclick="window.open('${f}','_blank')">`).join('')}</div>`:''}
-      <div class="hi-footer">👤 ${h.registrado_por||'—'}</div>
     </div>`;
   }).join('');
 }
 
-// MAPA
+// ── MAPA ─────────────────────────────────────────────────────────────────────
 function initMapa(){
   setTimeout(()=>{
     if(!MAP){
       MAP=L.map('op-map').setView([-34.6,-58.4],13);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-        attribution:'© OpenStreetMap',maxZoom:19
-      }).addTo(MAP);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(MAP);
     }
     if(navigator.geolocation){
       navigator.geolocation.getCurrentPosition(pos=>{
         const{latitude:lat,longitude:lng,accuracy}=pos.coords;
         MAP.setView([lat,lng],15);
         const icon=L.divIcon({
-          html:`<div style="background:var(--blue);color:white;padding:5px 10px;border-radius:12px;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.3)">📍 Yo</div>`,
-          className:'',iconAnchor:[25,12]
+          html:`<div style="background:var(--blue);color:white;padding:5px 10px;border-radius:12px;font-size:11px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.3)">📍 Mi posición</div>`,
+          className:'',iconAnchor:[50,12]
         });
         if(MAP_MARKER)MAP_MARKER.setLatLng([lat,lng]);
         else MAP_MARKER=L.marker([lat,lng],{icon}).addTo(MAP);
@@ -943,7 +909,7 @@ function initMapa(){
   },200);
 }
 
-// NAVEGACIÓN
+// ── NAVEGACIÓN ────────────────────────────────────────────────────────────────
 function goPage(p){
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));
@@ -953,24 +919,31 @@ function goPage(p){
   if(p==='mapa') initMapa();
 }
 
-// USER SHEET
 function showSheet(){$('ov-sheet').classList.add('show')}
 function closeSheet(){$('ov-sheet').classList.remove('show')}
 
-// INIT
+// ── INIT ─────────────────────────────────────────────────────────────────────
 $('li-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
 setPeon(false);
 
+// Service Worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').then(()=>{
+    navigator.serviceWorker.addEventListener('message',e=>{
+      if(e.data?.type==='SYNC_CHECKS') sincronizar();
+    });
+  }).catch(()=>{});
+}
+
 (async()=>{
-  // Inicializar IndexedDB
-  await abrirIDB().catch(e=>console.warn('IDB error:',e));
-  // Mostrar badge si hay pendientes
-  actualizarBadgePendientes();
-  // Mostrar estado offline si aplica
-  if(!navigator.onLine) mostrarEstadoConexion(false);
-  const{data:{session}}=await db.auth.getSession();
-  if(session?.user)await afterLogin(session.user);
-  else{hideSplash();$('login').classList.add('show');}
+  try{
+    const{data:{session}}=await db.auth.getSession();
+    if(session?.user) await afterLogin(session.user);
+    else{hideSplash();$('login').classList.add('show');}
+  }catch(err){
+    console.error(err);
+    hideSplash();$('login').classList.add('show');
+  }
   db.auth.onAuthStateChange((ev,s)=>{
     if(ev==='SIGNED_OUT'){$('app').classList.remove('show');$('login').classList.add('show');}
   });
