@@ -452,46 +452,43 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
       </div>
 
       <div class="section" id="s-satelital">
-        <div class="super-admin-pais-bar" style="display:none;background:var(--blue-light);border-radius:var(--radius);padding:8px 12px;margin-bottom:12px;display:none;align-items:center;gap:10px">
+        <div class="super-admin-pais-bar" style="display:none;background:var(--blue-light);border-radius:var(--radius);padding:8px 12px;margin-bottom:12px;align-items:center;gap:10px">
           <span style="font-size:12px;font-weight:600;color:var(--blue)">🌎 Filtrar por país:</span>
           <select class="sa-pais-filter" style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:white;color:var(--text)" onchange="cambiarPais(this.value)">
             <option value="">Todos los países</option>
           </select>
         </div>
         <div class="ph">
-          <div style="font-size:15px;font-weight:600">📍 Accesos satelitales</div>
-          <button class="btn btn-primary admin-only" onclick="openModal('gps')">+ Agregar GPS</button>
+          <div style="font-size:15px;font-weight:600">📍 Satelital en vivo</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-sm" onclick="loadSatelital()">↻ Actualizar</button>
+            <button class="btn btn-primary btn-sm admin-only" onclick="openModal('rastreador')">+ Vincular rastreador</button>
+          </div>
         </div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:16px">Accesos directos al portal satelital de cada vehículo o empresa de transporte.</div>
-        <div id="satelital-list"><div class="loader"><div class="spin"></div>Cargando...</div></div>
-      </div>
 
-      <!-- CONDUCTORES -->
-      <div class="section" id="s-conductores">
-        <div class="super-admin-pais-bar" style="display:none;background:var(--blue-light);border-radius:var(--radius);padding:8px 12px;margin-bottom:12px;display:none;align-items:center;gap:10px">
-          <span style="font-size:12px;font-weight:600;color:var(--blue)">🌎 Filtrar por país:</span>
-          <select class="sa-pais-filter" style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:white;color:var(--text)" onchange="cambiarPais(this.value)">
-            <option value="">Todos los países</option>
-          </select>
-        </div>
-        <div class="ph">
-          <div style="font-size:15px;font-weight:600">Conductores</div>
-          <button class="btn btn-primary" onclick="openModal('conductor')">+ Agregar conductor</button>
-        </div>
-        <div class="data-table">
-          <div class="th tc-c"><div></div><div>Conductor</div><div>Vehículo</div><div>Venc. licencia</div><div>Doc.</div><div>Estado</div><div>Acc.</div></div>
-          <div id="conductores-list"><div class="loader"><div class="spin"></div>Cargando...</div></div>
-        </div>
-      </div>
+        <!-- Estado de conexión GPS -->
+        <div id="sat-status" style="font-size:12px;color:var(--text2);margin-bottom:12px"></div>
 
-      <!-- ALERTAS -->
-      <div class="section" id="s-alertas">
-        <div class="ph">
-          <div style="font-size:15px;font-weight:600">Centro de alertas</div>
-          <button class="btn btn-sm" onclick="recalcAlertas()">↻ Recalcular</button>
+        <!-- Tabs: Mapa / Lista -->
+        <div style="display:flex;gap:0;margin-bottom:14px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;width:fit-content">
+          <button id="sat-tab-mapa" onclick="satTab('mapa')" style="padding:7px 18px;font-size:13px;font-weight:600;border:none;background:var(--blue);color:white;cursor:pointer">🗺 Mapa</button>
+          <button id="sat-tab-lista" onclick="satTab('lista')" style="padding:7px 18px;font-size:13px;font-weight:500;border:none;background:var(--bg2);color:var(--text2);cursor:pointer">📋 Lista</button>
         </div>
-        <div class="card mb"><div class="card-title" style="color:var(--red)">🔴 Críticas</div><div id="alertas-err"><div class="loader"><div class="spin"></div>Cargando...</div></div></div>
-        <div class="card"><div class="card-title" style="color:var(--amber)">🟡 Advertencias</div><div id="alertas-warn"><div class="loader"><div class="spin"></div>Cargando...</div></div></div>
+
+        <!-- MAPA -->
+        <div id="sat-mapa-wrap">
+          <div id="sat-map" style="height:450px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);margin-bottom:14px"></div>
+        </div>
+
+        <!-- LISTA -->
+        <div id="sat-lista-wrap" style="display:none">
+          <div class="data-table">
+            <div class="th" style="grid-template-columns:1fr 100px 80px 80px 100px 120px">
+              <div>Vehículo / Rastreador</div><div>Última pos.</div><div>Vel.</div><div>Estado</div><div>Evento</div><div>Acciones</div>
+            </div>
+            <div id="sat-lista-content"><div class="loader"><div class="spin"></div>Cargando...</div></div>
+          </div>
+        </div>
       </div>
 
       <!-- CLIENTES -->
@@ -742,6 +739,44 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
     <div style="display:flex;justify-content:flex-end;gap:8px">
       <button class="btn" onclick="closeModal('cliente')">Cancelar</button>
       <button class="btn btn-primary" onclick="guardarCliente()">✅ Guardar cliente</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL RASTREADOR -->
+<div class="overlay" id="ov-rastreador">
+  <div class="modal modal-sm">
+    <div class="modal-hd"><div class="modal-title" id="rast-title">Vincular rastreador</div><button class="modal-close" onclick="closeModal('rastreador')">✕</button></div>
+    <div style="background:var(--blue-light);border-radius:var(--radius);padding:9px 12px;font-size:12px;color:var(--blue);margin-bottom:14px">
+      Los rastreadores se obtienen automáticamente desde la API GPS. Seleccioná uno y asignalo a un vehículo.
+    </div>
+    <input type="hidden" id="rast-id">
+    <div class="fg" style="margin-bottom:11px">
+      <label class="fl">Rastreador GPS *</label>
+      <select id="rast-gps-sel" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg)">
+        <option value="">Cargando rastreadores...</option>
+      </select>
+    </div>
+    <div class="fg" style="margin-bottom:11px">
+      <label class="fl">Nombre del rastreador</label>
+      <input type="text" id="rast-nombre" placeholder="Ej: GPS Camión AR-001">
+    </div>
+    <div class="fg" style="margin-bottom:11px">
+      <label class="fl">Vehículo asignado</label>
+      <select id="rast-vehiculo-sel" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg)">
+        <option value="">Sin asignar</option>
+      </select>
+    </div>
+    <div class="fg" style="margin-bottom:16px">
+      <label class="fl">País</label>
+      <select id="rast-pais" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg)">
+        <option value="">Seleccioná país</option>
+      </select>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn" onclick="closeModal('rastreador')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarRastreador()">✅ Guardar</button>
     </div>
   </div>
 </div>
@@ -1185,19 +1220,20 @@ function updateCheckGPS(vid){
     return;
   }
   const v=VEH_CACHE_CHECK[vid];
-  if(!v){el.innerHTML='<span style="color:var(--text2)">Sin datos GPS cargados para este vehículo.</span>';return;}
-  // Chequear si es vehículo nuevo
+  if(!v){el.innerHTML='<span style="color:var(--text2)">Sin datos GPS.</span>';return;}
   checkVehiculoNuevo(v);
-  let html='';
-  if(v.nombre_empresa_gps||v.link_gps){
-    html+=`<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">`;
+  // Primero intentar con rastreadores en vivo
+  if(RASTREADORES_DB.length&&GPS_DATA_LIVE.length){
+    loadRastreadoresCheck(vid);
+  } else if(v.nombre_empresa_gps||v.link_gps){
+    let html=`<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">`;
     if(v.nombre_empresa_gps) html+=`<span style="font-weight:600;color:var(--blue)">🛰 ${v.nombre_empresa_gps}</span>`;
-    if(v.link_gps) html+=`<a href="${v.link_gps}" target="_blank" style="color:var(--blue);font-weight:600;display:inline-flex;align-items:center;gap:4px">📍 Ver en mapa →</a>`;
+    if(v.link_gps) html+=`<a href="${v.link_gps}" target="_blank" style="color:var(--blue);font-weight:600">📍 Ver en mapa →</a>`;
     html+=`</div>`;
+    el.innerHTML=html;
   } else {
-    html='<span style="color:var(--text2)">Este vehículo no tiene GPS configurado. Podés agregarlo en la ficha del vehículo.</span>';
+    el.innerHTML='<span style="color:var(--text2)">Sin GPS configurado para este vehículo.</span>';
   }
-  el.innerHTML=html;
 }
 
 async function guardarCheck(){
@@ -1909,6 +1945,243 @@ async function guardarPlanDia(fecha, planId, clienteId){
   if(error){toast('Error: '+error.message,'err');return}
   toast('✓ Guardado','ok');
   setTimeout(loadPlanificacion, 500);
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════
+// SATELITAL GPS — API plataforma.gotdns.org
+// ══════════════════════════════════════════════════════════════════════════
+const GPS_API_URL = 'https://plataforma.gotdns.org';
+const GPS_TOKEN = '0fde2a7b8593c641';
+
+let SAT_MAP = null;
+let SAT_MARKERS = {};
+let SAT_TAB = 'mapa';
+let SAT_INTERVAL = null;
+let RASTREADORES_DB = []; // rastreadores guardados en Supabase
+let GPS_DATA_LIVE = [];   // data en vivo de la API
+
+function satTab(tab){
+  SAT_TAB = tab;
+  $('sat-mapa-wrap').style.display = tab==='mapa'?'block':'none';
+  $('sat-lista-wrap').style.display = tab==='lista'?'block':'none';
+  $('sat-tab-mapa').style.background = tab==='mapa'?'var(--blue)':'var(--bg2)';
+  $('sat-tab-mapa').style.color = tab==='mapa'?'white':'var(--text2)';
+  $('sat-tab-lista').style.background = tab==='lista'?'var(--blue)':'var(--bg2)';
+  $('sat-tab-lista').style.color = tab==='lista'?'white':'var(--text2)';
+  if(tab==='mapa') setTimeout(()=>SAT_MAP?.invalidateSize(),100);
+  if(tab==='lista') renderSatLista();
+}
+
+async function fetchGPSData(){
+  try{
+    // Usar proxy del servidor para evitar CORS
+    const res = await fetch('/api/gps/transmissions');
+    const json = await res.json();
+    if(json.success) return json.data||[];
+    console.warn('GPS API error:', json.errors);
+    return [];
+  }catch(e){
+    console.warn('GPS fetch error:', e);
+    return [];
+  }
+}
+
+async function loadSatelital(){
+  const status=$('sat-status');
+  if(status) status.textContent='🔄 Conectando con GPS...';
+
+  // Cargar rastreadores de Supabase
+  const{data:rasts}=await withPais(db.from('rastreadores').select('*, vehiculos(patente,marca,modelo)').eq('activo',true));
+  RASTREADORES_DB = rasts||[];
+
+  // Obtener datos en vivo de la API
+  GPS_DATA_LIVE = await fetchGPSData();
+
+  if(status){
+    if(GPS_DATA_LIVE.length){
+      const hora = new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      status.textContent = `✓ ${GPS_DATA_LIVE.length} rastreadores activos · Última actualización: ${hora}`;
+      status.style.color = 'var(--green)';
+    } else {
+      status.textContent = '⚠ Sin datos de la API GPS';
+      status.style.color = 'var(--amber)';
+    }
+  }
+
+  // Inicializar mapa
+  initSatMap();
+  renderSatMarcadores();
+  if(SAT_TAB==='lista') renderSatLista();
+
+  // Auto-actualizar cada 30 segundos
+  if(SAT_INTERVAL) clearInterval(SAT_INTERVAL);
+  SAT_INTERVAL = setInterval(async()=>{
+    GPS_DATA_LIVE = await fetchGPSData();
+    renderSatMarcadores();
+    if(SAT_TAB==='lista') renderSatLista();
+    if(status){
+      const hora=new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      status.textContent=`✓ ${GPS_DATA_LIVE.length} rastreadores · Actualizado: ${hora}`;
+    }
+  }, 30000);
+}
+
+function initSatMap(){
+  if(!SAT_MAP){
+    SAT_MAP = L.map('sat-map').setView([-34.6,-58.4],5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+      attribution:'© OpenStreetMap', maxZoom:19
+    }).addTo(SAT_MAP);
+  }
+  SAT_MAP.invalidateSize();
+}
+
+function getVehiculoDeRastreador(gps_gid){
+  return RASTREADORES_DB.find(r=>r.gps_gid===gps_gid);
+}
+
+function renderSatMarcadores(){
+  if(!SAT_MAP) return;
+  const bounds = [];
+
+  GPS_DATA_LIVE.forEach(gps=>{
+    if(!gps.gps_latitud||!gps.gps_longitud) return;
+    const lat=parseFloat(gps.gps_latitud);
+    const lng=parseFloat(gps.gps_longitud);
+    if(isNaN(lat)||isNaN(lng)) return;
+
+    const rast = getVehiculoDeRastreador(gps.gps_gid);
+    const patente = rast?.vehiculos?.patente||gps.gps_vehiculo||gps.gps_id_dispositivo||'Sin asignar';
+    const velocidad = gps.gps_speed||0;
+    const estado = gps.gps_status||'';
+    const color = !rast?.vehiculo_id?'#999993':velocidad>0?'#185FA5':'#3B6D11';
+    const icon = L.divIcon({
+      html:`<div style="background:${color};color:white;padding:4px 8px;border-radius:8px;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.3)">${patente}</div>`,
+      className:'',iconAnchor:[30,12]
+    });
+
+    if(SAT_MARKERS[gps.gps_gid]){
+      SAT_MARKERS[gps.gps_gid].setLatLng([lat,lng]);
+      SAT_MARKERS[gps.gps_gid].setIcon(icon);
+    } else {
+      SAT_MARKERS[gps.gps_gid] = L.marker([lat,lng],{icon})
+        .bindPopup(`
+          <div style="min-width:180px">
+            <div style="font-weight:700;font-size:14px;margin-bottom:6px">${patente}</div>
+            <div style="font-size:12px;color:#666">🛰 ID: ${gps.gps_id_dispositivo||gps.gps_gid}</div>
+            <div style="font-size:12px">⚡ Velocidad: <strong>${velocidad} km/h</strong></div>
+            <div style="font-size:12px">📍 ${gps.gps_ubicacion||lat.toFixed(5)+', '+lng.toFixed(5)}</div>
+            <div style="font-size:12px">🕐 ${gps.gps_fecha||''} ${gps.gps_hora||''}</div>
+            ${rast?.vehiculos?`<div style="font-size:12px;margin-top:4px">🚛 ${rast.vehiculos.marca||''} ${rast.vehiculos.modelo||''}</div>`:''}
+            ${!rast?.vehiculo_id?'<div style="font-size:11px;color:#999;margin-top:4px">Sin vehículo asignado</div>':''}
+          </div>`)
+        .addTo(SAT_MAP);
+    }
+    bounds.push([lat,lng]);
+  });
+
+  if(bounds.length>0) SAT_MAP.fitBounds(bounds,{padding:[40,40],maxZoom:14});
+}
+
+function renderSatLista(){
+  const el=$('sat-lista-content');
+  if(!el) return;
+  if(!GPS_DATA_LIVE.length){
+    el.innerHTML='<div class="empty">Sin datos GPS disponibles.</div>';return;
+  }
+  el.innerHTML=GPS_DATA_LIVE.map(gps=>{
+    const rast=getVehiculoDeRastreador(gps.gps_gid);
+    const patente=rast?.vehiculos?.patente||'Sin asignar';
+    const vel=gps.gps_speed||0;
+    const hora=gps.gps_fecha?`${gps.gps_fecha} ${(gps.gps_hora||'').slice(0,5)}`:'—';
+    const statusColor=vel>0?'var(--blue)':'var(--green)';
+    const statusLabel=vel>0?`▶ ${vel} km/h`:'● Detenido';
+    return `<div class="tr" style="grid-template-columns:1fr 100px 80px 80px 100px 120px">
+      <div>
+        <div style="font-weight:600">${patente}</div>
+        <div style="font-size:11px;color:var(--text2)">${gps.gps_id_dispositivo||gps.gps_gid} · ${gps.gps_ubicacion||''}</div>
+      </div>
+      <div style="font-size:12px">${hora}</div>
+      <div style="font-size:12px;font-weight:600;color:${statusColor}">${vel} km/h</div>
+      <div><span style="font-size:11px;padding:3px 8px;border-radius:20px;background:${vel>0?'var(--blue-light)':'var(--green-light)'};color:${vel>0?'var(--blue)':'var(--green)'}">${vel>0?'En ruta':'Parado'}</span></div>
+      <div style="font-size:11px">${gps.gps_event||'—'}</div>
+      <div style="display:flex;gap:4px">
+        ${gps.gps_latitud&&gps.gps_longitud?`<button class="btn btn-sm" onclick="satVerEnMapa(${gps.gps_latitud},${gps.gps_longitud},${gps.gps_gid})">📍 Mapa</button>`:''}
+        ${isAdmin()?`<button class="btn btn-sm" onclick="abrirVincularRastreador(${gps.gps_gid},'${gps.gps_id_dispositivo||''}','${patente}')">🔗</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function satVerEnMapa(lat,lng,gid){
+  satTab('mapa');
+  if(SAT_MAP){
+    SAT_MAP.setView([lat,lng],16);
+    SAT_MARKERS[gid]?.openPopup();
+  }
+}
+
+async function abrirVincularRastreador(gid, dispositivoId, nombreActual){
+  // Poblar el modal de vinculación
+  $('rast-gps-sel').innerHTML=GPS_DATA_LIVE.map(g=>`<option value="${g.gps_gid}" ${g.gps_gid===gid?'selected':''}>${g.gps_id_dispositivo||g.gps_gid} (${g.gps_vehiculo||'Sin nombre'})</option>`).join('');
+  $('rast-nombre').value=nombreActual!=='Sin asignar'?nombreActual:'';
+  // Cargar vehículos
+  const{data:vehs}=await withPais(db.from('vehiculos').select('id,patente,marca').eq('activo',true).order('patente'));
+  const rastActual=RASTREADORES_DB.find(r=>r.gps_gid===gid);
+  $('rast-id').value=rastActual?.id||'';
+  $('rast-vehiculo-sel').innerHTML='<option value="">Sin asignar</option>'+(vehs||[]).map(v=>`<option value="${v.id}" ${rastActual?.vehiculo_id===v.id?'selected':''}>${v.patente} — ${v.marca}</option>`).join('');
+  // Cargar países
+  popularSelectsPais();
+  if($('rast-pais')&&rastActual?.pais_id) $('rast-pais').value=rastActual.pais_id;
+  openModal('rastreador');
+}
+
+async function guardarRastreador(){
+  const gpsGid=parseInt($('rast-gps-sel').value);
+  const nombre=$('rast-nombre').value.trim();
+  const vehiculoId=$('rast-vehiculo-sel').value||null;
+  const paisId=$('rast-pais')?.value||getPaisId()||null;
+  const existId=$('rast-id').value;
+  const gpsData=GPS_DATA_LIVE.find(g=>g.gps_gid===gpsGid);
+  if(!gpsGid){toast('Seleccioná un rastreador','err');return}
+
+  // Si hay un vehículo seleccionado, desasignar el rastreador anterior de ese vehículo
+  if(vehiculoId){
+    await db.from('rastreadores').update({vehiculo_id:null}).eq('vehiculo_id',vehiculoId).neq('gps_gid',gpsGid);
+  }
+
+  const p={gps_gid:gpsGid,gps_id_dispositivo:gpsData?.gps_id_dispositivo||'',nombre:nombre||gpsData?.gps_vehiculo||String(gpsGid),vehiculo_id:vehiculoId,pais_id:paisId,activo:true};
+  const{error}=existId
+    ?await db.from('rastreadores').update(p).eq('id',existId)
+    :await db.from('rastreadores').upsert(p,{onConflict:'gps_gid'});
+  if(error){toast('Error: '+error.message,'err');return}
+  toast('Rastreador vinculado ✓','ok');
+  closeModal('rastreador');
+  loadSatelital();
+}
+
+// Selector de rastreador en check diario
+async function loadRastreadoresCheck(vehiculoId){
+  if(!vehiculoId) return;
+  // Mostrar el rastreador asignado al vehículo en el check
+  const rast=RASTREADORES_DB.find(r=>r.vehiculo_id===vehiculoId);
+  const gps=rast?GPS_DATA_LIVE.find(g=>g.gps_gid===rast.gps_gid):null;
+  const el=$('check-gps-info');
+  if(!el) return;
+  if(rast&&gps){
+    el.innerHTML=`
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span style="font-weight:600;color:var(--blue)">🛰 ${rast.nombre||rast.gps_id_dispositivo}</span>
+        ${gps.gps_speed>0?`<span style="color:var(--blue)">▶ ${gps.gps_speed} km/h</span>`:'<span style="color:var(--green)">● Detenido</span>'}
+        ${gps.gps_ubicacion?`<span style="font-size:12px;color:var(--text2)">📍 ${gps.gps_ubicacion}</span>`:''}
+        ${gps.gps_latitud&&gps.gps_longitud?`<a href="https://maps.google.com/?q=${gps.gps_latitud},${gps.gps_longitud}" target="_blank" style="color:var(--blue);font-size:12px">Ver en Maps →</a>`:''}
+      </div>`;
+  } else if(rast&&!gps){
+    el.innerHTML='<span style="color:var(--text2)">🛰 '+rast.nombre+' — Sin señal reciente</span>';
+  } else {
+    el.innerHTML='<span style="color:var(--text2)">Este vehículo no tiene rastreador asignado.</span>';
+  }
 }
 
 // ── CONDUCTORES ───────────────────────────────────────────────────────────
