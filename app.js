@@ -7,20 +7,31 @@ app.use(express.static(path.join(__dirname)));
 
 const SB_URL = 'https://rzmijsyioxtmnfjpezvb.supabase.co';
 const SB_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
-const GPS_API_URL = 'https://plataforma.gotdns.org';
+const GPS_API_URL = 'https://plataforma.gotdns.org:2302'; // Puerto correcto
 const GPS_TOKEN = process.env.GPS_TOKEN || '0fde2a7b8593c641';
 
 // ── GPS PROXY (evita CORS) ────────────────────────────────────────────────
 app.get('/api/gps/transmissions', async (req, res) => {
   try {
-    const response = await fetch(`${GPS_API_URL}/api/seguimiento/transmissions`, {
+    const url = `${GPS_API_URL}/api/seguimiento/transmissions`;
+    console.log('GPS fetch:', url);
+    const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${GPS_TOKEN}`,
+        'Accept': 'application/json',
         'Content-Type': 'application/json'
       }
     });
-    const data = await response.json();
-    res.json(data);
+    const text = await response.text();
+    console.log('GPS response status:', response.status);
+    console.log('GPS response preview:', text.slice(0, 200));
+    try {
+      const data = JSON.parse(text);
+      res.json(data);
+    } catch(e) {
+      console.error('GPS parse error:', e.message);
+      res.status(500).json({ success: false, data: [], errors: 'Respuesta inválida de la API GPS: ' + text.slice(0,100) });
+    }
   } catch (err) {
     console.error('GPS API error:', err);
     res.status(500).json({ success: false, data: [], errors: err.message });
