@@ -784,9 +784,14 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
     <input type="hidden" id="rast-id">
     <div class="fg" style="margin-bottom:11px">
       <label class="fl">Rastreador GPS *</label>
-      <select id="rast-gps-sel" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg)">
-        <option value="">Cargando rastreadores...</option>
+      <select id="rast-gps-sel" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg)" onchange="onRastreadorChange(this.value)">
+        <option value="">Seleccioná un rastreador</option>
       </select>
+    </div>
+    <!-- Mini mapa del rastreador -->
+    <div id="rast-map-wrap" style="display:none;margin-bottom:12px">
+      <div id="rast-map" style="height:200px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)"></div>
+      <div id="rast-map-info" style="background:var(--bg3);border-radius:0 0 var(--radius) var(--radius);padding:8px 12px;font-size:12px;color:var(--text2);display:flex;gap:12px;flex-wrap:wrap"></div>
     </div>
     <input type="hidden" id="rast-nombre">
     <input type="hidden" id="rast-pais">
@@ -2419,6 +2424,66 @@ async function eliminarRegistro(tabla, id, recargar){
   if(recargar) recargar();
 }
 
+
+// Mini mapa en modal de rastreador
+let RAST_MINI_MAP = null;
+let RAST_MINI_MARKER = null;
+
+function onRastreadorChange(gid){
+  const wrap = $('rast-map-wrap');
+  const info = $('rast-map-info');
+  if(!gid){
+    if(wrap) wrap.style.display='none';
+    return;
+  }
+  const gpsGid = parseInt(gid);
+  const gps = GPS_DATA_LIVE.find(g=>g.gps_gid===gpsGid);
+  if(!gps||!gps.gps_latitud||!gps.gps_longitud){
+    if(wrap) wrap.style.display='none';
+    if(info) info.textContent='Sin datos de posición disponibles para este rastreador.';
+    return;
+  }
+  const lat = parseFloat(gps.gps_latitud);
+  const lng = parseFloat(gps.gps_longitud);
+  if(isNaN(lat)||isNaN(lng)){if(wrap)wrap.style.display='none';return;}
+  // Mostrar mapa
+  if(wrap) wrap.style.display='block';
+  // Info del rastreador
+  const ahora = new Date();
+  const ts = gps.gps_tstamp ? new Date(gps.gps_tstamp) : null;
+  const mins = ts ? Math.round((ahora-ts)/60000) : null;
+  const vel = gps.gps_speed||0;
+  const estado = mins===null?'Sin info':mins>30?'🔴 Sin reporte':vel>0?'🟢 En ruta':'🟡 Detenido';
+  if(info) info.innerHTML=`
+    <span>${estado}</span>
+    <span>⚡ ${vel} km/h</span>
+    ${gps.gps_ubicacion?`<span>📍 ${gps.gps_ubicacion}</span>`:''}
+    ${ts?`<span>🕐 ${gps.gps_fecha||''} ${(gps.gps_hora||'').slice(0,5)}</span>`:''}
+  `;
+  // Inicializar o actualizar mapa
+  setTimeout(()=>{
+    if(!RAST_MINI_MAP){
+      RAST_MINI_MAP = L.map('rast-map', {zoomControl:true, attributionControl:false});
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(RAST_MINI_MAP);
+    }
+    RAST_MINI_MAP.setView([lat,lng],15);
+    // Color semaforo
+    const color = mins===null||mins>30?'#A32D2D':vel>0?'#3B6D11':'#854F0B';
+    const emoji = mins===null||mins>30?'🔴':vel>0?'🟢':'🟡';
+    const icon = L.divIcon({
+      html:`<div style="background:white;border:3px solid ${color};border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.3)">${emoji}</div>`,
+      className:'',iconAnchor:[18,18]
+    });
+    if(RAST_MINI_MARKER){
+      RAST_MINI_MARKER.setLatLng([lat,lng]);
+      RAST_MINI_MARKER.setIcon(icon);
+    } else {
+      RAST_MINI_MARKER = L.marker([lat,lng],{icon}).addTo(RAST_MINI_MAP);
+    }
+    RAST_MINI_MAP.invalidateSize();
+  },100);
+}
+
 // MODALES
 async function openModal(id){
   if(id==='vehiculo'){
@@ -2475,8 +2540,13 @@ async function openModal(id){
 }
 function closeModal(id){
   $('ov-'+id).classList.remove('open');
-  // Reset mv-id cuando se cierra el modal de vehículo para que el próximo sea "nuevo"
   if(id==='vehiculo') setTimeout(()=>{if($('mv-id'))$('mv-id').value='';},300);
+  if(id==='rastreador'){
+    // Reset mini map
+    const wrap=$('rast-map-wrap');
+    if(wrap) wrap.style.display='none';
+    if(RAST_MINI_MAP){RAST_MINI_MAP.remove();RAST_MINI_MAP=null;RAST_MINI_MARKER=null;}
+  }
 }
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open')}));
 
