@@ -1143,32 +1143,27 @@ async function initCheckSelects(){
   const today = new Date();
   const fl = $('check-fecha-label');
   if(fl) fl.textContent = 'Check diario — ' + today.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  // Cargar vehículos en cache si no están
-  if(!Object.keys(VEH_CACHE_CHECK).length){
-    const {data:vehs} = await db.from('vehiculos').select('*').eq('activo',true).order('patente');
-    (vehs||[]).forEach(v=>VEH_CACHE_CHECK[v.id]=v);
-  }
-  // Empresas
+  // Cargar vehículos filtrados por país activo
+  const {data:vehs} = await withPais(db.from('vehiculos').select('*').eq('activo',true)).order('patente');
+  VEH_CACHE_CHECK = {};
+  (vehs||[]).forEach(v=>VEH_CACHE_CHECK[v.id]=v);
+  // Empresas filtradas por país activo
   const sel = $('check-empresa-sel');
   if(sel){
-    if(!EMPRESAS_CACHE.length){
-      const {data} = await db.from('empresas').select('id,nombre').order('nombre');
-      EMPRESAS_CACHE = data || [];
-    }
+    const {data:emps} = await withPais(db.from('empresas').select('id,nombre').eq('activo',true)).order('nombre');
+    EMPRESAS_CACHE = emps || [];
     sel.innerHTML = '<option value="">— Todas las empresas —</option>' +
       EMPRESAS_CACHE.map(e=>`<option value="${e.id}">${e.nombre}</option>`).join('');
   }
-  // Clientes
+  // Clientes filtrados por país activo
   const csel = $('check-cliente-sel');
   if(csel){
-    if(!CLIENTES_CACHE.length){
-      const {data} = await db.from('clientes').select('id,nombre').order('nombre');
-      CLIENTES_CACHE = data || [];
-    }
+    const {data:clis} = await withPais(db.from('clientes').select('id,nombre').eq('activo',true)).order('nombre');
+    CLIENTES_CACHE = clis || [];
     csel.innerHTML = '<option value="">— Sin cliente asignado —</option>' +
       CLIENTES_CACHE.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
   }
-  // Vehículos (todos)
+  // Vehículos (todos del país)
   updateVehiculosByEmpresa('');
   // Reset completo del formulario
   resetCheckForm();
