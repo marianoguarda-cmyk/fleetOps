@@ -1484,14 +1484,15 @@ async function loadClientes(){
 }
 
 function editarCliente(c){
-  $('cli-modal-title').textContent = 'Editar cliente';
-  $('cli-id').value = c.id;
-  $('cli-nombre').value = c.nombre || '';
-  $('cli-dir').value = c.direccion || '';
-  $('cli-tel').value = c.telefono || '';
-  $('cli-email').value = c.email || '';
-  if($('cli-pais')&&c.pais_id)$('cli-pais').value=c.pais_id;
-  openModal('cliente');
+  $('cli-id').value=c.id;
+  openModal('cliente').then(()=>{
+    $('cli-modal-title').textContent='Editar cliente';
+    $('cli-nombre').value=c.nombre||'';
+    $('cli-dir').value=c.direccion||'';
+    $('cli-tel').value=c.telefono||'';
+    $('cli-email').value=c.email||'';
+    if($('cli-pais')&&c.pais_id)$('cli-pais').value=c.pais_id;
+  });
 }
 
 async function guardarCliente(){
@@ -1541,15 +1542,16 @@ async function loadEmpresas(){
 }
 
 function editarEmpresa(e){
-  $('emp-modal-title').textContent='Editar empresa';
   $('emp-id').value=e.id;
-  $('emp-nombre').value=e.nombre||'';
-  $('emp-cuit').value=e.cuit||'';
-  $('emp-tel').value=e.telefono||'';
-  $('emp-email').value=e.email||'';
-  $('emp-dir').value=e.direccion||'';
-  if($('emp-pais')&&e.pais_id)$('emp-pais').value=e.pais_id;
-  openModal('empresa');
+  openModal('empresa').then(()=>{
+    $('emp-modal-title').textContent='Editar empresa';
+    $('emp-nombre').value=e.nombre||'';
+    $('emp-cuit').value=e.cuit||'';
+    $('emp-tel').value=e.telefono||'';
+    $('emp-email').value=e.email||'';
+    $('emp-dir').value=e.direccion||'';
+    if($('emp-pais')&&e.pais_id)$('emp-pais').value=e.pais_id;
+  });
 }
 
 async function guardarEmpresa(){
@@ -2513,12 +2515,18 @@ async function openModal(id){
     $('mc-empresa').innerHTML='<option value="">Sin empresa</option>'+EMPRESAS_CACHE.map(e=>`<option value="${e.id}">${e.nombre}</option>`).join('');
   }
   if(id==='cliente'){
-    $('cli-modal-title').textContent='Nuevo cliente';$('cli-id').value='';
-    ['cli-nombre','cli-dir','cli-tel','cli-email'].forEach(f=>$(f).value='');
+    const isEditCli=$('cli-id').value!=='';
+    if(!isEditCli){
+      $('cli-modal-title').textContent='Nuevo cliente';
+      ['cli-nombre','cli-dir','cli-tel','cli-email'].forEach(f=>$(f).value='');
+    }
   }
   if(id==='empresa'){
-    $('emp-modal-title').textContent='Nueva empresa';$('emp-id').value='';
-    ['emp-nombre','emp-cuit','emp-tel','emp-email','emp-dir'].forEach(f=>$(f).value='');
+    const isEditEmp=$('emp-id').value!=='';
+    if(!isEditEmp){
+      $('emp-modal-title').textContent='Nueva empresa';
+      ['emp-nombre','emp-cuit','emp-tel','emp-email','emp-dir'].forEach(f=>$(f).value='');
+    }
   }
   if(id==='gps'){
     $('gps-modal-title').textContent='Agregar acceso GPS';$('gps-id').value='';
