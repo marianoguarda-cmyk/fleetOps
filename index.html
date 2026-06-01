@@ -2289,24 +2289,24 @@ async function loadConductores(){
 
 
 function editarCond(c){
-  $("mc-title").textContent="Editar conductor";
+  // Guardar ID antes de abrir modal (openModal es async y resetea campos)
   $("mc-id").value=c.id;
-  ["mc-nombre","mc-dni","mc-tel","mc-email","mc-licencia","mc-venc-lic","mc-venc-lib","mc-venc-psico"].forEach(f=>$(f).value="");
-  $("mc-nombre").value=c.nombre||"";
-  $("mc-dni").value=c.dni||"";
-  $("mc-tel").value=c.telefono||"";
-  $("mc-email").value=c.email||"";
-  $("mc-licencia").value=c.nro_licencia||"";
-  $("mc-cat").value=c.categoria_licencia||"B";
-  $("mc-venc-lic").value=c.venc_licencia||"";
-  $("mc-venc-lib").value=c.venc_libreta_sanitaria||"";
-  $("mc-venc-psico").value=c.venc_psicofisico||"";
-  openModal("conductor");
-  setTimeout(()=>{
-    if($("mc-vehiculo"))$("mc-vehiculo").value=c.vehiculo_id||"";
-    if($("mc-empresa"))$("mc-empresa").value=c.empresa_id||"";
-    if($("mc-pais")&&c.pais_id)$("mc-pais").value=c.pais_id;
-  },300);
+  // Abrir modal y rellenar campos DESPUÉS de que cargue
+  openModal("conductor").then(()=>{
+    $("mc-title").textContent="Editar conductor";
+    $("mc-nombre").value=c.nombre||"";
+    $("mc-dni").value=c.dni||"";
+    $("mc-tel").value=c.telefono||"";
+    $("mc-email").value=c.email||"";
+    $("mc-licencia").value=c.nro_licencia||"";
+    $("mc-cat").value=c.categoria_licencia||"B";
+    $("mc-venc-lic").value=c.venc_licencia||"";
+    $("mc-venc-lib").value=c.venc_libreta_sanitaria||"";
+    $("mc-venc-psico").value=c.venc_psicofisico||"";
+    if($("mc-vehiculo")) $("mc-vehiculo").value=c.vehiculo_id||"";
+    if($("mc-empresa")) $("mc-empresa").value=c.empresa_id||"";
+    if($("mc-pais")&&c.pais_id) $("mc-pais").value=c.pais_id;
+  });
 }
 
 async function guardarConductor(){
@@ -2444,8 +2444,11 @@ async function openModal(id){
   }
   if(id==='conductor'){
     popularSelectsPais();
-    $('mc-title').textContent='Nuevo conductor';$('mc-id').value='';
-    ['mc-nombre','mc-dni','mc-tel','mc-email','mc-licencia','mc-venc-lic','mc-venc-lib','mc-venc-psico'].forEach(f=>$(f).value='');
+    const isEditCond = $('mc-id').value !== '';
+    if(!isEditCond){
+      $('mc-title').textContent='Nuevo conductor';
+      ['mc-nombre','mc-dni','mc-tel','mc-email','mc-licencia','mc-venc-lic','mc-venc-lib','mc-venc-psico'].forEach(f=>$(f).value='');
+    }
     if(!EMPRESAS_CACHE.length){const{data}=await db.from('empresas').select('id,nombre').order('nombre');EMPRESAS_CACHE=data||[];}
     $('mc-empresa').innerHTML='<option value="">Sin empresa</option>'+EMPRESAS_CACHE.map(e=>`<option value="${e.id}">${e.nombre}</option>`).join('');
   }
