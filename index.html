@@ -153,6 +153,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 .admin-only{display:none}
 .info-box{background:var(--blue-light);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--blue);margin-bottom:14px}
 .btn-danger{background:var(--red-light);color:var(--red);border:1px solid #F09595}
+#sat-map{z-index:1}
 </style>
 </head>
 <body>
@@ -425,6 +426,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
                 <div class="chip" onclick="selChip('chips-gps',this,'ok')">✓ Verificado</div>
                 <div class="chip" onclick="selChip('chips-gps',this,'err')">✕ Sin señal</div>
               </div>
+              <button class="btn btn-sm admin-only" onclick="abrirVincularDesdeCheck()" style="font-size:11px;padding:3px 8px">🔗 Vincular</button>
             </div>
           </div>
           <div id="check-gps-info" style="font-size:13px;color:var(--text2)">Seleccioná un vehículo para ver la info GPS.</div>
@@ -1183,6 +1185,30 @@ function togglePeon(){
   if(lno) lno.style.borderColor='var(--border)';
 }
 
+
+function abrirVincularDesdeCheck(){
+  const vid=$('check-vehiculo-sel')?.value;
+  if(!vid){toast('Seleccioná un vehículo primero','err');return}
+  // Cargar datos del modal rastreador
+  if(GPS_DATA_LIVE.length){
+    $('rast-gps-sel').innerHTML=GPS_DATA_LIVE.map(g=>`<option value="${g.gps_gid}">${g.gps_id_dispositivo||g.gps_gid} (${g.gps_vehiculo||'Sin nombre'})</option>`).join('');
+  } else {
+    $('rast-gps-sel').innerHTML='<option value="">Sin datos GPS disponibles</option>';
+  }
+  // Pre-seleccionar el vehículo
+  const vehs=Object.values(VEH_CACHE_CHECK);
+  $('rast-vehiculo-sel').innerHTML='<option value="">Sin asignar</option>'+vehs.map(v=>`<option value="${v.id}" ${v.id===vid?'selected':''}>${v.patente} — ${v.marca}</option>`).join('');
+  // País
+  popularSelectsPais();
+  if($('rast-pais')&&CP?.pais_id) $('rast-pais').value=CP.pais_id;
+  // Rastreador actual del vehículo
+  const rastActual=RASTREADORES_DB.find(r=>r.vehiculo_id===vid);
+  $('rast-id').value=rastActual?.id||'';
+  $('rast-nombre').value=rastActual?.nombre||'';
+  if(rastActual&&$('rast-gps-sel')) $('rast-gps-sel').value=rastActual.gps_gid;
+  openModal('rastreador');
+}
+
 // GPS info en checklist
 let VEH_CACHE_CHECK={};
 
@@ -1222,9 +1248,18 @@ function updateCheckGPS(vid){
   const v=VEH_CACHE_CHECK[vid];
   if(!v){el.innerHTML='<span style="color:var(--text2)">Sin datos GPS.</span>';return;}
   checkVehiculoNuevo(v);
-  // Primero intentar con rastreadores en vivo
-  if(RASTREADORES_DB.length&&GPS_DATA_LIVE.length){
-    loadRastreadoresCheck(vid);
+  // Buscar rastreador asignado
+  const rast=RASTREADORES_DB.find(r=>r.vehiculo_id===vid);
+  const gpsLive=rast?GPS_DATA_LIVE.find(g=>g.gps_gid===rast.gps_gid):null;
+  if(rast&&gpsLive){
+    el.innerHTML=`<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="font-weight:600;color:var(--blue)">🛰 ${rast.nombre||rast.gps_id_dispositivo}</span>
+      ${gpsLive.gps_speed>0?`<span style="color:var(--blue)">▶ ${gpsLive.gps_speed} km/h</span>`:'<span style="color:var(--green)">● Detenido</span>'}
+      ${gpsLive.gps_ubicacion?`<span style="font-size:12px;color:var(--text2)">📍 ${gpsLive.gps_ubicacion}</span>`:''}
+      ${gpsLive.gps_latitud&&gpsLive.gps_longitud?`<a href="https://maps.google.com/?q=${gpsLive.gps_latitud},${gpsLive.gps_longitud}" target="_blank" style="color:var(--blue);font-size:12px">Ver en Maps →</a>`:''}
+    </div>`;
+  } else if(rast){
+    el.innerHTML=`<span style="color:var(--text2)">🛰 ${rast.nombre} — Sin señal reciente</span>`;
   } else if(v.nombre_empresa_gps||v.link_gps){
     let html=`<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">`;
     if(v.nombre_empresa_gps) html+=`<span style="font-weight:600;color:var(--blue)">🛰 ${v.nombre_empresa_gps}</span>`;
@@ -1232,7 +1267,7 @@ function updateCheckGPS(vid){
     html+=`</div>`;
     el.innerHTML=html;
   } else {
-    el.innerHTML='<span style="color:var(--text2)">Sin GPS configurado para este vehículo.</span>';
+    el.innerHTML='<span style="color:var(--text2)">Sin rastreador asignado. Usá el botón 🔗 Vincular para asignar uno.</span>';
   }
 }
 
