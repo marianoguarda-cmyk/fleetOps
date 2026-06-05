@@ -649,8 +649,10 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
       <img id="mv-foto-preview" src="" style="display:none;margin-top:8px;max-height:120px;border-radius:8px;border:1px solid var(--border)">
       <input type="hidden" id="mv-foto-url">
     </div>
-    onclick="closeModal('vehiculo')">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardarVehiculo()">✅ Guardar vehículo</button>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+      <button class="btn" onclick="closeModal('vehiculo')">Cancelar</button>
+      <button class="btn btn-primary" id="mv-btn" onclick="guardarVehiculo()">✅ Guardar vehículo</button>
+    </div>
     </div>
   </div>
 </div>
@@ -688,8 +690,10 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
       <img id="mc-foto-preview" src="" style="display:none;margin-top:8px;max-height:120px;border-radius:8px;border:1px solid var(--border)">
       <input type="hidden" id="mc-foto-url">
     </div>
-    onclick="closeModal('conductor')">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardarConductor()">✅ Guardar conductor</button>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+      <button class="btn" onclick="closeModal('conductor')">Cancelar</button>
+      <button class="btn btn-primary" id="mc-btn" onclick="guardarConductor()">✅ Guardar conductor</button>
+    </div>
     </div>
   </div>
 </div>
@@ -1078,14 +1082,13 @@ async function guardarVehiculo(){
   const id=$('mv-id').value;
   const btn=$('mv-btn');if(btn){btn.disabled=true;btn.textContent='Guardando...';}
   // Subir foto a Google Drive si hay una seleccionada
-  let fotoVehUrl = $('mv-foto-url')?.value || null;
-  const fotoVehInput = $('mv-foto-input');
-  if(fotoVehInput?.files[0]){
+  const base64Veh = $('mv-foto-url')?.value || null;
+  let fotoVehUrl = null;
+  if(base64Veh && base64Veh.startsWith('data:')){
     try{
-      const base64 = await comprimirImagen(fotoVehInput.files[0]);
       const patente = $('mv-patente')?.value?.trim()||'vehiculo';
       const fname = `vehiculo_${patente}_${Date.now()}.jpg`;
-      fotoVehUrl = await uploadToDrive(base64, fname, 'vehiculos');
+      fotoVehUrl = await uploadToDrive(base64Veh, fname, 'vehiculos');
       toast('📷 Foto subida a Drive ✓');
     }catch(e){ toast('Error subiendo foto: '+e.message,'err'); }
   }
@@ -2447,23 +2450,22 @@ async function comprimirImagen(file, maxW=1200){
 function previewFotoCond(e){
   const file = e.target.files[0]; if(!file) return;
   $('mc-foto-nombre').textContent = file.name;
-  const reader = new FileReader();
-  reader.onload = ev => {
+  comprimirImagen(file).then(base64=>{
     const prev = $('mc-foto-preview');
-    prev.src = ev.target.result; prev.style.display='block';
-  };
-  reader.readAsDataURL(file);
+    prev.src = base64; prev.style.display='block';
+    $('mc-foto-url').value = base64;
+  });
 }
 
 function previewFotoVeh(e){
   const file = e.target.files[0]; if(!file) return;
   $('mv-foto-nombre').textContent = file.name;
-  const reader = new FileReader();
-  reader.onload = ev => {
+  comprimirImagen(file).then(base64=>{
     const prev = $('mv-foto-preview');
-    prev.src = ev.target.result; prev.style.display='block';
-  };
-  reader.readAsDataURL(file);
+    prev.src = base64; prev.style.display='block';
+    // Guardar base64 para upload
+    $('mv-foto-url').value = base64;
+  });
 }
 
 // ── CONDUCTORES ───────────────────────────────────────────────────────────
@@ -2521,13 +2523,12 @@ async function guardarConductor(){
   if(!nombre){toast('El nombre es obligatorio','err');return}
   const btn=$('mc-btn');if(btn){btn.disabled=true;btn.textContent='Guardando...';}
   // Subir foto a Google Drive si hay una seleccionada
-  let fotoUrl = $('mc-foto-url')?.value || null;
-  const fotoInput = $('mc-foto-input');
-  if(fotoInput?.files[0]){
+  const base64Cond = $('mc-foto-url')?.value || null;
+  let fotoUrl = null;
+  if(base64Cond && base64Cond.startsWith('data:')){
     try{
-      const base64 = await comprimirImagen(fotoInput.files[0]);
       const fname = `conductor_${nombre.replace(/\s+/g,'_')}_${Date.now()}.jpg`;
-      fotoUrl = await uploadToDrive(base64, fname, 'conductores');
+      fotoUrl = await uploadToDrive(base64Cond, fname, 'conductores');
       toast('📷 Foto subida a Drive ✓');
     }catch(e){ toast('Error subiendo foto: '+e.message,'err'); }
   }
