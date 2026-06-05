@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const crypto = require('crypto');
 
 const app = express();
 app.use(express.json({ limit: '20mb' }));
@@ -10,14 +11,9 @@ const SB_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
 const GPS_API_URL = 'https://plataforma.gotdns.org:2302';
 const GPS_TOKEN = process.env.GPS_TOKEN || '0fde2a7b8593c641';
 
-// Google Drive Service Account
 const GDRIVE_SA = {
-  type: "service_account",
-  project_id: "operating-braid-496220-b0",
-  private_key_id: "5b904afe71b7fdf331d86553a20678afce6aa0f8",
-  private_key: process.env.GDRIVE_PRIVATE_KEY || "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC2yejklq3Q9wkT\neG773Pn19xNjXht6lmcRktlnv/ndnLzagDAQamTBMM9biHqiXtHUEwwWK3FmBJdd\nsqLv/ZyiQiDUWri+cpT1O/rXEaAu3Rql1r28tLZiJdYSyQi6wMLtOoxnMkb0KXV/\n6tbPcftIZuDcFBGkMPHXLdt/yoojOHkY1jogLET4/8NhQIVUrpEnklf7HYKiUlet\nPmB66lspHW/NubzZ4LR+ImgKqhqUf4wOF8vTAoK40RbUmLRNS4Sp56+rSS9YEADQ\nOj6quTLkNnSNPmX9fKqRvrRn/TJde1RmU9kEem8dcJ4Up5CERoHWmutWdaksGZgn\nC3pMROTHAgMBAAECggEAO/jyQzHW9LVg0nUUwOlHT/bRcyxYyrdXONJcJ2i69AWt\nhulBG9m0lhhMKIWWavi+Up0vPYTib2z5NuJaCHDG+AvHVrUvYTkZ+35C9laPnmCo\nEhprZWNLZddxLfesuA1vx0MK9v7tfcWuihpEgYqtvhsXEs443Yy7hHTEzGBpQ1WB\nUKEilZOhQqalgKtZ49zcEnSAJzMcme8tLaHadMsBT/YkBb6YqpHZcbDYZffELBsY\nfU+4TTF/6LAR4WG7mtJyUiIEJg4NdzefFfPU2p4K/JAcjoen69533pUd9TLvlHRD\nNvBDEYKHHUpWnDTZa2Yl80I3vTfDx/znIziP/rLKVQKBgQDm/P7uKss1AL++QY0T\nsghm3mqkCC0pMf7/gVhHqRnJxvuR1/eQ1008vIRyg5841PJm0ikaDE+wOj+xkMg1\nuIXi/06grdBWgkbb1y5O9N3PzrZlUzJ6K/mS05z+JoDeiQISYBTJU2SMt0CAe8Ar\nv7pGehUyURZ+1shzzTY1vTyCVQKBgQDKlNH9f4XsjZ5mV1TiDSXIMRxip7vp3vR5\nLphVozd4/sA8Q/uWczVuanh5KHBPUqjcS6zQQWlt0w5lw/iIeuBw8qDvy++65TDF\n5lyd7nUXzDbVLGNo9THH2YC31Fw6BqJAt+VaQlm1hGq0R6YQ7nwDJngOHfHgw/6/\ncxUb5eR+qwKBgQCioTHkAeE8miBmFcT8PvbHZoVypAcX4AmHX0wGeDqd5CkvT/0P\nz2akAp7F+YHbA6L/XaxumIhqrTg3DpbHq/koD1UOsBHlNqgpFGGYWbLqIsIsqNz7\nQ4beJ3t7PSSyiYgZ4+f+r2Y15LfXPknZA45lHINb/9d0ykgrsCogv/GgWQKBgCI8\nrJCvMK8d8BtTvyDFIBGJW0bBGl0YNTEV0uEGSKXGSC7nPmna5rjWfa3cS77cNXWl\nxHsd0vegp9pDGInYWn48Qz7DtKxdd7S6jgSS/G8dMFcuvU5LwjIIbFylI0EbReiy\nK6zpccffrTjysvpBk+vkYH3iSbK27SLmDDc+zzMpAoGAWTt0f0j8JSPukCS4HFDG\nhUABI+womIq9PsMo7V9iVd9QpPcn87QQqzaJ+GqXRRwSP8zNeuk5oPMbg/tyr19G\nMOi6CAz9Q1LNKr2KDL0TFUJPmIhppyqHbbw2pr+pbSnBQarvF4/I+wO/K0jEYA+z\n3Sy7LsscZbs5u0Drrft1b7w=\n-----END PRIVATE KEY-----\n",
   client_email: "fleetops-drive@operating-braid-496220-b0.iam.gserviceaccount.com",
-  client_id: "110503783852963868004",
+  private_key: "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC2yejklq3Q9wkT\neG773Pn19xNjXht6lmcRktlnv/ndnLzagDAQamTBMM9biHqiXtHUEwwWK3FmBJdd\nsqLv/ZyiQiDUWri+cpT1O/rXEaAu3Rql1r28tLZiJdYSyQi6wMLtOoxnMkb0KXV/\n6tbPcftIZuDcFBGkMPHXLdt/yoojOHkY1jogLET4/8NhQIVUrpEnklf7HYKiUlet\nPmB66lspHW/NubzZ4LR+ImgKqhqUf4wOF8vTAoK40RbUmLRNS4Sp56+rSS9YEADQ\nOj6quTLkNnSNPmX9fKqRvrRn/TJde1RmU9kEem8dcJ4Up5CERoHWmutWdaksGZgn\nC3pMROTHAgMBAAECggEAO/jyQzHW9LVg0nUUwOlHT/bRcyxYyrdXONJcJ2i69AWt\nhulBG9m0lhhMKIWWavi+Up0vPYTib2z5NuJaCHDG+AvHVrUvYTkZ+35C9laPnmCo\nEhprZWNLZddxLfesuA1vx0MK9v7tfcWuihpEgYqtvhsXEs443Yy7hHTEzGBpQ1WB\nUKEilZOhQqalgKtZ49zcEnSAJzMcme8tLaHadMsBT/YkBb6YqpHZcbDYZffELBsY\nfU+4TTF/6LAR4WG7mtJyUiIEJg4NdzefFfPU2p4K/JAcjoen69533pUd9TLvlHRD\nNvBDEYKHHUpWnDTZa2Yl80I3vTfDx/znIziP/rLKVQKBgQDm/P7uKss1AL++QY0T\nsghm3mqkCC0pMf7/gVhHqRnJxvuR1/eQ1008vIRyg5841PJm0ikaDE+wOj+xkMg1\nuIXi/06grdBWgkbb1y5O9N3PzrZlUzJ6K/mS05z+JoDeiQISYBTJU2SMt0CAe8Ar\nv7pGehUyURZ+1shzzTY1vTyCVQKBgQDKlNH9f4XsjZ5mV1TiDSXIMRxip7vp3vR5\nLphVozd4/sA8Q/uWczVuanh5KHBPUqjcS6zQQWlt0w5lw/iIeuBw8qDvy++65TDF\n5lyd7nUXzDbVLGNo9THH2YC31Fw6BqJAt+VaQlm1hGq0R6YQ7nwDJngOHfHgw/6/\ncxUb5eR+qwKBgQCioTHkAeE8miBmFcT8PvbHZoVypAcX4AmHX0wGeDqd5CkvT/0P\nz2akAp7F+YHbA6L/XaxumIhqrTg3DpbHq/koD1UOsBHlNqgpFGGYWbLqIsIsqNz7\nQ4beJ3t7PSSyiYgZ4+f+r2Y15LfXPknZA45lHINb/9d0ykgrsCogv/GgWQKBgCI8\nrJCvMK8d8BtTvyDFIBGJW0bBGl0YNTEV0uEGSKXGSC7nPmna5rjWfa3cS77cNXWl\nxHsd0vegp9pDGInYWn48Qz7DtKxdd7S6jgSS/G8dMFcuvU5LwjIIbFylI0EbReiy\nK6zpccffrTjysvpBk+vkYH3iSbK27SLmDDc+zzMpAoGAWTt0f0j8JSPukCS4HFDG\nhUABI+womIq9PsMo7V9iVd9QpPcn87QQqzaJ+GqXRRwSP8zNeuk5oPMbg/tyr19G\nMOi6CAz9Q1LNKr2KDL0TFUJPmIhppyqHbbw2pr+pbSnBQarvF4/I+wO/K0jEYA+z\n3Sy7LsscZbs5u0Drrft1b7w=\n-----END PRIVATE KEY-----\n",
   token_uri: "https://oauth2.googleapis.com/token"
 };
 
@@ -27,25 +23,27 @@ const GDRIVE_FOLDERS = {
   checks:      '1nbLdLknzNm7U0LyvHzCSMhf8oinPwSMR'
 };
 
-// Generate JWT for Google OAuth
-function base64url(buf) {
+// Cache token
+let _gToken = null, _gTokenExp = 0;
+
+function b64url(buf) {
   return buf.toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
 }
 
 async function getGoogleToken() {
-  const crypto = require('crypto');
+  if (_gToken && Date.now() < _gTokenExp) return _gToken;
   const now = Math.floor(Date.now() / 1000);
-  const header = base64url(Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })));
-  const payload = base64url(Buffer.from(JSON.stringify({
+  const header = b64url(Buffer.from(JSON.stringify({ alg:'RS256', typ:'JWT' })));
+  const payload = b64url(Buffer.from(JSON.stringify({
     iss: GDRIVE_SA.client_email,
-    scope: 'https://www.googleapis.com/auth/drive.file',
+    scope: 'https://www.googleapis.com/auth/drive',
     aud: GDRIVE_SA.token_uri,
     exp: now + 3600,
     iat: now
   })));
   const sign = crypto.createSign('RSA-SHA256');
   sign.update(`${header}.${payload}`);
-  const sig = base64url(sign.sign(GDRIVE_SA.private_key));
+  const sig = b64url(sign.sign(GDRIVE_SA.private_key));
   const jwt = `${header}.${payload}.${sig}`;
   const res = await fetch(GDRIVE_SA.token_uri, {
     method: 'POST',
@@ -53,66 +51,63 @@ async function getGoogleToken() {
     body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`
   });
   const data = await res.json();
-  return data.access_token;
+  if (!data.access_token) throw new Error('No token: ' + JSON.stringify(data));
+  _gToken = data.access_token;
+  _gTokenExp = Date.now() + 3500000;
+  return _gToken;
 }
 
 // ── GOOGLE DRIVE UPLOAD ───────────────────────────────────────────────────
 app.post('/api/drive/upload', async (req, res) => {
   try {
     const { base64, filename, tipo } = req.body;
-    if (!base64 || !filename || !tipo) {
-      return res.status(400).json({ error: 'Faltan parámetros: base64, filename, tipo' });
-    }
+    if (!base64 || !filename || !tipo) return res.status(400).json({ error: 'Faltan parámetros' });
     const folderId = GDRIVE_FOLDERS[tipo];
-    if (!folderId) {
-      return res.status(400).json({ error: 'Tipo inválido. Usar: conductores, vehiculos, checks' });
-    }
+    if (!folderId) return res.status(400).json({ error: 'Tipo inválido' });
 
     const token = await getGoogleToken();
-
-    // Convert base64 to buffer
     const base64Data = base64.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
     const mimeType = base64.match(/data:([^;]+);/)?.[1] || 'image/jpeg';
 
-    // Multipart upload to Google Drive
-    const boundary = 'fleetops_boundary';
+    const boundary = 'fleet_boundary_xyz';
     const metadata = JSON.stringify({ name: filename, parents: [folderId] });
     const body = Buffer.concat([
-      Buffer.from(`--${boundary}\r\nContent-Type: application/json\r\n\r\n${metadata}\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`),
+      Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`),
       buffer,
       Buffer.from(`\r\n--${boundary}--`)
     ]);
 
-    const uploadRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,webContentLink', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': `multipart/related; boundary=${boundary}`,
-        'Content-Length': body.length
-      },
-      body
-    });
+    const uploadRes = await fetch(
+      `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink&supportsAllDrives=true`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': `multipart/related; boundary="${boundary}"`,
+          'Content-Length': String(body.length)
+        },
+        body
+      }
+    );
 
     const fileData = await uploadRes.json();
-    if (!uploadRes.ok) {
-      console.error('Drive upload error:', fileData);
-      return res.status(500).json({ error: fileData.error?.message || 'Error subiendo a Drive' });
-    }
+    console.log('Drive upload result:', uploadRes.status, fileData);
 
-    // Make file publicly viewable
-    await fetch(`https://www.googleapis.com/drive/v3/files/${fileData.id}/permissions`, {
+    if (!uploadRes.ok) return res.status(500).json({ error: fileData.error?.message || 'Error Drive' });
+
+    // Make public
+    await fetch(`https://www.googleapis.com/drive/v3/files/${fileData.id}/permissions?supportsAllDrives=true`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ role: 'reader', type: 'anyone' })
     });
 
-    // Return direct view URL
     const viewUrl = `https://drive.google.com/uc?export=view&id=${fileData.id}`;
-    res.json({ success: true, id: fileData.id, url: viewUrl, viewLink: fileData.webViewLink });
+    res.json({ success: true, id: fileData.id, url: viewUrl });
 
   } catch (err) {
-    console.error('Drive upload error:', err);
+    console.error('Drive error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -125,7 +120,7 @@ app.get('/api/gps/transmissions', async (req, res) => {
     });
     const text = await response.text();
     try { res.json(JSON.parse(text)); }
-    catch(e) { res.status(500).json({ success: false, data: [], errors: 'Respuesta inválida de la API GPS' }); }
+    catch(e) { res.status(500).json({ success: false, data: [], errors: 'Respuesta inválida' }); }
   } catch (err) {
     res.status(500).json({ success: false, data: [], errors: err.message });
   }
@@ -154,7 +149,6 @@ app.post('/api/crear-usuario', async (req, res) => {
   }
 });
 
-// Rutas específicas
 app.get('/operador', (req, res) => res.sendFile(path.join(__dirname, 'operador.html')));
 app.get('/operador.html', (req, res) => res.sendFile(path.join(__dirname, 'operador.html')));
 app.get('/sw.js', (req, res) => {
