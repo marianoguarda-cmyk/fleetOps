@@ -282,13 +282,6 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 
       <!-- PLANIFICACIÓN -->
       <div class="section" id="s-planificacion">
-        <div class="super-admin-pais-bar" style="display:none;background:var(--blue-light);border-radius:var(--radius);padding:8px 12px;margin-bottom:12px;align-items:center;gap:10px">
-          <span style="font-size:12px;font-weight:600;color:var(--blue)">🌎 Filtrar por país:</span>
-          <select class="sa-pais-filter" style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:white;color:var(--text)" onchange="cambiarPais(this.value)">
-            <option value="">Todos los países</option>
-          </select>
-        </div>
-
         <div class="ph">
           <div style="font-size:15px;font-weight:600">📅 Planificación de flota</div>
           <div style="display:flex;gap:8px;align-items:center">
@@ -975,7 +968,9 @@ const PAGES={dashboard:{title:'Dashboard',sub:'Vista general de la flota'},vehic
 
 function goTo(sec){
   if(sec==='usuarios'&&!isAdmin()){toast('Solo los administradores pueden ver esta sección','err');return}
-  if(sec==='empresas')document.querySelectorAll('.admin-only').forEach(el=>{}); // empresas visible para todos
+  // Si el país cambió, forzar recarga de la sección
+  const forceReload = window._paisCambiadoPendiente;
+  window._paisCambiadoPendiente = false; // empresas visible para todos
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   $('s-'+sec).classList.add('active');
@@ -1890,10 +1885,9 @@ function semanaSiguiente(){
 async function initPlanCliente(){
   const sel = $('plan-cliente-sel');
   if(!sel) return;
-  if(!CLIENTES_CACHE.length){
-    const{data}=await withPais(db.from('clientes').select('id,nombre').eq('activo',true)).order('nombre');
-    CLIENTES_CACHE = data || [];
-  }
+  // Siempre recargar clientes filtrados por país activo
+  const{data}=await withPais(db.from('clientes').select('id,nombre').eq('activo',true)).order('nombre');
+  CLIENTES_CACHE = data || [];
   sel.innerHTML = '<option value="">Todos los clientes</option>' +
     CLIENTES_CACHE.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
 }
