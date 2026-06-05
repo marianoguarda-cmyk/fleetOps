@@ -653,7 +653,6 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
       <button class="btn" onclick="closeModal('vehiculo')">Cancelar</button>
       <button class="btn btn-primary" id="mv-btn" onclick="guardarVehiculo()">✅ Guardar vehículo</button>
     </div>
-    </div>
   </div>
 </div>
 
@@ -693,7 +692,6 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
       <button class="btn" onclick="closeModal('conductor')">Cancelar</button>
       <button class="btn btn-primary" id="mc-btn" onclick="guardarConductor()">✅ Guardar conductor</button>
-    </div>
     </div>
   </div>
 </div>
@@ -1093,8 +1091,10 @@ async function guardarVehiculo(){
     }catch(e){ toast('Error subiendo foto: '+e.message,'err'); }
   }
   const p={tipo:$('mv-tipo').value,patente:$('mv-patente').value.trim().toUpperCase(),marca:$('mv-marca').value.trim(),modelo:$('mv-modelo').value.trim(),anio:parseInt($('mv-anio').value)||null,color:$('mv-color').value.trim(),nro_chasis:$('mv-chasis').value.trim(),nro_motor:$('mv-motor').value.trim(),aseguradora:$('mv-aseguradora').value.trim(),nro_poliza:$('mv-poliza').value.trim(),venc_seguro:$('mv-venc-seguro').value||null,venc_vtv:$('mv-venc-vtv').value||null,venc_habilitacion_municipal:$('mv-venc-hab').value||null,nro_permiso_transporte:$('mv-permiso').value.trim(),observaciones:$('mv-obs').value.trim(),empresa_id:$('mv-empresa')?.value||null,nombre_empresa_gps:$('mv-gps-empresa')?.value.trim()||null,link_gps:$('mv-gps-link')?.value.trim()||null,pais_id:$('mv-pais')?.value||getPaisId()||null,activo:true};
-  if(!p.patente){toast('La patente es obligatoria','err');return}
+  if(!p.patente){toast('La patente es obligatoria','err');if(btn){btn.disabled=false;btn.textContent='✅ Guardar vehículo';}return}
+  if(fotoVehUrl) p.foto_url = fotoVehUrl;
   const{error}=id?await db.from('vehiculos').update(p).eq('id',id):await db.from('vehiculos').insert(p);
+  if(btn){btn.disabled=false;btn.textContent='✅ Guardar vehículo';}
   if(error){toast('Error: '+error.message,'err');return}
   toast(id?'Vehículo actualizado ✓':'Vehículo registrado ✓','ok');closeModal('vehiculo');loadVehiculos();recalcAlertas();
 }
