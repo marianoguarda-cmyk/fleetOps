@@ -18,9 +18,9 @@ const GDRIVE_SA = {
 };
 
 const GDRIVE_FOLDERS = {
-  conductores: '1GrwnV0G0vtE3N-7bLvaghYj2OTCCim8j',
-  vehiculos:   '1aY9FvWOpXXdJISz4svNM5xLTuGVtEB6f',
-  checks:      '1nbLdLknzNm7U0LyvHzCSMhf8oinPwSMR'
+  conductores: '1HbWvm2uahei85ySU0P3a_c3T0EHCyXa_',
+  vehiculos:   '1XP45p-iv3yWFfm8UCEbbd6IEU7IoBidJ',
+  checks:      '1ima6LbI3AjrYNcsXcr-jhVsNNq1fqhW7'
 };
 
 // Cache token
