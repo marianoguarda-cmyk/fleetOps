@@ -103,7 +103,7 @@ app.post('/api/drive/upload', async (req, res) => {
       body: JSON.stringify({ role: 'reader', type: 'anyone' })
     });
 
-    const viewUrl = `https://drive.google.com/uc?export=view&id=${fileData.id}`;
+    const viewUrl = `https://lh3.googleusercontent.com/d/${fileData.id}`;
     res.json({ success: true, id: fileData.id, url: viewUrl });
 
   } catch (err) {
