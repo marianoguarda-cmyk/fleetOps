@@ -1937,8 +1937,17 @@ async function loadPlanificacion(){
   let q = withPais(db.from('planificacion').select('*').in('fecha', dias));
   if(clienteId) q = q.eq('cliente_id', clienteId);
   const{data:planData} = await q;
+  // planMap: fecha -> suma de vehiculos_planificados de todos los paises/clientes
   const planMap = {};
-  (planData||[]).forEach(p => { planMap[p.fecha + '_' + (p.cliente_id||'')] = p; });
+  const planMapDetalle = {}; // para edición individual: fecha_cliente -> registro
+  (planData||[]).forEach(p => {
+    // Suma por fecha (para mostrar total en grilla)
+    if(!planMap[p.fecha]) planMap[p.fecha] = {vehiculos_planificados:0, ids:[]};
+    planMap[p.fecha].vehiculos_planificados += p.vehiculos_planificados||0;
+    planMap[p.fecha].ids.push(p.id);
+    // Detalle para edición
+    planMapDetalle[p.fecha + '_' + (p.cliente_id||'')] = p;
+  });
 
   // Cargar checks del día para comparar (filtrado por país)
   let qChecks = db.from('checks_diarios').select('fecha').in('fecha', dias);
@@ -1964,9 +1973,10 @@ async function loadPlanificacion(){
   const hoy = fechaStr(new Date());
 
   grid.innerHTML = dias.map(fecha => {
-    const key = fecha + '_' + (clienteId||'');
-    const plan = planMap[key];
-    const planificados = plan?.vehiculos_planificados || 0;
+    const planTotal = planMap[fecha];
+    const planDetalle = planMapDetalle[fecha + '_' + (clienteId||'')];
+    const planificados = planTotal?.vehiculos_planificados || 0;
+    const plan = planDetalle; // para edición individual
     const checks = checksMap[fecha] || 0;
     const esFuturo = fecha > hoy;
     const esHoy = fecha === hoy;
@@ -2000,7 +2010,7 @@ async function loadPlanificacion(){
   }).join('');
 
   // Resumen
-  const totalPlan = dias.reduce((s,f) => s + (planMap[f+'_'+(clienteId||'')]?.vehiculos_planificados||0), 0);
+  const totalPlan = dias.reduce((s,f) => s + (planMap[f]?.vehiculos_planificados||0), 0);
   const totalChecks = dias.reduce((s,f) => s + (checksMap[f]||0), 0);
   const resumen = $('plan-resumen-content');
   if(resumen){
