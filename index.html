@@ -1509,7 +1509,17 @@ function verCheckDet(h){
 
 async function exportarHistorial(){
   if(!HIST_DATA_CACHE.length){toast('Primero cargá el historial','err');return;}
-  const headers=['Fecha','Hora','Patente','Marca','Modelo','Empresa','Cliente','Chofer','Carga','Vehículo','Estado Final','Precinto','Sale con Peón','Nombre Peón','GPS Estado','Observaciones','Registrado por'];
+  const headers=[
+    'Fecha','Hora','Patente','Marca','Modelo','Empresa','Cliente',
+    'Doc. Chofer OK','Estado Chofer',
+    'Remito OK','Estado Carga','Precinto N°',
+    'Carrocería OK','Espejos OK','Sin pérdida fluidos','Limpieza OK','Extintor OK','Botiquín OK',
+    'Estado Vehículo','Estado Final',
+    'GPS Estado','Rastreador','Empresa GPS',
+    'Sale con Peón','Nombre Peón',
+    'Observaciones','Registrado por',
+    'Fotos (links)'
+  ];
   const rows=HIST_DATA_CACHE.map(h=>[
     fd(h.fecha),
     h.hora_check?.slice(0,5)||'',
@@ -1518,16 +1528,27 @@ async function exportarHistorial(){
     h.vehiculos?.modelo||'',
     h.vehiculos?.empresas?.nombre||'',
     h.clientes?.nombre||'',
+    h.doc_chofer_ok?'Sí':'No',
     h.doc_chofer_estado||'',
+    h.carga_ok?'Sí':'No',
     h.carga_estado||'',
+    h.precinto_numero||'',
+    h.vehiculo_ok?'Sí':'No',
+    '',
+    '',
+    '',
+    '',
+    '',
     h.vehiculo_estado||'',
     h.estado_final||'',
-    h.precinto_numero||'',
+    h.gps_estado||'',
+    h.rastreador_nombre||'',
+    h.empresa_gps||'',
     h.sale_con_peon?'Sí':'No',
     h.nombre_peon||'',
-    h.gps_estado||'',
     (h.observaciones||'').replace(/,/g,';'),
-    h.registrado_por||''
+    h.registrado_por||'',
+    (h.fotos||[]).join(' | ')
   ]);
   const csv=[headers,...rows].map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
   const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
