@@ -1917,6 +1917,14 @@ async function initPlanCliente(){
 
 async function loadPlanificacion(){
   if(!PLAN_SEMANA_INICIO) PLAN_SEMANA_INICIO = getLunesDeSemana(new Date());
+  // Super admin debe seleccionar un país para ver planificación
+  if(isSuperAdmin() && !getPaisId()){
+    const grid=$('plan-grid');
+    if(grid) grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--text2);font-size:13px">🌎 Seleccioná un país en el selector superior para ver la planificación</div>';
+    const res=$('plan-resumen-content');
+    if(res) res.innerHTML='';
+    return;
+  }
   await initPlanCliente();
 
   // Calcular los 7 días de la semana
@@ -1937,16 +1945,16 @@ async function loadPlanificacion(){
   let q = withPais(db.from('planificacion').select('*').in('fecha', dias));
   if(clienteId) q = q.eq('cliente_id', clienteId);
   const{data:planData} = await q;
-  // planMap: fecha -> suma de vehiculos_planificados de todos los paises/clientes
+  // planMap simple: un registro por fecha+cliente
   const planMap = {};
-  const planMapDetalle = {}; // para edición individual: fecha_cliente -> registro
+  const planMapDetalle = {};
   (planData||[]).forEach(p => {
-    // Suma por fecha (para mostrar total en grilla)
-    if(!planMap[p.fecha]) planMap[p.fecha] = {vehiculos_planificados:0, ids:[]};
-    planMap[p.fecha].vehiculos_planificados += p.vehiculos_planificados||0;
-    planMap[p.fecha].ids.push(p.id);
-    // Detalle para edición
-    planMapDetalle[p.fecha + '_' + (p.cliente_id||'')] = p;
+    const key = p.fecha + '_' + (p.cliente_id||'');
+    planMapDetalle[key] = p;
+    // Para la grilla: usar el último registro por fecha
+    if(!planMap[p.fecha] || p.updated_at > planMap[p.fecha].updated_at){
+      planMap[p.fecha] = p;
+    }
   });
 
   // Cargar checks del día para comparar (filtrado por país)
@@ -1973,10 +1981,8 @@ async function loadPlanificacion(){
   const hoy = fechaStr(new Date());
 
   grid.innerHTML = dias.map(fecha => {
-    const planTotal = planMap[fecha];
-    const planDetalle = planMapDetalle[fecha + '_' + (clienteId||'')];
-    const planificados = planTotal?.vehiculos_planificados || 0;
-    const plan = planDetalle; // para edición individual
+    const plan = clienteId ? planMapDetalle[fecha+'_'+clienteId] : planMap[fecha];
+    const planificados = plan?.vehiculos_planificados || 0;
     const checks = checksMap[fecha] || 0;
     const esFuturo = fecha > hoy;
     const esHoy = fecha === hoy;
@@ -2010,7 +2016,10 @@ async function loadPlanificacion(){
   }).join('');
 
   // Resumen
-  const totalPlan = dias.reduce((s,f) => s + (planMap[f]?.vehiculos_planificados||0), 0);
+  const totalPlan = dias.reduce((s,f) => {
+    const p = clienteId ? planMapDetalle[f+'_'+clienteId] : planMap[f];
+    return s + (p?.vehiculos_planificados||0);
+  }, 0);
   const totalChecks = dias.reduce((s,f) => s + (checksMap[f]||0), 0);
   const resumen = $('plan-resumen-content');
   if(resumen){
