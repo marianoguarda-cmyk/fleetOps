@@ -124,9 +124,9 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 .leg-dot{width:9px;height:9px;border-radius:50%}
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center}
 .overlay.open{display:flex}
-.modal{background:var(--bg2);border-radius:var(--radius-lg);border:1px solid var(--border);width:560px;max-width:96vw;max-height:88vh;overflow-y:auto;padding:20px 22px}
-.modal-sm{width:420px}
-.modal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.modal{background:var(--bg2);border-radius:var(--radius-lg);border:1px solid var(--border);width:560px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-sm{width:420px}.modal-sm .modal-body{padding:0 22px}.modal-sm .modal-hd{padding:20px 22px 14px}
+.modal-hd{display:flex;align-items:center;justify-content:space-between;padding:20px 22px 14px;flex-shrink:0}.modal-body{overflow-y:auto;padding:0 22px;flex:1}.modal-footer{padding:14px 22px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0;background:var(--bg2)}
 .modal-title{font-size:15px;font-weight:600}
 .modal-close{background:none;border:none;cursor:pointer;color:var(--text2);font-size:20px;line-height:1;padding:2px 6px}
 .modal-close:hover{color:var(--text)}
@@ -608,6 +608,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 <div class="overlay" id="ov-vehiculo">
   <div class="modal">
     <div class="modal-hd"><div class="modal-title" id="mv-title">Nuevo vehículo</div><button class="modal-close" onclick="closeModal('vehiculo')">✕</button></div>
+    <div class="modal-body">
     <input type="hidden" id="mv-id">
     <div class="form-section">Datos básicos</div>
     <div class="form-grid">
@@ -649,7 +650,8 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
       <img id="mv-foto-preview" src="" style="display:none;margin-top:8px;max-height:120px;border-radius:8px;border:1px solid var(--border)">
       <input type="hidden" id="mv-foto-url">
     </div>
-    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+    </div><!-- end modal-body -->
+    <div class="modal-footer">
       <button class="btn" onclick="closeModal('vehiculo')">Cancelar</button>
       <button class="btn btn-primary" id="mv-btn" onclick="guardarVehiculo()">✅ Guardar vehículo</button>
     </div>
@@ -659,6 +661,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 <div class="overlay" id="ov-conductor">
   <div class="modal">
     <div class="modal-hd"><div class="modal-title" id="mc-title">Nuevo conductor</div><button class="modal-close" onclick="closeModal('conductor')">✕</button></div>
+    <div class="modal-body">
     <input type="hidden" id="mc-id">
     <div class="form-section">Datos personales</div>
     <div class="form-grid">
@@ -689,7 +692,8 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
       <img id="mc-foto-preview" src="" style="display:none;margin-top:8px;max-height:120px;border-radius:8px;border:1px solid var(--border)">
       <input type="hidden" id="mc-foto-url">
     </div>
-    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+    </div><!-- end modal-body -->
+    <div class="modal-footer">
       <button class="btn" onclick="closeModal('conductor')">Cancelar</button>
       <button class="btn btn-primary" id="mc-btn" onclick="guardarConductor()">✅ Guardar conductor</button>
     </div>
@@ -2417,12 +2421,14 @@ async function loadRastreadoresCheck(vehiculoId){
 
 // ── GOOGLE DRIVE UPLOAD ───────────────────────────────────────────────────
 async function uploadToDrive(base64, filename, tipo){
+  console.log('[Drive] Subiendo:', filename, tipo, 'base64 len:', base64?.length);
   const res = await fetch('/api/drive/upload', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({base64, filename, tipo})
   });
   const data = await res.json();
+  console.log('[Drive] Respuesta:', data);
   if(!res.ok || !data.success) throw new Error(data.error||'Error al subir foto');
   return data.url;
 }
