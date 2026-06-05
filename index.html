@@ -1758,23 +1758,23 @@ function popularSelectsPais(){
 
 async function cambiarPais(paisId){
   PAIS_ACTIVO = paisId || null;
-  // Recargar sección activa
-  const active = document.querySelector('.section.active');
-  if(active){
-    const sec = active.id.replace('s-','');
-    const L={dashboard:loadDashboard,vehiculos:loadVehiculos,historial:loadHistorial,
-             conductores:loadConductores,alertas:loadAlertas,empresas:loadEmpresas,
-             clientes:loadClientes,satelital:loadSatelital};
-    if(L[sec]) L[sec]();
+
+  // Limpiar caches que dependen del país
+  EMPRESAS_CACHE = [];
+  CLIENTES_CACHE = [];
+  VEH_CACHE_CHECK = {};
+
+  // Actualizar indicador visual en topbar
+  const pi=$('pais-indicator');
+  if(pi){
+    if(paisId){
+      const p=PAISES_CACHE.find(x=>x.id===paisId);
+      pi.textContent=p?(BANDERAS[p.codigo]||'🌎')+' '+p.nombre:'';
+      pi.style.display='flex';
+    } else {
+      pi.style.display='none';
+    }
   }
-  // Mostrar país activo en topbar sub
-  if(paisId){
-    const p = PAISES_CACHE.find(x=>x.id===paisId);
-    $('tb-sub').textContent = p ? (BANDERAS[p.codigo]||'📍')+' '+p.nombre : '';
-  } else {
-    $('tb-sub').textContent = '🌎 Todos los países';
-  }
-  // Actualizar topbar sub con bandera persistente
   const sub=$('tb-sub');
   if(sub){
     if(paisId){
@@ -1784,9 +1784,32 @@ async function cambiarPais(paisId){
       sub.textContent='🌎 Todos los países';
     }
   }
-  // Sincronizar filtro de país del historial con el selector global
-  const hfp=$('hist-filtro-pais');
-  if(hfp) hfp.value=paisId||'';
+
+  // Sincronizar todos los selectores de país
+  const sel=$('pais-selector');if(sel) sel.value=paisId||'';
+  document.querySelectorAll('.sa-pais-filter').forEach(s=>s.value=paisId||'');
+  const hfp=$('hist-filtro-pais');if(hfp) hfp.value=paisId||'';
+
+  // Recargar la sección activa con los nuevos datos
+  const active = document.querySelector('.section.active');
+  if(active){
+    const sec = active.id.replace('s-','');
+    const L={
+      dashboard:loadDashboard,
+      vehiculos:loadVehiculos,
+      historial:loadHistorial,
+      conductores:loadConductores,
+      alertas:loadAlertas,
+      empresas:loadEmpresas,
+      clientes:loadClientes,
+      satelital:loadSatelital,
+      planificacion:loadPlanificacion,
+      checklist:initCheckSelects,
+      usuarios:loadUsuarios,
+      paises:loadPaises
+    };
+    if(L[sec]) await L[sec]();
+  }
 }
 
 // ── PÁGINAS ───────────────────────────────────────────────────────────────
