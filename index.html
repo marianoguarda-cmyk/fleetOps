@@ -1923,8 +1923,20 @@ async function loadPlanificacion(){
   const planMap = {};
   (planData||[]).forEach(p => { planMap[p.fecha + '_' + (p.cliente_id||'')] = p; });
 
-  // Cargar checks del día para comparar
-  const{data:checksData} = await withPais(db.from('checks_diarios').select('fecha').in('fecha', dias));
+  // Cargar checks del día para comparar (filtrado por país)
+  let qChecks = db.from('checks_diarios').select('fecha').in('fecha', dias);
+  if(isSuperAdmin()){
+    if(clienteId) {
+      const cl = CLIENTES_CACHE?.find?.(c=>c.id===clienteId);
+      if(cl?.pais_id) qChecks = qChecks.eq('pais_id', cl.pais_id);
+      else if(getPaisId()) qChecks = qChecks.eq('pais_id', getPaisId());
+    } else if(getPaisId()){
+      qChecks = qChecks.eq('pais_id', getPaisId());
+    }
+  } else {
+    qChecks = qChecks.eq('pais_id', CP?.pais_id||'');
+  }
+  const{data:checksData} = await qChecks;
   const checksMap = {};
   (checksData||[]).forEach(c => { checksMap[c.fecha] = (checksMap[c.fecha]||0) + 1; });
 
@@ -1999,6 +2011,11 @@ async function guardarPlanDia(fecha, planId, clienteId){
   if(!input) return;
   const cantidad = parseInt(input.value)||0;
   const paisId = getPaisId() || CP?.pais_id || null;
+  // Super admin debe tener un país seleccionado para guardar planificación
+  if(isSuperAdmin() && !paisId){
+    toast('⚠ Seleccioná un país antes de guardar la planificación','err');
+    return;
+  }
   const{error} = planId
     ? await db.from('planificacion').update({vehiculos_planificados:cantidad,updated_at:new Date().toISOString()}).eq('id',planId)
     : await db.from('planificacion').upsert({fecha,vehiculos_planificados:cantidad,pais_id:paisId,cliente_id:clienteId||null,creado_por:CP?.nombre||CU?.email},{onConflict:'fecha,pais_id,cliente_id'});
@@ -2051,12 +2068,24 @@ async function loadSatelital(){
   const status=$('sat-status');
   if(status) status.textContent='🔄 Conectando con GPS...';
 
-  // Cargar rastreadores de Supabase
+  // Cargar rastreadores de Supabase filtrados por país activo
   const{data:rasts}=await withPais(db.from('rastreadores').select('*, vehiculos(patente,marca,modelo)').eq('activo',true));
   RASTREADORES_DB = rasts||[];
 
-  // Obtener datos en vivo de la API
-  GPS_DATA_LIVE = await fetchGPSData();
+  // La API GPS es exclusiva de Chile — solo obtener datos en vivo si el país activo es CL o es super_admin sin filtro
+  const paisActual = getPaisId();
+  const paisCL = PAISES_CACHE.find(p=>p.codigo==='CL');
+  const esPaisCL = !paisActual || (paisCL && paisActual===paisCL.id);
+
+  if(esPaisCL){
+    GPS_DATA_LIVE = await fetchGPSData();
+  } else {
+    GPS_DATA_LIVE = [];
+    if(status){
+      status.textContent='ℹ️ La integración GPS en vivo está disponible solo para Chile';
+      status.style.color='var(--text2)';
+    }
+  }
 
   if(status){
     if(GPS_DATA_LIVE.length){
