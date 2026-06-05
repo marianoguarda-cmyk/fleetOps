@@ -387,6 +387,13 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
                 <label class="fl">Observaciones</label>
                 <textarea id="check-obs" placeholder="Novedades del día..." style="margin-top:4px;min-height:72px"></textarea>
               </div>
+              <!-- FOTOS DEL CHECK -->
+              <div style="margin-top:8px">
+                <label class="fl">📷 Fotos de novedades</label>
+                <div id="check-fotos-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0"></div>
+                <input type="file" id="check-foto-input" accept="image/*" multiple style="display:none" onchange="handleCheckFotos(event)">
+                <button class="btn btn-sm" type="button" onclick="$('check-foto-input').click()" style="margin-top:4px">📷 Agregar fotos</button>
+              </div>
               <div>
                 <label class="fl">¿Sale con peón?</label>
                 <div style="margin-top:6px;display:flex;align-items:center;gap:10px">
@@ -632,7 +639,17 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
     <div class="form-section">Observaciones</div>
     <textarea id="mv-obs" placeholder="Información adicional..."></textarea>
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
-      <button class="btn" onclick="closeModal('vehiculo')">Cancelar</button>
+      <button class="btn"     <div class="fg" style="margin-bottom:8px">
+      <label class="fl">📷 Foto del vehículo</label>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px">
+        <input type="file" accept="image/*" id="mv-foto-input" style="display:none" onchange="previewFotoVeh(event)">
+        <button class="btn btn-sm" type="button" onclick="$('mv-foto-input').click()">📷 Seleccionar</button>
+        <span id="mv-foto-nombre" style="font-size:12px;color:var(--text2)">Sin foto seleccionada</span>
+      </div>
+      <img id="mv-foto-preview" src="" style="display:none;margin-top:8px;max-height:120px;border-radius:8px;border:1px solid var(--border)">
+      <input type="hidden" id="mv-foto-url">
+    </div>
+    onclick="closeModal('vehiculo')">Cancelar</button>
       <button class="btn btn-primary" onclick="guardarVehiculo()">✅ Guardar vehículo</button>
     </div>
   </div>
@@ -661,7 +678,17 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
       <div class="fg"><label class="fl">Empresa de transporte</label><select id="mc-empresa"><option value="">Sin empresa</option></select></div>
     </div>
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
-      <button class="btn" onclick="closeModal('conductor')">Cancelar</button>
+      <button class="btn"     <div class="fg" style="margin-bottom:8px">
+      <label class="fl">📷 Foto del conductor</label>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px">
+        <input type="file" accept="image/*" id="mc-foto-input" style="display:none" onchange="previewFotoCond(event)">
+        <button class="btn btn-sm" type="button" onclick="$('mc-foto-input').click()">📷 Seleccionar</button>
+        <span id="mc-foto-nombre" style="font-size:12px;color:var(--text2)">Sin foto seleccionada</span>
+      </div>
+      <img id="mc-foto-preview" src="" style="display:none;margin-top:8px;max-height:120px;border-radius:8px;border:1px solid var(--border)">
+      <input type="hidden" id="mc-foto-url">
+    </div>
+    onclick="closeModal('conductor')">Cancelar</button>
       <button class="btn btn-primary" onclick="guardarConductor()">✅ Guardar conductor</button>
     </div>
   </div>
@@ -1049,6 +1076,19 @@ async function loadVehiculos(){
 
 async function guardarVehiculo(){
   const id=$('mv-id').value;
+  const btn=$('mv-btn');if(btn){btn.disabled=true;btn.textContent='Guardando...';}
+  // Subir foto a Google Drive si hay una seleccionada
+  let fotoVehUrl = $('mv-foto-url')?.value || null;
+  const fotoVehInput = $('mv-foto-input');
+  if(fotoVehInput?.files[0]){
+    try{
+      const base64 = await comprimirImagen(fotoVehInput.files[0]);
+      const patente = $('mv-patente')?.value?.trim()||'vehiculo';
+      const fname = `vehiculo_${patente}_${Date.now()}.jpg`;
+      fotoVehUrl = await uploadToDrive(base64, fname, 'vehiculos');
+      toast('📷 Foto subida a Drive ✓');
+    }catch(e){ toast('Error subiendo foto: '+e.message,'err'); }
+  }
   const p={tipo:$('mv-tipo').value,patente:$('mv-patente').value.trim().toUpperCase(),marca:$('mv-marca').value.trim(),modelo:$('mv-modelo').value.trim(),anio:parseInt($('mv-anio').value)||null,color:$('mv-color').value.trim(),nro_chasis:$('mv-chasis').value.trim(),nro_motor:$('mv-motor').value.trim(),aseguradora:$('mv-aseguradora').value.trim(),nro_poliza:$('mv-poliza').value.trim(),venc_seguro:$('mv-venc-seguro').value||null,venc_vtv:$('mv-venc-vtv').value||null,venc_habilitacion_municipal:$('mv-venc-hab').value||null,nro_permiso_transporte:$('mv-permiso').value.trim(),observaciones:$('mv-obs').value.trim(),empresa_id:$('mv-empresa')?.value||null,nombre_empresa_gps:$('mv-gps-empresa')?.value.trim()||null,link_gps:$('mv-gps-link')?.value.trim()||null,pais_id:$('mv-pais')?.value||getPaisId()||null,activo:true};
   if(!p.patente){toast('La patente es obligatoria','err');return}
   const{error}=id?await db.from('vehiculos').update(p).eq('id',id):await db.from('vehiculos').insert(p);
@@ -1292,6 +1332,15 @@ async function guardarCheck(){
   const dc=getChip('chips-chofer'),cc=getChip('chips-carga'),vc=getChip('chips-vehiculo');
   if(!dc||!cc||!vc){toast('Completá el estado de todas las secciones','err');return}
   const ef=[dc,cc,vc].includes('err')?'err':[dc,cc,vc].includes('warn')?'warn':'ok';
+  // Subir fotos a Google Drive
+  const fotosUrls = [];
+  for(let i=0;i<CHECK_FOTOS.length;i++){
+    try{
+      const fname=`check_${vid}_${Date.now()}_${i}.jpg`;
+      const url=await uploadToDrive(CHECK_FOTOS[i],fname,'checks');
+      fotosUrls.push(url);
+    }catch(e){console.warn('Error subiendo foto:',e);}
+  }
   const{error}=await db.from('checks_diarios').insert({vehiculo_id:vid,fecha:new Date().toISOString().split('T')[0],doc_chofer_ok:$('dc1').checked&&$('dc2').checked,doc_chofer_estado:dc,carga_ok:$('ca1').checked&&$('ca2').checked,carga_estado:cc,precinto_numero:$('precinto-num')?.value.trim()||null,vehiculo_ok:$('ve1').checked&&$('ve2').checked&&$('ve3').checked&&$('ve4').checked,vehiculo_estado:vc,estado_final:ef,observaciones:$('check-obs').value.trim(),registrado_por:CP?.nombre||CU?.email,
     link_gps_check:VEH_CACHE_CHECK[vid]?.link_gps||null,
     empresa_gps:VEH_CACHE_CHECK[vid]?.nombre_empresa_gps||null,
@@ -1302,10 +1351,48 @@ async function guardarCheck(){
     pais_id:getPaisId()||null,
     sale_con_peon:$('peon-si')?.checked||false,
     nombre_peon:$('peon-si')?.checked?($('peon-nombre')?.value.trim()||null):null,
-    hora_check:new Date().toTimeString().slice(0,8)});
+    hora_check:new Date().toTimeString().slice(0,8),
+    fotos:fotosUrls.length?fotosUrls:null});
   if(error){toast('Error: '+error.message,'err');return}
+  CHECK_FOTOS=[];renderCheckFotos();
   resetCheckForm();
   toast('✓ Check registrado','ok');
+}
+
+
+// Fotos del check (panel web)
+let CHECK_FOTOS = [];
+
+function handleCheckFotos(e){
+  const files = Array.from(e.target.files);
+  files.forEach(file=>{
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX=1200; let w=img.width,h=img.height;
+        if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+        canvas.width=w;canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        CHECK_FOTOS.push(canvas.toDataURL('image/jpeg',.80));
+        renderCheckFotos();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value='';
+}
+
+function renderCheckFotos(){
+  const g=$('check-fotos-grid');
+  if(!g) return;
+  g.innerHTML = CHECK_FOTOS.map((f,i)=>`
+    <div style="position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:var(--bg3)">
+      <img src="${f}" style="width:100%;height:100%;object-fit:cover">
+      <button onclick="CHECK_FOTOS.splice(${i},1);renderCheckFotos()" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);color:white;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer">✕</button>
+    </div>`).join('');
 }
 
 // HISTORIAL
@@ -1399,6 +1486,8 @@ async function loadHistorial(){
       </div>
       <!-- Observaciones -->
       ${h.observaciones?`<div style="background:var(--bg3);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text2);border-left:3px solid var(--border2)"><span style="font-weight:600;color:var(--text)">📝 Obs:</span> ${h.observaciones}</div>`:''}
+      <!-- Fotos -->
+      ${h.fotos&&h.fotos.length?`<div style="display:flex;gap:6px;margin-top:8px;overflow-x:auto;padding-bottom:4px">${h.fotos.map(f=>`<img src="${f}" onclick="window.open('${f}','_blank')" style="height:60px;width:60px;object-fit:cover;border-radius:6px;cursor:pointer;flex-shrink:0;border:1px solid var(--border)">`).join('')}</div>`:''}
       <!-- Footer -->
       <div style="margin-top:8px;font-size:11px;color:var(--text3)">👤 ${h.registrado_por||'—'}</div>
     </div>`;
@@ -2322,6 +2411,61 @@ async function loadRastreadoresCheck(vehiculoId){
   }
 }
 
+
+// ── GOOGLE DRIVE UPLOAD ───────────────────────────────────────────────────
+async function uploadToDrive(base64, filename, tipo){
+  const res = await fetch('/api/drive/upload', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({base64, filename, tipo})
+  });
+  const data = await res.json();
+  if(!res.ok || !data.success) throw new Error(data.error||'Error al subir foto');
+  return data.url;
+}
+
+async function comprimirImagen(file, maxW=1200){
+  return new Promise(resolve=>{
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let w=img.width, h=img.height;
+        if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+        canvas.width=w; canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg',.80));
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+
+function previewFotoCond(e){
+  const file = e.target.files[0]; if(!file) return;
+  $('mc-foto-nombre').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const prev = $('mc-foto-preview');
+    prev.src = ev.target.result; prev.style.display='block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function previewFotoVeh(e){
+  const file = e.target.files[0]; if(!file) return;
+  $('mv-foto-nombre').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const prev = $('mv-foto-preview');
+    prev.src = ev.target.result; prev.style.display='block';
+  };
+  reader.readAsDataURL(file);
+}
+
 // ── CONDUCTORES ───────────────────────────────────────────────────────────
 async function loadConductores(){
   const el=$('conductores-list');
@@ -2375,6 +2519,18 @@ async function guardarConductor(){
   const id=$('mc-id').value;
   const nombre=$('mc-nombre').value.trim();
   if(!nombre){toast('El nombre es obligatorio','err');return}
+  const btn=$('mc-btn');if(btn){btn.disabled=true;btn.textContent='Guardando...';}
+  // Subir foto a Google Drive si hay una seleccionada
+  let fotoUrl = $('mc-foto-url')?.value || null;
+  const fotoInput = $('mc-foto-input');
+  if(fotoInput?.files[0]){
+    try{
+      const base64 = await comprimirImagen(fotoInput.files[0]);
+      const fname = `conductor_${nombre.replace(/\s+/g,'_')}_${Date.now()}.jpg`;
+      fotoUrl = await uploadToDrive(base64, fname, 'conductores');
+      toast('📷 Foto subida a Drive ✓');
+    }catch(e){ toast('Error subiendo foto: '+e.message,'err'); }
+  }
   const p={
     nombre,
     dni:$('mc-dni').value.trim()||null,
@@ -2388,11 +2544,13 @@ async function guardarConductor(){
     vehiculo_id:$('mc-vehiculo').value||null,
     empresa_id:$('mc-empresa')?.value||null,
     pais_id:$('mc-pais')?.value||getPaisId()||null,
+    foto_url:fotoUrl||null,
     activo:true
   };
   const{error}=id
     ?await db.from('conductores').update(p).eq('id',id)
     :await db.from('conductores').insert(p);
+  if(btn){btn.disabled=false;btn.textContent='✅ Guardar conductor';}
   if(error){toast('Error: '+error.message,'err');return}
   toast(id?'Conductor actualizado ✓':'Conductor registrado ✓','ok');
   closeModal('conductor');

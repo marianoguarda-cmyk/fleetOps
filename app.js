@@ -2,81 +2,155 @@ const express = require('express');
 const path = require('path');
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '20mb' }));
 app.use(express.static(path.join(__dirname)));
 
 const SB_URL = 'https://rzmijsyioxtmnfjpezvb.supabase.co';
 const SB_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
-const GPS_API_URL = 'https://plataforma.gotdns.org:2302'; // Puerto correcto
+const GPS_API_URL = 'https://plataforma.gotdns.org:2302';
 const GPS_TOKEN = process.env.GPS_TOKEN || '0fde2a7b8593c641';
 
-// ── GPS PROXY (evita CORS) ────────────────────────────────────────────────
+// Google Drive Service Account
+const GDRIVE_SA = {
+  type: "service_account",
+  project_id: "operating-braid-496220-b0",
+  private_key_id: "5b904afe71b7fdf331d86553a20678afce6aa0f8",
+  private_key: process.env.GDRIVE_PRIVATE_KEY || "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC2yejklq3Q9wkT\neG773Pn19xNjXht6lmcRktlnv/ndnLzagDAQamTBMM9biHqiXtHUEwwWK3FmBJdd\nsqLv/ZyiQiDUWri+cpT1O/rXEaAu3Rql1r28tLZiJdYSyQi6wMLtOoxnMkb0KXV/\n6tbPcftIZuDcFBGkMPHXLdt/yoojOHkY1jogLET4/8NhQIVUrpEnklf7HYKiUlet\nPmB66lspHW/NubzZ4LR+ImgKqhqUf4wOF8vTAoK40RbUmLRNS4Sp56+rSS9YEADQ\nOj6quTLkNnSNPmX9fKqRvrRn/TJde1RmU9kEem8dcJ4Up5CERoHWmutWdaksGZgn\nC3pMROTHAgMBAAECggEAO/jyQzHW9LVg0nUUwOlHT/bRcyxYyrdXONJcJ2i69AWt\nhulBG9m0lhhMKIWWavi+Up0vPYTib2z5NuJaCHDG+AvHVrUvYTkZ+35C9laPnmCo\nEhprZWNLZddxLfesuA1vx0MK9v7tfcWuihpEgYqtvhsXEs443Yy7hHTEzGBpQ1WB\nUKEilZOhQqalgKtZ49zcEnSAJzMcme8tLaHadMsBT/YkBb6YqpHZcbDYZffELBsY\nfU+4TTF/6LAR4WG7mtJyUiIEJg4NdzefFfPU2p4K/JAcjoen69533pUd9TLvlHRD\nNvBDEYKHHUpWnDTZa2Yl80I3vTfDx/znIziP/rLKVQKBgQDm/P7uKss1AL++QY0T\nsghm3mqkCC0pMf7/gVhHqRnJxvuR1/eQ1008vIRyg5841PJm0ikaDE+wOj+xkMg1\nuIXi/06grdBWgkbb1y5O9N3PzrZlUzJ6K/mS05z+JoDeiQISYBTJU2SMt0CAe8Ar\nv7pGehUyURZ+1shzzTY1vTyCVQKBgQDKlNH9f4XsjZ5mV1TiDSXIMRxip7vp3vR5\nLphVozd4/sA8Q/uWczVuanh5KHBPUqjcS6zQQWlt0w5lw/iIeuBw8qDvy++65TDF\n5lyd7nUXzDbVLGNo9THH2YC31Fw6BqJAt+VaQlm1hGq0R6YQ7nwDJngOHfHgw/6/\ncxUb5eR+qwKBgQCioTHkAeE8miBmFcT8PvbHZoVypAcX4AmHX0wGeDqd5CkvT/0P\nz2akAp7F+YHbA6L/XaxumIhqrTg3DpbHq/koD1UOsBHlNqgpFGGYWbLqIsIsqNz7\nQ4beJ3t7PSSyiYgZ4+f+r2Y15LfXPknZA45lHINb/9d0ykgrsCogv/GgWQKBgCI8\nrJCvMK8d8BtTvyDFIBGJW0bBGl0YNTEV0uEGSKXGSC7nPmna5rjWfa3cS77cNXWl\nxHsd0vegp9pDGInYWn48Qz7DtKxdd7S6jgSS/G8dMFcuvU5LwjIIbFylI0EbReiy\nK6zpccffrTjysvpBk+vkYH3iSbK27SLmDDc+zzMpAoGAWTt0f0j8JSPukCS4HFDG\nhUABI+womIq9PsMo7V9iVd9QpPcn87QQqzaJ+GqXRRwSP8zNeuk5oPMbg/tyr19G\nMOi6CAz9Q1LNKr2KDL0TFUJPmIhppyqHbbw2pr+pbSnBQarvF4/I+wO/K0jEYA+z\n3Sy7LsscZbs5u0Drrft1b7w=\n-----END PRIVATE KEY-----\n",
+  client_email: "fleetops-drive@operating-braid-496220-b0.iam.gserviceaccount.com",
+  client_id: "110503783852963868004",
+  token_uri: "https://oauth2.googleapis.com/token"
+};
+
+const GDRIVE_FOLDERS = {
+  conductores: '1GrwnV0G0vtE3N-7bLvaghYj2OTCCim8j',
+  vehiculos:   '1aY9FvWOpXXdJISz4svNM5xLTuGVtEB6f',
+  checks:      '1nbLdLknzNm7U0LyvHzCSMhf8oinPwSMR'
+};
+
+// Generate JWT for Google OAuth
+function base64url(buf) {
+  return buf.toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+
+async function getGoogleToken() {
+  const crypto = require('crypto');
+  const now = Math.floor(Date.now() / 1000);
+  const header = base64url(Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })));
+  const payload = base64url(Buffer.from(JSON.stringify({
+    iss: GDRIVE_SA.client_email,
+    scope: 'https://www.googleapis.com/auth/drive.file',
+    aud: GDRIVE_SA.token_uri,
+    exp: now + 3600,
+    iat: now
+  })));
+  const sign = crypto.createSign('RSA-SHA256');
+  sign.update(`${header}.${payload}`);
+  const sig = base64url(sign.sign(GDRIVE_SA.private_key));
+  const jwt = `${header}.${payload}.${sig}`;
+  const res = await fetch(GDRIVE_SA.token_uri, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`
+  });
+  const data = await res.json();
+  return data.access_token;
+}
+
+// ── GOOGLE DRIVE UPLOAD ───────────────────────────────────────────────────
+app.post('/api/drive/upload', async (req, res) => {
+  try {
+    const { base64, filename, tipo } = req.body;
+    if (!base64 || !filename || !tipo) {
+      return res.status(400).json({ error: 'Faltan parámetros: base64, filename, tipo' });
+    }
+    const folderId = GDRIVE_FOLDERS[tipo];
+    if (!folderId) {
+      return res.status(400).json({ error: 'Tipo inválido. Usar: conductores, vehiculos, checks' });
+    }
+
+    const token = await getGoogleToken();
+
+    // Convert base64 to buffer
+    const base64Data = base64.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    const mimeType = base64.match(/data:([^;]+);/)?.[1] || 'image/jpeg';
+
+    // Multipart upload to Google Drive
+    const boundary = 'fleetops_boundary';
+    const metadata = JSON.stringify({ name: filename, parents: [folderId] });
+    const body = Buffer.concat([
+      Buffer.from(`--${boundary}\r\nContent-Type: application/json\r\n\r\n${metadata}\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`),
+      buffer,
+      Buffer.from(`\r\n--${boundary}--`)
+    ]);
+
+    const uploadRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,webContentLink', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': `multipart/related; boundary=${boundary}`,
+        'Content-Length': body.length
+      },
+      body
+    });
+
+    const fileData = await uploadRes.json();
+    if (!uploadRes.ok) {
+      console.error('Drive upload error:', fileData);
+      return res.status(500).json({ error: fileData.error?.message || 'Error subiendo a Drive' });
+    }
+
+    // Make file publicly viewable
+    await fetch(`https://www.googleapis.com/drive/v3/files/${fileData.id}/permissions`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'reader', type: 'anyone' })
+    });
+
+    // Return direct view URL
+    const viewUrl = `https://drive.google.com/uc?export=view&id=${fileData.id}`;
+    res.json({ success: true, id: fileData.id, url: viewUrl, viewLink: fileData.webViewLink });
+
+  } catch (err) {
+    console.error('Drive upload error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GPS PROXY ─────────────────────────────────────────────────────────────
 app.get('/api/gps/transmissions', async (req, res) => {
   try {
-    const url = `${GPS_API_URL}/api/seguimiento/transmissions`;
-    console.log('GPS fetch:', url);
-    const response = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${GPS_TOKEN}`,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      }
+    const response = await fetch(`${GPS_API_URL}/api/seguimiento/transmissions`, {
+      headers: { 'Authorization': `Bearer ${GPS_TOKEN}`, 'Accept': 'application/json' }
     });
     const text = await response.text();
-    console.log('GPS response status:', response.status);
-    console.log('GPS response preview:', text.slice(0, 200));
-    try {
-      const data = JSON.parse(text);
-      res.json(data);
-    } catch(e) {
-      console.error('GPS parse error:', e.message);
-      res.status(500).json({ success: false, data: [], errors: 'Respuesta inválida de la API GPS: ' + text.slice(0,100) });
-    }
+    try { res.json(JSON.parse(text)); }
+    catch(e) { res.status(500).json({ success: false, data: [], errors: 'Respuesta inválida de la API GPS' }); }
   } catch (err) {
-    console.error('GPS API error:', err);
     res.status(500).json({ success: false, data: [], errors: err.message });
   }
 });
 
-// ── CREAR USUARIO (Admin API) ────────────────────────────────────────────
+// ── CREAR USUARIO ─────────────────────────────────────────────────────────
 app.post('/api/crear-usuario', async (req, res) => {
   const { email, password, nombre, rol, pais_id } = req.body;
-  if (!email || !password || !nombre) {
-    return res.status(400).json({ error: 'Faltan campos obligatorios' });
-  }
+  if (!email || !password || !nombre) return res.status(400).json({ error: 'Faltan campos' });
   try {
     const createRes = await fetch(`${SB_URL}/auth/v1/admin/users`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SB_SERVICE_KEY,
-        'Authorization': `Bearer ${SB_SERVICE_KEY}`
-      },
-      body: JSON.stringify({
-        email, password,
-        email_confirm: true,
-        user_metadata: { nombre, rol, pais_id }
-      })
+      headers: { 'Content-Type': 'application/json', 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}` },
+      body: JSON.stringify({ email, password, email_confirm: true, user_metadata: { nombre, rol, pais_id } })
     });
     const userData = await createRes.json();
-    if (!createRes.ok) {
-      return res.status(400).json({ error: userData.message || userData.error_description || 'Error al crear usuario' });
-    }
-    const profileRes = await fetch(`${SB_URL}/rest/v1/profiles`, {
+    if (!createRes.ok) return res.status(400).json({ error: userData.message || 'Error al crear usuario' });
+    await fetch(`${SB_URL}/rest/v1/profiles`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SB_SERVICE_KEY,
-        'Authorization': `Bearer ${SB_SERVICE_KEY}`,
-        'Prefer': 'resolution=merge-duplicates'
-      },
+      headers: { 'Content-Type': 'application/json', 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}`, 'Prefer': 'resolution=merge-duplicates' },
       body: JSON.stringify({ id: userData.id, email, nombre, rol: rol || 'operador', pais_id: pais_id || null, activo: true })
     });
-    if (!profileRes.ok) console.error('Profile error:', await profileRes.json());
     res.json({ success: true, id: userData.id });
   } catch (err) {
-    console.error('Error crear usuario:', err);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -88,8 +162,6 @@ app.get('/sw.js', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
   res.sendFile(path.join(__dirname, 'sw.js'));
 });
-
-// Fallback → index.html
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 module.exports = app;
