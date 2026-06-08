@@ -471,6 +471,23 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
           </div>
         </div>
 
+        <!-- GPS -->
+        <div class="card mb" id="pe-gps-card" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:13px;font-weight:600" id="pe-gps-label">📍 GPS asignado al vehículo</span>
+            <a id="pe-gps-link" href="#" target="_blank" style="color:var(--blue);font-size:12px;display:none">Ver en Maps →</a>
+          </div>
+          <div id="pe-gps-info" style="font-size:13px;color:var(--text2);margin-bottom:10px">Seleccioná un vehículo</div>
+          <div style="display:flex;gap:10px">
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+              <input type="radio" name="pe-gps-est" value="ok"> ✓ Verificado
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+              <input type="radio" name="pe-gps-est" value="err"> ✕ Sin señal
+            </label>
+          </div>
+        </div>
+
         <!-- DOCUMENTACIÓN -->
         <div class="card mb">
           <div class="card-title">📄 Documentación</div>
@@ -557,23 +574,6 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
           </table>
         </div>
 
-        <!-- GPS -->
-        <div class="card mb" id="pe-gps-card" style="display:none">
-          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
-            <span id="pe-gps-label">📍 GPS asignado al vehículo</span>
-            <a id="pe-gps-link" href="#" target="_blank" style="color:var(--blue);font-size:12px;display:none">Ver en Maps →</a>
-          </div>
-          <div id="pe-gps-info" style="font-size:13px;color:var(--text2);margin-bottom:8px"></div>
-          <div style="display:flex;gap:8px;margin-top:6px">
-            <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer">
-              <input type="radio" name="pe-gps-est" value="ok"> ✓ Verificado
-            </label>
-            <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer">
-              <input type="radio" name="pe-gps-est" value="err"> ✕ Sin señal
-            </label>
-          </div>
-        </div>
-
         <!-- PEÓN -->
         <div class="card mb">
           <div class="card-title">👷 ¿Sale con peón?</div>
@@ -610,7 +610,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
         </div>
       </div>
 
-id="s-historial">
+      <div class="section" id="s-historial">
         <div class="ph">
           <div style="font-size:15px;font-weight:600">Historial de checks</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
