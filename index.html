@@ -459,7 +459,19 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
               </select>
             </div>
 
+          <div style="grid-column:1/-1">
+              <div style="font-size:10px;opacity:.75;margin-bottom:3px">Cliente</div>
+              <select class="form-control" id="pe-cliente-sel" style="font-size:13px;background:rgba(255,255,255,.92);color:var(--text);border:none;border-radius:8px;padding:7px 9px;width:100%">
+                <option value="">Sin cliente</option>
+              </select>
+            </div>
           </div>
+        </div>
+
+        <!-- Advertencia vehículo nuevo -->
+        <div id="pe-warn-nuevo" style="display:none;background:var(--amber-light);border:1.5px solid #EF9F27;border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:14px;color:var(--amber)">
+          <div style="font-weight:600;font-size:13px;margin-bottom:3px">⚠️ Vehículo en período de primeras cargas</div>
+          <div id="pe-warn-nuevo-sub" style="font-size:12px;line-height:1.4"></div>
         </div>
 
         <!-- GPS — mismo formato que check estándar -->
@@ -2757,6 +2769,8 @@ async function initCheckPE(){
   llenarVehiculosPE(vehs||[]);
   // Clientes
   const{data:clis}=await withPais(db.from('clientes').select('id,nombre').eq('activo',true)).order('nombre');
+  const csel=$('pe-cliente-sel');
+  if(csel) csel.innerHTML='<option value="">Sin cliente</option>'+(clis||[]).map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
 }
 
 function llenarVehiculosPE(lista){
@@ -2773,6 +2787,17 @@ function filtrarVehiculosPE(empId){
 
 function onPEVehiculoChange(vid){
   const v=PE_VEH_CACHE[vid];
+  // Advertencia vehículo nuevo
+  const wn=$('pe-warn-nuevo');
+  if(wn){
+    if(v?.created_at){
+      const dias=Math.floor((new Date()-new Date(v.created_at))/86400000);
+      if(dias<=15){
+        wn.style.display='block';
+        $('pe-warn-nuevo-sub').textContent=`Dado de alta hace ${dias} días. Quedan ${15-dias} días de seguimiento especial.`;
+      } else wn.style.display='none';
+    } else wn.style.display='none';
+  }
   // GPS card
   const gc=$('pe-gps-card');
   if(vid&&gc){
@@ -2979,6 +3004,7 @@ async function guardarCheckPE(){
     doc_chofer_ok:getRV('pe-lic')==='si',
     sale_con_peon:document.querySelector('input[name="pe-peon"]:checked')?.value==='si'||false,
     nombre_peon:(document.querySelector('input[name="pe-peon"]:checked')?.value==='si')?($('pe-peon-nombre')?.value.trim()||null):null,
+    cliente_id:$('pe-cliente-sel')?.value||null,
     gps_estado:PE_GPS_ESTADO||null,
     registrado_por:CP?.nombre||CU?.email,
     observaciones:$('pe-obs')?.value.trim()||null,
@@ -3004,6 +3030,13 @@ async function guardarCheckPE(){
   document.querySelectorAll('#s-checklist-pe input[type=text]').forEach(r=>r.value='');
   $('pe-vehiculo-sel').value='';
   if($('pe-obs')) $('pe-obs').value='';
+  if($('pe-cliente-sel')) $('pe-cliente-sel').value='';
+  if($('pe-warn-nuevo')) $('pe-warn-nuevo').style.display='none';
+  PE_GPS_ESTADO=null;
+  // Reset GPS chips
+  ['pe-chip-gps-ok','pe-chip-gps-err'].forEach(id=>{
+    const el=$(id);if(el){el.style.background='var(--bg)';el.style.borderColor='var(--border)';el.style.color='';}
+  });
 }
 
 // ── CONDUCTORES ───────────────────────────────────────────────────────────
