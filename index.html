@@ -458,33 +458,23 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
                 <option value="">Seleccioná</option>
               </select>
             </div>
-            <div style="grid-column:1/-1">
-              <div style="font-size:10px;opacity:.75;margin-bottom:3px">Tipo de vehículo</div>
-              <select id="pe-tipo-veh" style="font-size:13px;background:rgba(255,255,255,.92);color:var(--text);border:none;border-radius:8px;padding:7px 9px;width:100%">
-                <option value="camion">Camión</option>
-                <option value="porter">Porter</option>
-                <option value="van">Van</option>
-                <option value="auto">Auto</option>
-                <option value="moto">Moto</option>
-              </select>
-            </div>
+
           </div>
         </div>
 
-        <!-- GPS -->
-        <div class="card mb" id="pe-gps-card" style="display:none">
+        <!-- GPS — mismo formato que check estándar -->
+        <div style="background:var(--blue-light);border:1px solid var(--blue);border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:14px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <span style="font-size:13px;font-weight:600" id="pe-gps-label">📍 GPS asignado al vehículo</span>
-            <a id="pe-gps-link" href="#" target="_blank" style="color:var(--blue);font-size:12px;display:none">Ver en Maps →</a>
+            <span style="font-size:13px;font-weight:600;color:var(--blue)" id="pe-gps-label">📍 GPS asignado al vehículo</span>
+            <div style="display:flex;gap:8px;align-items:center">
+              <a id="pe-gps-link" href="#" target="_blank" style="color:var(--blue);font-size:12px;font-weight:600;display:none">Ver en Maps →</a>
+              <button class="btn btn-sm admin-only" onclick="abrirVincularDesdeCheckPE()" style="font-size:11px;padding:3px 8px">🔗 Vincular</button>
+            </div>
           </div>
-          <div id="pe-gps-info" style="font-size:13px;color:var(--text2);margin-bottom:10px">Seleccioná un vehículo</div>
-          <div style="display:flex;gap:10px">
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
-              <input type="radio" name="pe-gps-est" value="ok"> ✓ Verificado
-            </label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
-              <input type="radio" name="pe-gps-est" value="err"> ✕ Sin señal
-            </label>
+          <div id="pe-gps-info" style="font-size:12px;color:var(--text2);margin-bottom:10px">Seleccioná un vehículo para ver la info GPS.</div>
+          <div style="display:flex;gap:8px">
+            <button class="chip" id="pe-chip-gps-ok" onclick="setPEChipGPS('ok')" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg);font-size:12px;cursor:pointer">✓ Verificado</button>
+            <button class="chip" id="pe-chip-gps-err" onclick="setPEChipGPS('err')" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg);font-size:12px;cursor:pointer">✕ Sin señal</button>
           </div>
         </div>
 
@@ -2831,6 +2821,55 @@ document.addEventListener('change', e=>{
   }
 });
 
+function setPEChipGPS(val){
+  $('pe-chip-gps-ok').style.background=val==='ok'?'var(--green-light)':'var(--bg)';
+  $('pe-chip-gps-ok').style.borderColor=val==='ok'?'var(--green)':'var(--border)';
+  $('pe-chip-gps-ok').style.color=val==='ok'?'var(--green)':'';
+  $('pe-chip-gps-err').style.background=val==='err'?'var(--red-light)':'var(--bg)';
+  $('pe-chip-gps-err').style.borderColor=val==='err'?'var(--red)':'var(--border)';
+  $('pe-chip-gps-err').style.color=val==='err'?'var(--red)':'';
+  document.querySelector('input[name="pe-gps-est-hidden"]') && (document.querySelector('input[name="pe-gps-est-hidden"]').value=val);
+}
+
+let PE_GPS_ESTADO = null;
+function setPEChipGPS(val){
+  PE_GPS_ESTADO = val;
+  $('pe-chip-gps-ok').style.cssText=$('pe-chip-gps-ok').style.cssText.replace(/background:[^;]+;/,'');
+  $('pe-chip-gps-err').style.cssText=$('pe-chip-gps-err').style.cssText.replace(/background:[^;]+;/,'');
+  if(val==='ok'){
+    $('pe-chip-gps-ok').style.background='var(--green-light)';
+    $('pe-chip-gps-ok').style.borderColor='var(--green)';
+    $('pe-chip-gps-ok').style.color='var(--green)';
+    $('pe-chip-gps-err').style.background='var(--bg)';
+    $('pe-chip-gps-err').style.borderColor='var(--border)';
+    $('pe-chip-gps-err').style.color='';
+  } else {
+    $('pe-chip-gps-err').style.background='var(--red-light)';
+    $('pe-chip-gps-err').style.borderColor='var(--red)';
+    $('pe-chip-gps-err').style.color='var(--red)';
+    $('pe-chip-gps-ok').style.background='var(--bg)';
+    $('pe-chip-gps-ok').style.borderColor='var(--border)';
+    $('pe-chip-gps-ok').style.color='';
+  }
+}
+
+function abrirVincularDesdeCheckPE(){
+  const vid=$('pe-vehiculo-sel')?.value;
+  if(!vid){toast('Seleccioná un vehículo primero','err');return}
+  if(GPS_DATA_LIVE.length){
+    $('rast-gps-sel').innerHTML=GPS_DATA_LIVE.map(g=>`<option value="${g.gps_gid}">${g.gps_id_dispositivo||g.gps_gid} (${g.gps_vehiculo||'Sin nombre'})</option>`).join('');
+  }
+  const vehs=Object.values(PE_VEH_CACHE);
+  $('rast-vehiculo-sel').innerHTML='<option value="">Sin asignar</option>'+vehs.map(v=>`<option value="${v.id}" ${v.id===vid?'selected':''}>${v.patente} — ${v.marca}</option>`).join('');
+  popularSelectsPais();
+  if($('rast-pais')&&CP?.pais_id) $('rast-pais').value=CP.pais_id;
+  const rastActual=RASTREADORES_DB.find(r=>r.vehiculo_id===vid);
+  $('rast-id').value=rastActual?.id||'';
+  $('rast-nombre').value=rastActual?.nombre||'';
+  if(rastActual&&$('rast-gps-sel')) $('rast-gps-sel').value=rastActual.gps_gid;
+  openModal('rastreador');
+}
+
 function getRV(name){
   const el=document.querySelector(`input[name="${name}"]:checked`);
   return el?.value||null;
@@ -2940,11 +2979,11 @@ async function guardarCheckPE(){
     doc_chofer_ok:getRV('pe-lic')==='si',
     sale_con_peon:document.querySelector('input[name="pe-peon"]:checked')?.value==='si'||false,
     nombre_peon:(document.querySelector('input[name="pe-peon"]:checked')?.value==='si')?($('pe-peon-nombre')?.value.trim()||null):null,
-    gps_estado:document.querySelector('input[name="pe-gps-est"]:checked')?.value||null,
+    gps_estado:PE_GPS_ESTADO||null,
     registrado_por:CP?.nombre||CU?.email,
     observaciones:$('pe-obs')?.value.trim()||null,
     fotos:fotosUrls.length?fotosUrls:null,
-    tipo_vehiculo_check:$('pe-tipo-veh')?.value||null,
+    tipo_vehiculo_check:PE_VEH_CACHE[$('pe-vehiculo-sel')?.value]?.tipo||null,
   };
 
   // Calcular estado final
