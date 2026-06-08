@@ -434,7 +434,150 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
         <div style="display:flex;justify-content:flex-end"><button class="btn btn-primary" onclick="guardarCheck()">✅ Confirmar check del día</button></div>
       </div>
 
-      <div class="section" id="s-historial">
+      <div class="section"       <!-- CHECK PERÚ -->
+      <div class="section" id="s-checklist-pe" style="display:none">
+        <!-- Header -->
+        <div style="background:var(--blue);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:14px;color:white">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div>
+              <div style="font-size:13px;font-weight:600" id="pe-fecha-label">Check diario — Perú</div>
+              <div style="font-size:11px;opacity:.7;margin-top:2px">Checklist de distribución · Unidad y personal</div>
+            </div>
+            <div id="pe-reloj" style="background:rgba(255,255,255,.2);padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600">⏱ --:--</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div>
+              <div style="font-size:10px;opacity:.75;margin-bottom:3px">Empresa</div>
+              <select class="form-control" id="pe-empresa-sel" onchange="filtrarVehiculosPE(this.value)" style="font-size:13px;background:rgba(255,255,255,.92);color:var(--text);border:none;border-radius:8px;padding:7px 9px;width:100%">
+                <option value="">Todas las empresas</option>
+              </select>
+            </div>
+            <div>
+              <div style="font-size:10px;opacity:.75;margin-bottom:3px">Vehículo *</div>
+              <select class="form-control" id="pe-vehiculo-sel" onchange="onPEVehiculoChange(this.value)" style="font-size:13px;background:rgba(255,255,255,.92);color:var(--text);border:none;border-radius:8px;padding:7px 9px;width:100%">
+                <option value="">Seleccioná</option>
+              </select>
+            </div>
+            <div style="grid-column:1/-1">
+              <div style="font-size:10px;opacity:.75;margin-bottom:3px">Tipo de vehículo</div>
+              <select id="pe-tipo-veh" style="font-size:13px;background:rgba(255,255,255,.92);color:var(--text);border:none;border-radius:8px;padding:7px 9px;width:100%">
+                <option value="camion">Camión</option>
+                <option value="porter">Porter</option>
+                <option value="van">Van</option>
+                <option value="auto">Auto</option>
+                <option value="moto">Moto</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- DOCUMENTACIÓN -->
+        <div class="card mb">
+          <div class="card-title">📄 Documentación</div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr style="background:var(--bg3)">
+              <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">Descripción</th>
+              <th style="padding:8px;text-align:center;border-bottom:1px solid var(--border);width:50px">Sí</th>
+              <th style="padding:8px;text-align:center;border-bottom:1px solid var(--border);width:50px">No</th>
+              <th style="padding:8px;text-align:center;border-bottom:1px solid var(--border);width:70px">No aplica</th>
+              <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">Comentario</th>
+            </tr></thead>
+            <tbody id="pe-doc-body">
+              <tr class="pe-row"><td style="padding:8px 10px;border-bottom:1px solid var(--border)">SOAT</td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-soat" value="si"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-soat" value="no"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-soat" value="na"></td><td style="border-bottom:1px solid var(--border)"><input type="text" id="pe-soat-com" placeholder="Comentario..." style="width:100%;border:none;background:transparent;font-size:12px;font-family:inherit"></td></tr>
+              <tr class="pe-row"><td style="padding:8px 10px;border-bottom:1px solid var(--border)">Revisión técnica</td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-rtec" value="si"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-rtec" value="no"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-rtec" value="na"></td><td style="border-bottom:1px solid var(--border)"><input type="text" id="pe-rtec-com" placeholder="Comentario..." style="width:100%;border:none;background:transparent;font-size:12px;font-family:inherit"></td></tr>
+              <tr class="pe-row"><td style="padding:8px 10px;border-bottom:1px solid var(--border)">Licencia de conducir</td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-lic" value="si"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-lic" value="no"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-lic" value="na"></td><td style="border-bottom:1px solid var(--border)"><input type="text" id="pe-lic-com" placeholder="Comentario..." style="width:100%;border:none;background:transparent;font-size:12px;font-family:inherit"></td></tr>
+              <tr class="pe-row"><td style="padding:8px 10px">Permiso de circulación</td><td style="text-align:center"><input type="radio" name="pe-perm" value="si"></td><td style="text-align:center"><input type="radio" name="pe-perm" value="no"></td><td style="text-align:center"><input type="radio" name="pe-perm" value="na"></td><td><input type="text" id="pe-perm-com" placeholder="Comentario..." style="width:100%;border:none;background:transparent;font-size:12px;font-family:inherit"></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ESTADO MECÁNICO -->
+        <div class="card mb">
+          <div class="card-title">🔧 Estado mecánico</div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr style="background:var(--bg3)">
+              <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">Descripción</th>
+              <th style="padding:8px;text-align:center;border-bottom:1px solid var(--border);width:50px">Sí</th>
+              <th style="padding:8px;text-align:center;border-bottom:1px solid var(--border);width:50px">No</th>
+              <th style="padding:8px;text-align:center;border-bottom:1px solid var(--border);width:70px">No aplica</th>
+              <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">Comentario</th>
+            </tr></thead>
+            <tbody>
+              <tr class="pe-row"><td style="padding:8px 10px;border-bottom:1px solid var(--border)">Nivel de combustible adecuado</td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-comb" value="si"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-comb" value="no"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-comb" value="na"></td><td style="border-bottom:1px solid var(--border)"><input type="text" id="pe-comb-com" placeholder="" style="width:100%;border:none;background:transparent;font-size:12px;font-family:inherit"></td></tr>
+              <tr class="pe-row"><td style="padding:8px 10px;border-bottom:1px solid var(--border)">Nivel de aceite</td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-aceite" value="si"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-aceite" value="no"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-aceite" value="na"></td><td style="border-bottom:1px solid var(--border)"><input type="text" id="pe-aceite-com" placeholder="" style="width:100%;border:none;background:transparent;font-size:12px;font-family:inherit"></td></tr>
+              <tr class="pe-row"><td style="padding:8px 10px;border-bottom:1px solid var(--border)">Líquido de frenos</td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-lfrenos" value="si"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-lfrenos" value="no"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-lfrenos" value="na"></td><td style="border-bottom:1px solid var(--border)"><input type="text" id="pe-lfrenos-com" placeholder="" style="width:100%;border:none;background:transparent;font-size:12px;font-family:inherit"></td></tr>
+              <tr class="pe-row"><td style="padding:8px 10px;border-bottom:1px solid var(--border)">Luces (altas, bajas, direccionales)</td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-luces" value="si"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-luces" value="no"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-luces" value="na"></td><td style="border-bottom:1px solid var(--border)"><input type="text" id="pe-luces-com" placeholder="" style="width:100%;border:none;background:transparent;font-size:12px;font-family:inherit"></td></tr>
+              <tr class="pe-row"><td style="padding:8px 10px;border-bottom:1px solid var(--border)">Bocina operativa</td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-bocina" value="si"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-bocina" value="no"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-bocina" value="na"></td><td style="border-bottom:1px solid var(--border)"><input type="text" id="pe-bocina-com" placeholder="" style="width:100%;border:none;background:transparent;font-size:12px;font-family:inherit"></td></tr>
+              <tr class="pe-row"><td style="padding:8px 10px;border-bottom:1px solid var(--border)">Frenos en buen estado</td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-frenos" value="si"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-frenos" value="no"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-frenos" value="na"></td><td style="border-bottom:1px solid var(--border)"><input type="text" id="pe-frenos-com" placeholder="" style="width:100%;border:none;background:transparent;font-size:12px;font-family:inherit"></td></tr>
+              <tr class="pe-row"><td style="padding:8px 10px;border-bottom:1px solid var(--border)">Neumáticos con presión adecuada</td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-neum" value="si"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-neum" value="no"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-neum" value="na"></td><td style="border-bottom:1px solid var(--border)"><input type="text" id="pe-neum-com" placeholder="" style="width:100%;border:none;background:transparent;font-size:12px;font-family:inherit"></td></tr>
+              <tr class="pe-row"><td style="padding:8px 10px;border-bottom:1px solid var(--border)">Llanta de repuesto operativa</td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-llanta" value="si"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-llanta" value="no"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-llanta" value="na"></td><td style="border-bottom:1px solid var(--border)"><input type="text" id="pe-llanta-com" placeholder="" style="width:100%;border:none;background:transparent;font-size:12px;font-family:inherit"></td></tr>
+              <tr class="pe-row"><td style="padding:8px 10px">Kit de herramientas</td><td style="text-align:center"><input type="radio" name="pe-kit" value="si"></td><td style="text-align:center"><input type="radio" name="pe-kit" value="no"></td><td style="text-align:center"><input type="radio" name="pe-kit" value="na"></td><td><input type="text" id="pe-kit-com" placeholder="" style="width:100%;border:none;background:transparent;font-size:12px;font-family:inherit"></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- CONDICIONES E IMPLEMENTOS -->
+        <div class="card mb">
+          <div class="card-title">🔒 Condiciones, implementos y seguridad</div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr style="background:var(--bg3)">
+              <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">Descripción</th>
+              <th style="padding:8px;text-align:center;border-bottom:1px solid var(--border);width:50px">Sí</th>
+              <th style="padding:8px;text-align:center;border-bottom:1px solid var(--border);width:50px">No</th>
+              <th style="padding:8px;text-align:center;border-bottom:1px solid var(--border);width:70px">No aplica</th>
+              <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">Comentario</th>
+            </tr></thead>
+            <tbody>
+              <tr class="pe-row"><td style="padding:8px 10px;border-bottom:1px solid var(--border)">Unidad limpia (interior/exterior)</td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-limp" value="si"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-limp" value="no"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-limp" value="na"></td><td style="border-bottom:1px solid var(--border)"><input type="text" id="pe-limp-com" placeholder="" style="width:100%;border:none;background:transparent;font-size:12px;font-family:inherit"></td></tr>
+              <tr class="pe-row"><td style="padding:8px 10px;border-bottom:1px solid var(--border)">Área de carga libre de residuos</td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-carga" value="si"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-carga" value="no"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-carga" value="na"></td><td style="border-bottom:1px solid var(--border)"><input type="text" id="pe-carga-com" placeholder="" style="width:100%;border:none;background:transparent;font-size:12px;font-family:inherit"></td></tr>
+              <tr class="pe-row"><td style="padding:8px 10px;border-bottom:1px solid var(--border)">Candados, conos y tacos</td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-cand" value="si"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-cand" value="no"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-cand" value="na"></td><td style="border-bottom:1px solid var(--border)"><input type="text" id="pe-cand-com" placeholder="" style="width:100%;border:none;background:transparent;font-size:12px;font-family:inherit"></td></tr>
+              <tr class="pe-row"><td style="padding:8px 10px;border-bottom:1px solid var(--border)">Carretilla</td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-carr" value="si"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-carr" value="no"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-carr" value="na"></td><td style="border-bottom:1px solid var(--border)"><input type="text" id="pe-carr-com" placeholder="" style="width:100%;border:none;background:transparent;font-size:12px;font-family:inherit"></td></tr>
+              <tr class="pe-row"><td style="padding:8px 10px">Film, cutter y wincha</td><td style="text-align:center"><input type="radio" name="pe-film" value="si"></td><td style="text-align:center"><input type="radio" name="pe-film" value="no"></td><td style="text-align:center"><input type="radio" name="pe-film" value="na"></td><td><input type="text" id="pe-film-com" placeholder="" style="width:100%;border:none;background:transparent;font-size:12px;font-family:inherit"></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- PERSONAL -->
+        <div class="card mb">
+          <div class="card-title">👷 Personal</div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr style="background:var(--bg3)">
+              <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">Descripción</th>
+              <th style="padding:8px;text-align:center;border-bottom:1px solid var(--border);width:50px">Sí</th>
+              <th style="padding:8px;text-align:center;border-bottom:1px solid var(--border);width:50px">No</th>
+              <th style="padding:8px;text-align:center;border-bottom:1px solid var(--border);width:70px">No aplica</th>
+              <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">Comentario</th>
+            </tr></thead>
+            <tbody>
+              <tr class="pe-row"><td style="padding:8px 10px;border-bottom:1px solid var(--border)">Personal completo</td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-pcomp" value="si"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-pcomp" value="no"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-pcomp" value="na"></td><td style="border-bottom:1px solid var(--border)"><input type="text" id="pe-pcomp-com" placeholder="" style="width:100%;border:none;background:transparent;font-size:12px;font-family:inherit"></td></tr>
+              <tr class="pe-row"><td style="padding:8px 10px;border-bottom:1px solid var(--border)">Credencial laboral</td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-cred" value="si"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-cred" value="no"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-cred" value="na"></td><td style="border-bottom:1px solid var(--border)"><input type="text" id="pe-cred-com" placeholder="" style="width:100%;border:none;background:transparent;font-size:12px;font-family:inherit"></td></tr>
+              <tr class="pe-row"><td style="padding:8px 10px;border-bottom:1px solid var(--border)">Pantalón jean limpio</td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-pant" value="si"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-pant" value="no"></td><td style="text-align:center;border-bottom:1px solid var(--border)"><input type="radio" name="pe-pant" value="na"></td><td style="border-bottom:1px solid var(--border)"><input type="text" id="pe-pant-com" placeholder="" style="width:100%;border:none;background:transparent;font-size:12px;font-family:inherit"></td></tr>
+              <tr class="pe-row"><td style="padding:8px 10px">EPP's (Casco, chaleco, guantes y zapatos)</td><td style="text-align:center"><input type="radio" name="pe-epp" value="si"></td><td style="text-align:center"><input type="radio" name="pe-epp" value="no"></td><td style="text-align:center"><input type="radio" name="pe-epp" value="na"></td><td><input type="text" id="pe-epp-com" placeholder="" style="width:100%;border:none;background:transparent;font-size:12px;font-family:inherit"></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- FOTOS Y OBS -->
+        <div class="card mb">
+          <div class="card-title">📷 Fotos y observaciones</div>
+          <div style="margin-bottom:10px">
+            <label class="fl">Observaciones generales</label>
+            <textarea id="pe-obs" placeholder="Novedades del día..." style="margin-top:4px;min-height:72px"></textarea>
+          </div>
+          <div>
+            <label class="fl">Fotos</label>
+            <div id="pe-fotos-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0"></div>
+            <input type="file" id="pe-foto-input" accept="image/*" multiple style="display:none" onchange="handlePEFotos(event)">
+            <button class="btn btn-sm" onclick="$('pe-foto-input').click()" style="margin-top:4px">📷 Agregar fotos</button>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:20px">
+          <button class="btn btn-primary" onclick="guardarCheckPE()">✅ Confirmar checklist</button>
+        </div>
+      </div>
+
+id="s-historial">
         <div class="ph">
           <div style="font-size:15px;font-weight:600">Historial de checks</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1017,7 +1160,7 @@ function goTo(sec){
   if(sec==='paises') a.innerHTML='';
   if(sec==='clientes')a.innerHTML=`<button class="btn btn-primary" onclick="openModal('cliente')">+ Nuevo cliente</button>`;
   if(sec==='empresas')a.innerHTML=`<button class="btn btn-primary" onclick="openModal('empresa')">+ Nueva empresa</button>`;
-  const L={dashboard:loadDashboard,vehiculos:loadVehiculos,historial:loadHistorial,conductores:loadConductores,alertas:loadAlertas,satelital:loadSatelital,usuarios:loadUsuarios,empresas:loadEmpresas,clientes:loadClientes,checklist:initCheckSelects,paises:loadPaises,planificacion:loadPlanificacion};
+  const L={dashboard:loadDashboard,vehiculos:loadVehiculos,historial:loadHistorial,conductores:loadConductores,alertas:loadAlertas,satelital:loadSatelital,usuarios:loadUsuarios,empresas:loadEmpresas,clientes:loadClientes,checklist:initCheckDiario,paises:loadPaises,planificacion:loadPlanificacion};
   if(L[sec])L[sec]();
 }
 
@@ -1432,7 +1575,7 @@ async function loadHistorial(){
 
   // Aplicar filtro de país: usa el filtro del historial si es super_admin, sino usa withPais normal
   let q=db.from('checks_diarios')
-    .select('*, vehiculos(patente,marca,modelo,empresa_id,nombre_empresa_gps,link_gps,empresas(nombre)), clientes(nombre)');
+    .select('*, vehiculos(patente,marca,modelo,empresa_id,nombre_empresa_gps,link_gps,empresas(nombre)), clientes(nombre), tipo_check, tipo_vehiculo_check, doc_soat, doc_revision_tecnica, doc_permiso_circulacion, mec_combustible, mec_aceite, mec_liquido_frenos, mec_luces, mec_bocina, mec_frenos, mec_neumaticos, mec_llanta_repuesto, mec_kit_herramientas, cond_limpieza, cond_area_carga, cond_candados, cond_carretilla, cond_film, pers_completo, pers_credencial, pers_pantalon, pers_epp, comentarios_check');
   if(isSuperAdmin()){
     if(paisFiltroId) q=q.eq('pais_id',paisFiltroId);
   } else {
@@ -1509,47 +1652,87 @@ function verCheckDet(h){
 
 async function exportarHistorial(){
   if(!HIST_DATA_CACHE.length){toast('Primero cargá el historial','err');return;}
+  const val=v=>v==='si'?'Sí':v==='no'?'No':v==='na'?'No aplica':v||'';
+  const com=h=>h?.comentarios_check||{};
   const headers=[
-    'Fecha','Hora','Patente','Marca','Modelo','Empresa','Cliente',
-    'Doc. Chofer OK','Estado Chofer',
-    'Remito OK','Estado Carga','Precinto N°',
-    'Carrocería OK','Espejos OK','Sin pérdida fluidos','Limpieza OK','Extintor OK','Botiquín OK',
-    'Estado Vehículo','Estado Final',
-    'GPS Estado','Rastreador','Empresa GPS',
-    'Sale con Peón','Nombre Peón',
-    'Observaciones','Registrado por',
+    // General
+    'Tipo Check','Fecha','Hora','Patente','Marca','Modelo','Tipo Vehículo','Empresa','Cliente',
+    'Estado Final','Registrado por',
+    // Check estándar
+    'Doc. Chofer','Estado Chofer','Remito','Estado Carga','Precinto N°',
+    'Estado Vehículo','GPS Estado','Rastreador','Empresa GPS',
+    'Sale con Peón','Nombre Peón','Observaciones',
+    // Check Perú — Documentación
+    'PE: SOAT','PE: Revisión técnica','PE: Licencia conducir','PE: Permiso circulación',
+    // Check Perú — Mecánico
+    'PE: Combustible','PE: Aceite','PE: Líquido frenos','PE: Luces',
+    'PE: Bocina','PE: Frenos','PE: Neumáticos','PE: Llanta repuesto','PE: Kit herramientas',
+    // Check Perú — Condiciones
+    'PE: Limpieza unidad','PE: Área carga','PE: Candados/conos/tacos','PE: Carretilla','PE: Film/cutter/wincha',
+    // Check Perú — Personal
+    'PE: Personal completo','PE: Credencial laboral','PE: Pantalón jean','PE: EPPs',
+    // Comentarios PE
+    'PE: Comentario SOAT','PE: Comentario Rev. técnica','PE: Comentario Licencia','PE: Comentario Permiso',
+    'PE: Comentario Combustible','PE: Comentario Aceite','PE: Comentario Liq. frenos',
+    'PE: Comentario Luces','PE: Comentario Bocina','PE: Comentario Frenos',
+    'PE: Comentario Neumáticos','PE: Comentario Llanta','PE: Comentario Kit',
+    'PE: Comentario Limpieza','PE: Comentario Área carga','PE: Comentario Candados',
+    'PE: Comentario Carretilla','PE: Comentario Film',
+    'PE: Comentario Personal','PE: Comentario Credencial','PE: Comentario Pantalón','PE: Comentario EPPs',
+    // Fotos
     'Fotos (links)'
   ];
-  const rows=HIST_DATA_CACHE.map(h=>[
-    fd(h.fecha),
-    h.hora_check?.slice(0,5)||'',
-    h.vehiculos?.patente||'',
-    h.vehiculos?.marca||'',
-    h.vehiculos?.modelo||'',
-    h.vehiculos?.empresas?.nombre||'',
-    h.clientes?.nombre||'',
-    h.doc_chofer_ok?'Sí':'No',
-    h.doc_chofer_estado||'',
-    h.carga_ok?'Sí':'No',
-    h.carga_estado||'',
-    h.precinto_numero||'',
-    h.vehiculo_ok?'Sí':'No',
-    '',
-    '',
-    '',
-    '',
-    '',
-    h.vehiculo_estado||'',
-    h.estado_final||'',
-    h.gps_estado||'',
-    h.rastreador_nombre||'',
-    h.empresa_gps||'',
-    h.sale_con_peon?'Sí':'No',
-    h.nombre_peon||'',
-    (h.observaciones||'').replace(/,/g,';'),
-    h.registrado_por||'',
-    (h.fotos||[]).join(' | ')
-  ]);
+  const rows=HIST_DATA_CACHE.map(h=>{
+    const esPE = h.tipo_check==='peru';
+    const c = com(h);
+    return [
+      // General
+      esPE?'Perú':'Estándar',
+      fd(h.fecha),
+      h.hora_check?.slice(0,5)||'',
+      h.vehiculos?.patente||'',
+      h.vehiculos?.marca||'',
+      h.vehiculos?.modelo||'',
+      h.tipo_vehiculo_check||'',
+      h.vehiculos?.empresas?.nombre||'',
+      h.clientes?.nombre||'',
+      h.estado_final||'',
+      h.registrado_por||'',
+      // Check estándar
+      esPE?'':h.doc_chofer_ok?'Sí':'No',
+      esPE?'':h.doc_chofer_estado||'',
+      esPE?'':h.carga_ok?'Sí':'No',
+      esPE?'':h.carga_estado||'',
+      esPE?'':h.precinto_numero||'',
+      esPE?'':h.vehiculo_estado||'',
+      h.gps_estado||'',
+      h.rastreador_nombre||'',
+      h.empresa_gps||'',
+      h.sale_con_peon?'Sí':'No',
+      h.nombre_peon||'',
+      (h.observaciones||'').replace(/,/g,';'),
+      // Perú — Documentación
+      val(h.doc_soat),
+      val(h.doc_revision_tecnica),
+      esPE?val(h.doc_chofer_estado):'',
+      val(h.doc_permiso_circulacion),
+      // Perú — Mecánico
+      val(h.mec_combustible),val(h.mec_aceite),val(h.mec_liquido_frenos),val(h.mec_luces),
+      val(h.mec_bocina),val(h.mec_frenos),val(h.mec_neumaticos),val(h.mec_llanta_repuesto),val(h.mec_kit_herramientas),
+      // Perú — Condiciones
+      val(h.cond_limpieza),val(h.cond_area_carga),val(h.cond_candados),val(h.cond_carretilla),val(h.cond_film),
+      // Perú — Personal
+      val(h.pers_completo),val(h.pers_credencial),val(h.pers_pantalon),val(h.pers_epp),
+      // Comentarios PE
+      c.soat||'',c.rtec||'',c.lic||'',c.perm||'',
+      c.comb||'',c.aceite||'',c.lfrenos||'',c.luces||'',c.bocina||'',c.frenos||'',
+      c.neum||'',c.llanta||'',c.kit||'',
+      c.limp||'',c.carga||'',c.cand||'',c.carr||'',c.film||'',
+      c.pcomp||'',c.cred||'',c.pant||'',c.epp||'',
+      // Fotos
+      (h.fotos||[]).join(' | ')
+    ];
+  });
   const csv=[headers,...rows].map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
   const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob);
@@ -1921,7 +2104,7 @@ async function cambiarPais(paisId){
       clientes:loadClientes,
       satelital:loadSatelital,
       planificacion:loadPlanificacion,
-      checklist:initCheckSelects,
+      checklist:initCheckDiario,
       usuarios:loadUsuarios,
       paises:loadPaises
     };
@@ -2493,6 +2676,208 @@ function previewFotoVeh(e){
     // Guardar base64 para upload
     $('mv-foto-url').value = base64;
   });
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════
+// CHECK PERÚ — Checklist de distribución
+// ══════════════════════════════════════════════════════════════════════════
+let PE_FOTOS = [];
+let PE_VEH_CACHE = {};
+
+function esPeru(){
+  const paisId = getPaisId() || CP?.pais_id;
+  const pe = PAISES_CACHE.find(p=>p.codigo==='PE');
+  return pe && paisId === pe.id;
+}
+
+// Detectar qué check mostrar al entrar a la sección
+function initCheckDiario(){
+  if(esPeru()){
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    $('s-checklist-pe').classList.add('active');
+    initCheckPE();
+  } else {
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    $('s-checklist').classList.add('active');
+    initCheckSelects();
+  }
+}
+
+async function initCheckPE(){
+  // Reloj
+  const tick=()=>{const el=$('pe-reloj');if(el)el.textContent='⏱ '+new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});};
+  tick();setInterval(tick,1000);
+  // Fecha
+  const fl=$('pe-fecha-label');
+  if(fl) fl.textContent='Check diario PE — '+new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+  // Cargar vehículos de Perú
+  const{data:vehs}=await withPais(db.from('vehiculos').select('*').eq('activo',true)).order('patente');
+  PE_VEH_CACHE={};(vehs||[]).forEach(v=>PE_VEH_CACHE[v.id]=v);
+  // Empresas
+  const{data:emps}=await withPais(db.from('empresas').select('id,nombre').eq('activo',true)).order('nombre');
+  const se=$('pe-empresa-sel');
+  if(se){
+    se.innerHTML='<option value="">Todas las empresas</option>'+(emps||[]).map(e=>`<option value="${e.id}">${e.nombre}</option>`).join('');
+  }
+  // Vehículos
+  llenarVehiculosPE(vehs||[]);
+  // Clientes
+  const{data:clis}=await withPais(db.from('clientes').select('id,nombre').eq('activo',true)).order('nombre');
+}
+
+function llenarVehiculosPE(lista){
+  const sv=$('pe-vehiculo-sel');
+  if(!sv) return;
+  sv.innerHTML='<option value="">Seleccioná vehículo</option>'+lista.map(v=>`<option value="${v.id}">${v.patente} — ${v.marca} ${v.modelo}</option>`).join('');
+}
+
+function filtrarVehiculosPE(empId){
+  const todos=Object.values(PE_VEH_CACHE);
+  const filtrados=empId?todos.filter(v=>v.empresa_id===empId):todos;
+  llenarVehiculosPE(filtrados);
+}
+
+function onPEVehiculoChange(vid){
+  const v=PE_VEH_CACHE[vid];
+  if(v?.created_at){
+    const dias=Math.floor((new Date()-new Date(v.created_at))/86400000);
+    // Show new vehicle warning if needed
+  }
+}
+
+function getRV(name){
+  const el=document.querySelector(`input[name="${name}"]:checked`);
+  return el?.value||null;
+}
+
+function handlePEFotos(e){
+  const files=Array.from(e.target.files);
+  files.forEach(file=>{
+    comprimirImagen(file).then(b64=>{
+      PE_FOTOS.push(b64);
+      renderPEFotos();
+    });
+  });
+  e.target.value='';
+}
+
+function renderPEFotos(){
+  const g=$('pe-fotos-grid');
+  if(!g) return;
+  g.innerHTML=PE_FOTOS.map((f,i)=>`
+    <div style="position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:var(--bg3)">
+      <img src="${f}" style="width:100%;height:100%;object-fit:cover">
+      <button onclick="PE_FOTOS.splice(${i},1);renderPEFotos()" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);color:white;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer">✕</button>
+    </div>`).join('');
+}
+
+async function guardarCheckPE(){
+  const vid=$('pe-vehiculo-sel')?.value;
+  if(!vid){toast('Seleccioná un vehículo','err');return}
+  const btn=document.querySelector('#s-checklist-pe .btn-primary');
+  if(btn){btn.disabled=true;btn.textContent='Guardando...';}
+
+  // Subir fotos
+  const fotosUrls=[];
+  for(let i=0;i<PE_FOTOS.length;i++){
+    try{
+      const fname=`check_pe_${vid}_${Date.now()}_${i}.jpg`;
+      const url=await uploadToDrive(PE_FOTOS[i],fname,'checks');
+      fotosUrls.push(url);
+    }catch(e){console.warn('Error foto:',e);}
+  }
+
+  const v=PE_VEH_CACHE[vid];
+  const checkData={
+    vehiculo_id:vid,
+    pais_id:getPaisId()||CP?.pais_id||null,
+    fecha:new Date().toISOString().split('T')[0],
+    hora_check:new Date().toTimeString().slice(0,8),
+    tipo_check:'peru',
+    estado_final:'ok',
+    // Documentación
+    doc_soat:getRV('pe-soat'),
+    doc_revision_tecnica:getRV('pe-rtec'),
+    doc_chofer_estado:getRV('pe-lic'),
+    doc_permiso_circulacion:getRV('pe-perm'),
+    // Mecánico
+    mec_combustible:getRV('pe-comb'),
+    mec_aceite:getRV('pe-aceite'),
+    mec_liquido_frenos:getRV('pe-lfrenos'),
+    mec_luces:getRV('pe-luces'),
+    mec_bocina:getRV('pe-bocina'),
+    mec_frenos:getRV('pe-frenos'),
+    mec_neumaticos:getRV('pe-neum'),
+    mec_llanta_repuesto:getRV('pe-llanta'),
+    mec_kit_herramientas:getRV('pe-kit'),
+    // Condiciones
+    cond_limpieza:getRV('pe-limp'),
+    cond_area_carga:getRV('pe-carga'),
+    cond_candados:getRV('pe-cand'),
+    cond_carretilla:getRV('pe-carr'),
+    cond_film:getRV('pe-film'),
+    // Personal
+    pers_completo:getRV('pe-pcomp'),
+    pers_credencial:getRV('pe-cred'),
+    pers_pantalon:getRV('pe-pant'),
+    pers_epp:getRV('pe-epp'),
+    // Comentarios
+    comentarios_check:{
+      soat:$('pe-soat-com')?.value||null,
+      rtec:$('pe-rtec-com')?.value||null,
+      lic:$('pe-lic-com')?.value||null,
+      perm:$('pe-perm-com')?.value||null,
+      comb:$('pe-comb-com')?.value||null,
+      aceite:$('pe-aceite-com')?.value||null,
+      lfrenos:$('pe-lfrenos-com')?.value||null,
+      luces:$('pe-luces-com')?.value||null,
+      bocina:$('pe-bocina-com')?.value||null,
+      frenos:$('pe-frenos-com')?.value||null,
+      neum:$('pe-neum-com')?.value||null,
+      llanta:$('pe-llanta-com')?.value||null,
+      kit:$('pe-kit-com')?.value||null,
+      limp:$('pe-limp-com')?.value||null,
+      carga:$('pe-carga-com')?.value||null,
+      cand:$('pe-cand-com')?.value||null,
+      carr:$('pe-carr-com')?.value||null,
+      film:$('pe-film-com')?.value||null,
+      pcomp:$('pe-pcomp-com')?.value||null,
+      cred:$('pe-cred-com')?.value||null,
+      pant:$('pe-pant-com')?.value||null,
+      epp:$('pe-epp-com')?.value||null,
+    },
+    // Vehículo
+    vehiculo_ok:true,
+    vehiculo_estado:'ok',
+    carga_ok:true,
+    carga_estado:'ok',
+    doc_chofer_ok:getRV('pe-lic')==='si',
+    sale_con_peon:false,
+    registrado_por:CP?.nombre||CU?.email,
+    observaciones:$('pe-obs')?.value.trim()||null,
+    fotos:fotosUrls.length?fotosUrls:null,
+    tipo_vehiculo_check:$('pe-tipo-veh')?.value||null,
+  };
+
+  // Calcular estado final
+  const todos=[checkData.doc_soat,checkData.doc_revision_tecnica,checkData.doc_chofer_estado,checkData.doc_permiso_circulacion,
+    checkData.mec_combustible,checkData.mec_aceite,checkData.mec_luces,checkData.mec_frenos,
+    checkData.pers_completo,checkData.pers_epp];
+  const hayNo=todos.some(v=>v==='no');
+  checkData.estado_final=hayNo?'warn':'ok';
+
+  const{error}=await db.from('checks_diarios').insert(checkData);
+  if(btn){btn.disabled=false;btn.textContent='✅ Confirmar checklist';}
+  if(error){toast('Error: '+error.message,'err');return}
+
+  toast('✓ Checklist PE registrado','ok');
+  PE_FOTOS=[];renderPEFotos();
+  // Reset radios
+  document.querySelectorAll('#s-checklist-pe input[type=radio]').forEach(r=>r.checked=false);
+  document.querySelectorAll('#s-checklist-pe input[type=text]').forEach(r=>r.value='');
+  $('pe-vehiculo-sel').value='';
+  if($('pe-obs')) $('pe-obs').value='';
 }
 
 // ── CONDUCTORES ───────────────────────────────────────────────────────────
