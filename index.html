@@ -557,6 +557,39 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
           </table>
         </div>
 
+        <!-- GPS -->
+        <div class="card mb" id="pe-gps-card" style="display:none">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+            <span id="pe-gps-label">📍 GPS asignado al vehículo</span>
+            <a id="pe-gps-link" href="#" target="_blank" style="color:var(--blue);font-size:12px;display:none">Ver en Maps →</a>
+          </div>
+          <div id="pe-gps-info" style="font-size:13px;color:var(--text2);margin-bottom:8px"></div>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="radio" name="pe-gps-est" value="ok"> ✓ Verificado
+            </label>
+            <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="radio" name="pe-gps-est" value="err"> ✕ Sin señal
+            </label>
+          </div>
+        </div>
+
+        <!-- PEÓN -->
+        <div class="card mb">
+          <div class="card-title">👷 ¿Sale con peón?</div>
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <label style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:14px">
+              <input type="radio" name="pe-peon" value="no" checked style="display:none"> No
+            </label>
+            <label style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:14px">
+              <input type="radio" name="pe-peon" value="si" style="display:none"> Sí
+            </label>
+          </div>
+          <div id="pe-peon-nombre-wrap" style="display:none">
+            <input type="text" id="pe-peon-nombre" placeholder="Nombre del peón" class="form-control" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit">
+          </div>
+        </div>
+
         <!-- FOTOS Y OBS -->
         <div class="card mb">
           <div class="card-title">📷 Fotos y observaciones</div>
@@ -2750,11 +2783,53 @@ function filtrarVehiculosPE(empId){
 
 function onPEVehiculoChange(vid){
   const v=PE_VEH_CACHE[vid];
-  if(v?.created_at){
-    const dias=Math.floor((new Date()-new Date(v.created_at))/86400000);
-    // Show new vehicle warning if needed
+  // GPS card
+  const gc=$('pe-gps-card');
+  if(vid&&gc){
+    gc.style.display='block';
+    const rast=RASTREADORES_DB.find(r=>r.vehiculo_id===vid);
+    const gpsLive=rast?GPS_DATA_LIVE.find(g=>g.gps_gid===rast.gps_gid):null;
+    if(rast&&gpsLive){
+      $('pe-gps-label').textContent='🛰 '+(rast.nombre||rast.gps_id_dispositivo);
+      const vel=gpsLive.gps_speed||0;
+      const ts=gpsLive.gps_tstamp?new Date(gpsLive.gps_tstamp):null;
+      const mins=ts?Math.round((new Date()-ts)/60000):999;
+      const estado=mins>30?'🔴 Sin reporte':vel>0?`🟢 En ruta · ${vel} km/h`:'🟡 Detenido';
+      $('pe-gps-info').textContent=estado+(gpsLive.gps_ubicacion?' · '+gpsLive.gps_ubicacion:'');
+      if(gpsLive.gps_latitud&&gpsLive.gps_longitud){
+        const lnk=$('pe-gps-link');
+        lnk.href=`https://maps.google.com/?q=${gpsLive.gps_latitud},${gpsLive.gps_longitud}`;
+        lnk.style.display='inline';
+      }
+    } else if(v?.nombre_empresa_gps){
+      $('pe-gps-label').textContent='📍 '+(v.nombre_empresa_gps||'GPS');
+      $('pe-gps-info').textContent='Sin datos en vivo';
+      if(v.link_gps){const lnk=$('pe-gps-link');lnk.href=v.link_gps;lnk.style.display='inline';lnk.textContent='Abrir portal →';}
+    } else {
+      $('pe-gps-label').textContent='📍 GPS';
+      $('pe-gps-info').textContent='Sin rastreador asignado';
+      $('pe-gps-link').style.display='none';
+    }
+  } else if(gc){
+    gc.style.display='none';
   }
 }
+
+// Toggle peon nombre
+document.addEventListener('change', e=>{
+  if(e.target.name==='pe-peon'){
+    const wrap=$('pe-peon-nombre-wrap');
+    if(wrap) wrap.style.display=e.target.value==='si'?'block':'none';
+    // Style labels
+    document.querySelectorAll('label:has(input[name="pe-peon"])').forEach(l=>{
+      const inp=l.querySelector('input');
+      l.style.background=inp.checked?'var(--blue-light)':'';
+      l.style.borderColor=inp.checked?'var(--blue)':'var(--border)';
+      l.style.color=inp.checked?'var(--blue)':'';
+      l.style.fontWeight=inp.checked?'600':'';
+    });
+  }
+});
 
 function getRV(name){
   const el=document.querySelector(`input[name="${name}"]:checked`);
@@ -2863,7 +2938,9 @@ async function guardarCheckPE(){
     carga_ok:true,
     carga_estado:'ok',
     doc_chofer_ok:getRV('pe-lic')==='si',
-    sale_con_peon:false,
+    sale_con_peon:document.querySelector('input[name="pe-peon"]:checked')?.value==='si'||false,
+    nombre_peon:(document.querySelector('input[name="pe-peon"]:checked')?.value==='si')?($('pe-peon-nombre')?.value.trim()||null):null,
+    gps_estado:document.querySelector('input[name="pe-gps-est"]:checked')?.value||null,
     registrado_por:CP?.nombre||CU?.email,
     observaciones:$('pe-obs')?.value.trim()||null,
     fotos:fotosUrls.length?fotosUrls:null,
