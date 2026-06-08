@@ -2686,20 +2686,24 @@ let PE_FOTOS = [];
 let PE_VEH_CACHE = {};
 
 function esPeru(){
-  const paisId = getPaisId() || CP?.pais_id;
+  // Para super admin usa PAIS_ACTIVO, para admin/operador usa su pais_id
+  const paisId = isSuperAdmin() ? PAIS_ACTIVO : (CP?.pais_id || null);
+  if(!paisId) return false;
   const pe = PAISES_CACHE.find(p=>p.codigo==='PE');
   return pe && paisId === pe.id;
 }
 
 // Detectar qué check mostrar al entrar a la sección
 function initCheckDiario(){
+  const secPE = $('s-checklist-pe');
+  const secSTD = $('s-checklist');
   if(esPeru()){
-    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-    $('s-checklist-pe').classList.add('active');
+    if(secSTD) secSTD.classList.remove('active');
+    if(secPE){ secPE.classList.add('active'); secPE.style.display=''; }
     initCheckPE();
   } else {
-    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-    $('s-checklist').classList.add('active');
+    if(secPE){ secPE.classList.remove('active'); }
+    if(secSTD) secSTD.classList.add('active');
     initCheckSelects();
   }
 }
