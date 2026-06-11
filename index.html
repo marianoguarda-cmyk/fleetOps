@@ -624,28 +624,60 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 
         <div class="ph">
           <div style="font-size:15px;font-weight:600">💰 Liquidación de ruta</div>
-          <div style="display:flex;gap:8px">
-            <select id="liq-filtro-fecha" style="font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:20px;background:var(--bg2)" onchange="loadLiquidacion()">
-              <option value="hoy">Hoy</option>
-              <option value="semana">Esta semana</option>
-              <option value="mes">Este mes</option>
-            </select>
-            <button class="btn btn-primary admin-only" onclick="openModal('nueva-liquidacion')">+ Nueva planilla</button>
+          <button class="btn btn-primary admin-only" onclick="openModal('nueva-liquidacion')">+ Nueva planilla</button>
+        </div>
+
+        <!-- Stats dashboard -->
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px">
+          <div class="stat" style="cursor:pointer" onclick="liqTab('hoy')">
+            <div class="stat-label">Planillas hoy</div>
+            <div class="stat-val" id="liq-stat-total" style="color:var(--blue)">—</div>
+          </div>
+          <div class="stat" style="cursor:pointer" onclick="liqTab('liquidadas')">
+            <div class="stat-label">✓ Liquidadas</div>
+            <div class="stat-val" id="liq-stat-ok" style="color:var(--green)">—</div>
+          </div>
+          <div class="stat" style="cursor:pointer" onclick="liqTab('pendientes')">
+            <div class="stat-label">⏳ Pendientes</div>
+            <div class="stat-val" id="liq-stat-pend" style="color:var(--amber)">—</div>
+          </div>
+          <div class="stat" style="cursor:pointer" onclick="liqTab('diferencia')">
+            <div class="stat-label">⚠ Con diferencia</div>
+            <div class="stat-val" id="liq-stat-diff" style="color:var(--red)">—</div>
+          </div>
+          <div class="stat" style="cursor:pointer;border:2px solid var(--red-light)" onclick="liqTab('alerta')">
+            <div class="stat-label" style="color:var(--red)">🚨 Alertas +28hs</div>
+            <div class="stat-val" id="liq-stat-alerta" style="color:var(--red)">—</div>
           </div>
         </div>
 
-        <!-- Resumen del día -->
-        <div id="liq-resumen" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
-          <div class="stat"><div class="stat-label">Planillas hoy</div><div class="stat-val" id="liq-stat-total" style="color:var(--blue)">—</div></div>
-          <div class="stat"><div class="stat-label">Liquidadas</div><div class="stat-val" id="liq-stat-ok" style="color:var(--green)">—</div></div>
-          <div class="stat"><div class="stat-label">Pendientes</div><div class="stat-val" id="liq-stat-pend" style="color:var(--amber)">—</div></div>
-          <div class="stat"><div class="stat-label">Con diferencia</div><div class="stat-val" id="liq-stat-diff" style="color:var(--red)">—</div></div>
+        <!-- Alertas +28hs -->
+        <div id="liq-alertas-box" style="display:none;background:var(--red-light);border:1.5px solid #F09595;border-radius:var(--radius);padding:12px 14px;margin-bottom:14px">
+          <div style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:8px">🚨 Conductores con más de 28hs sin liquidar</div>
+          <div id="liq-alertas-list"></div>
+        </div>
+
+        <!-- Filtros y tabs -->
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+          <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:20px;overflow:hidden">
+            <button id="liq-tab-todos" onclick="liqTab('todos')" style="padding:5px 14px;font-size:12px;border:none;background:var(--blue);color:white;cursor:pointer;font-family:inherit">Todos</button>
+            <button id="liq-tab-pendientes" onclick="liqTab('pendientes')" style="padding:5px 14px;font-size:12px;border:none;background:var(--bg2);color:var(--text2);cursor:pointer;font-family:inherit">Pendientes</button>
+            <button id="liq-tab-liquidadas" onclick="liqTab('liquidadas')" style="padding:5px 14px;font-size:12px;border:none;background:var(--bg2);color:var(--text2);cursor:pointer;font-family:inherit">Liquidadas</button>
+            <button id="liq-tab-diferencia" onclick="liqTab('diferencia')" style="padding:5px 14px;font-size:12px;border:none;background:var(--bg2);color:var(--text2);cursor:pointer;font-family:inherit">Con diferencia</button>
+          </div>
+          <select id="liq-filtro-fecha" style="font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:20px;background:var(--bg2)" onchange="loadLiquidacion()">
+            <option value="hoy">Hoy</option>
+            <option value="semana">Esta semana</option>
+            <option value="mes">Este mes</option>
+            <option value="todo">Todo</option>
+          </select>
+          <button class="btn btn-sm" onclick="exportarLiquidacionCSV()">⬇ CSV</button>
         </div>
 
         <!-- Lista de liquidaciones -->
         <div class="data-table">
-          <div class="th" style="grid-template-columns:80px 1fr 120px 100px 100px 100px 120px">
-            <div>Fecha</div><div>Conductor / Vehículo</div><div>Salida</div><div>Entregado</div><div>Cobrado</div><div>Diferencia</div><div>Estado</div>
+          <div class="th" style="grid-template-columns:80px 1fr 120px 100px 100px 100px 100px 130px">
+            <div>Fecha</div><div>Conductor / Vehículo</div><div>Salida</div><div>Entregado</div><div>Cobrado</div><div>Dif. monto</div><div>Dif. efectivo</div><div>Estado</div>
           </div>
           <div id="liq-list"><div class="loader"><div class="spin"></div>Cargando...</div></div>
         </div>
@@ -3211,6 +3243,9 @@ async function guardarCheckPE(){
 // ══════════════════════════════════════════════════════════════════════════
 let LIQ_DETALLE_COUNT = 0;
 
+let LIQ_DATA_CACHE = [];
+let LIQ_TAB_ACTIVO = 'todos';
+
 async function loadLiquidacion(){
   const el=$('liq-list');
   if(!el) return;
@@ -3221,60 +3256,164 @@ async function loadLiquidacion(){
   let desde=today;
   if(fechaFiltro==='semana'){const d=new Date();d.setDate(d.getDate()-7);desde=d.toISOString().split('T')[0];}
   if(fechaFiltro==='mes'){const d=new Date();d.setDate(d.getDate()-30);desde=d.toISOString().split('T')[0];}
+  if(fechaFiltro==='todo') desde='2020-01-01';
 
-  const{data,error}=await withPais(db.from('liquidaciones')
+  let q=withPais(db.from('liquidaciones')
     .select('*, conductores(nombre), vehiculos(patente,marca), clientes(nombre)')
-    .gte('fecha',desde))
-    .order('fecha',{ascending:false})
-    .order('created_at',{ascending:false});
+    .gte('fecha',desde));
+  q=q.order('fecha',{ascending:false}).order('created_at',{ascending:false});
 
+  const{data,error}=await q;
   if(error){el.innerHTML=`<div class="empty">Error: ${error.message}</div>`;return;}
-  if(!data?.length){el.innerHTML='<div class="empty">📋 Sin liquidaciones en este período.</div>';return;}
+  LIQ_DATA_CACHE=data||[];
 
   // Stats
-  const total=data.length;
-  const ok=data.filter(l=>l.estado==='liquidado').length;
-  const pend=data.filter(l=>l.estado==='pendiente').length;
-  const diff=data.filter(l=>l.estado==='con_diferencia').length;
+  const total=LIQ_DATA_CACHE.length;
+  const ok=LIQ_DATA_CACHE.filter(l=>l.estado==='liquidado').length;
+  const pend=LIQ_DATA_CACHE.filter(l=>l.estado==='pendiente').length;
+  const diff=LIQ_DATA_CACHE.filter(l=>l.estado==='con_diferencia').length;
+  // Alertas +28hs
+  const ahora=new Date();
+  const alertas=LIQ_DATA_CACHE.filter(l=>{
+    if(l.estado!=='pendiente') return false;
+    const salida=new Date(l.fecha+'T'+(l.hora_salida||'00:00:00'));
+    return (ahora-salida)/3600000 > 28;
+  });
+  const sa=$('liq-stat-alerta');if(sa)sa.textContent=alertas.length;
   const sl=$('liq-stat-total');if(sl)sl.textContent=total;
   const sok=$('liq-stat-ok');if(sok)sok.textContent=ok;
   const sp=$('liq-stat-pend');if(sp)sp.textContent=pend;
   const sd=$('liq-stat-diff');if(sd)sd.textContent=diff;
 
+  // Mostrar alertas box
+  const ab=$('liq-alertas-box');
+  if(ab){
+    if(alertas.length){
+      ab.style.display='block';
+      $('liq-alertas-list').innerHTML=alertas.map(l=>`
+        <div style="display:flex;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid #F09595">
+          <span style="font-size:13px;font-weight:600;color:var(--red)">⚠ ${l.conductores?.nombre||'—'}</span>
+          <span style="font-size:12px;color:var(--text2)">${l.vehiculos?.patente||''}</span>
+          <span style="font-size:12px;color:var(--text2)">Salida: ${l.fecha} ${l.hora_salida?.slice(0,5)||''}</span>
+          <span style="font-size:12px;font-weight:600;color:var(--red)">${Math.floor((ahora-new Date(l.fecha+'T'+(l.hora_salida||'00:00:00')))/3600000)}hs sin liquidar</span>
+          ${isAdmin()?`<button class="btn btn-sm btn-primary" onclick="abrirLiquidar('${l.id}')" style="font-size:11px">💰 Liquidar</button>`:''}
+        </div>`).join('');
+    } else {
+      ab.style.display='none';
+    }
+  }
+
+  renderLiquidaciones();
+}
+
+function liqTab(tab){
+  LIQ_TAB_ACTIVO=tab;
+  // Update tab buttons
+  ['todos','pendientes','liquidadas','diferencia'].forEach(t=>{
+    const btn=$(`liq-tab-${t}`);
+    if(btn){
+      btn.style.background=t===tab?'var(--blue)':'var(--bg2)';
+      btn.style.color=t===tab?'white':'var(--text2)';
+    }
+  });
+  renderLiquidaciones();
+}
+
+function renderLiquidaciones(){
+  const el=$('liq-list');
+  if(!el) return;
+  let data=LIQ_DATA_CACHE;
+  if(LIQ_TAB_ACTIVO==='pendientes') data=data.filter(l=>l.estado==='pendiente');
+  else if(LIQ_TAB_ACTIVO==='liquidadas') data=data.filter(l=>l.estado==='liquidado');
+  else if(LIQ_TAB_ACTIVO==='diferencia') data=data.filter(l=>l.estado==='con_diferencia');
+  else if(LIQ_TAB_ACTIVO==='alerta'){
+    const ahora=new Date();
+    data=data.filter(l=>{
+      if(l.estado!=='pendiente') return false;
+      const salida=new Date(l.fecha+'T'+(l.hora_salida||'00:00:00'));
+      return (ahora-salida)/3600000 > 28;
+    });
+  }
+  if(!data.length){el.innerHTML='<div class="empty">Sin resultados.</div>';return;}
+
   const estadoColor={pendiente:'var(--amber)',liquidado:'var(--green)',con_diferencia:'var(--red)'};
   const estadoLabel={pendiente:'⏳ Pendiente',liquidado:'✓ Liquidado',con_diferencia:'⚠ Con diferencia'};
+  const ahora=new Date();
 
   el.innerHTML=data.map(l=>{
     const color=estadoColor[l.estado]||'var(--text2)';
     const puedeEditar=isAdmin();
-    return `<div class="tr" style="grid-template-columns:80px 1fr 120px 100px 100px 100px 120px;border-left:4px solid ${color}">
-      <div style="font-size:12px;color:var(--text2)">${l.fecha?new Date(l.fecha+'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'—'}</div>
+    const salida=new Date(l.fecha+'T'+(l.hora_salida||'00:00:00'));
+    const horas=Math.floor((ahora-salida)/3600000);
+    const esAlerta=l.estado==='pendiente'&&horas>28;
+    return `<div class="tr" style="grid-template-columns:80px 1fr 120px 100px 100px 100px 100px 130px;border-left:4px solid ${esAlerta?'var(--red)':color}">
+      <div style="font-size:12px">
+        <div>${l.fecha?new Date(l.fecha+'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'—'}</div>
+        ${l.hora_salida?`<div style="color:var(--text2)">${l.hora_salida.slice(0,5)}</div>`:''}
+        ${esAlerta?`<div style="color:var(--red);font-weight:600;font-size:10px">🚨 ${horas}hs</div>`:''}
+      </div>
       <div>
         <div style="font-weight:600">${l.conductores?.nombre||'—'}</div>
-        <div style="font-size:11px;color:var(--text2)">${l.vehiculos?.patente||''} ${l.vehiculos?.marca||''} · ${l.clientes?.nombre||'Sin cliente'}</div>
+        <div style="font-size:11px;color:var(--text2)">${l.vehiculos?.patente||''} ${l.vehiculos?.marca||''}</div>
+        <div style="font-size:11px;color:var(--text2)">${l.clientes?.nombre||'Sin cliente'}</div>
       </div>
       <div style="font-size:12px">
         <div>${l.bultos_salida||0} bultos</div>
-        <div style="color:var(--text2)">$ ${(l.monto_esperado||0).toLocaleString('es-AR')}</div>
+        <div style="color:var(--text2)">$ ${(l.monto_esperado||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</div>
       </div>
       <div style="font-size:12px">
-        ${l.bultos_entregados!==null?`<div style="color:var(--green)">✓ ${l.bultos_entregados} entregados</div>`:'<div style="color:var(--text3)">—</div>'}
-        ${l.bultos_no_entregados?`<div style="color:var(--red)">✗ ${l.bultos_no_entregados} devueltos</div>`:''}
+        ${l.bultos_entregados!==null?`<div style="color:var(--green)">✓ ${l.bultos_entregados}</div><div style="color:var(--red)">✗ ${l.bultos_no_entregados||0}</div>`:'<div style="color:var(--text3)">—</div>'}
       </div>
       <div style="font-size:12px">
-        ${l.monto_cobrado!==null?`<div style="font-weight:600">$ ${(l.monto_cobrado||0).toLocaleString('es-AR')}</div>`:'<div style="color:var(--text3)">—</div>'}
+        ${l.monto_cobrado!==null?`<div style="font-weight:600">$ ${(l.monto_cobrado||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</div>`:'<div style="color:var(--text3)">—</div>'}
       </div>
       <div style="font-size:12px;font-weight:600">
-        ${l.monto_diferencia!==null?`<div style="color:${l.monto_diferencia<0?'var(--red)':l.monto_diferencia>0?'var(--amber)':'var(--green)'}">
-          ${l.monto_diferencia>0?'+':''}$ ${(l.monto_diferencia||0).toLocaleString('es-AR')}</div>`:'—'}
+        ${l.monto_diferencia!==null?`<div style="color:${l.monto_diferencia<0?'var(--red)':l.monto_diferencia>0?'var(--amber)':'var(--green)'}">${l.monto_diferencia>=0?'+':''}$${(l.monto_diferencia||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</div>`:'<div style="color:var(--text3)">—</div>'}
       </div>
-      <div style="display:flex;gap:6px;align-items:center">
+      <div style="font-size:12px;font-weight:600">
+        ${l.diferencia_efectivo!==null?`<div style="color:${l.diferencia_efectivo<0?'var(--red)':l.diferencia_efectivo>0?'var(--amber)':'var(--green)'}">${l.diferencia_efectivo>=0?'+':''}$${(l.diferencia_efectivo||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</div>`:'<div style="color:var(--text3)">—</div>'}
+      </div>
+      <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
         <span style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;background:${color}20;color:${color}">${estadoLabel[l.estado]||l.estado}</span>
-        ${puedeEditar&&l.estado==='pendiente'?`<button class="btn btn-sm btn-primary" onclick="abrirLiquidar('${l.id}')" style="font-size:11px">💰 Liquidar</button>`:puedeEditar&&l.estado!=='pendiente'?'<span style="font-size:11px;color:var(--text3)">🔒 Cerrada</span>':''}
+        ${puedeEditar&&l.estado==='pendiente'?`<button class="btn btn-sm btn-primary" onclick="abrirLiquidar('${l.id}')" style="font-size:11px">💰</button>`:''}
+        ${puedeEditar&&l.estado!=='pendiente'?'<span style="font-size:10px;color:var(--text3)">🔒</span>':''}
         ${puedeEditar?`<button class="btn btn-sm" onclick="editarPlanilla('${l.id}')" style="font-size:11px">✏️</button>`:''}
       </div>
     </div>`;
   }).join('');
+}
+
+function exportarLiquidacionCSV(){
+  if(!LIQ_DATA_CACHE.length){toast('Sin datos para exportar','err');return;}
+  const headers=['Fecha','Hora salida','Conductor','Vehículo','Cliente','Bultos salida','Monto esperado','Bultos entregados','Bultos no entregados','Monto cobrado','Diferencia monto','Efectivo entregado','Diferencia efectivo','Hora regreso','Observaciones salida','Observaciones liquidación','Estado','Creado por','Liquidado por'];
+  const rows=LIQ_DATA_CACHE.map(l=>[
+    l.fecha||'',
+    l.hora_salida?.slice(0,5)||'',
+    l.conductores?.nombre||'',
+    `${l.vehiculos?.patente||''} ${l.vehiculos?.marca||''}`.trim(),
+    l.clientes?.nombre||'',
+    l.bultos_salida||0,
+    l.monto_esperado||0,
+    l.bultos_entregados??'',
+    l.bultos_no_entregados??'',
+    l.monto_cobrado??'',
+    l.monto_diferencia??'',
+    l.efectivo_entregado??'',
+    l.diferencia_efectivo??'',
+    l.hora_regreso?.slice(0,5)||'',
+    (l.observaciones_salida||'').replace(/,/g,';'),
+    (l.observaciones_liquidacion||'').replace(/,/g,';'),
+    l.estado||'',
+    l.creado_por||'',
+    l.liquidado_por||''
+  ]);
+  const csv=[headers,...rows].map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`liquidaciones_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();URL.revokeObjectURL(url);
+  toast('✓ CSV descargado','ok');
 }
 
 async function openModal_liquidacion(){
@@ -3466,6 +3605,28 @@ async function editarPlanilla(liqId){
     $('nliq-obs-sal').value=liq.observaciones_salida||'';
   },300);
   openModal('nueva-liquidacion');
+}
+
+
+// Crear usuario para conductor desde la sección conductores
+async function crearUsuarioConductor(condId, nombre, email){
+  const emailUso = email || prompt(`Email para ${nombre}:`);
+  if(!emailUso) return;
+  const pass = prompt('Contraseña (mínimo 6 caracteres):');
+  if(!pass||pass.length<6){toast('Contraseña muy corta','err');return}
+  toast('Creando usuario...','ok');
+  try{
+    const res=await fetch('/api/crear-usuario',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email:emailUso,password:pass,nombre,rol:'operador',pais_id:getPaisId()||CP?.pais_id||null})
+    });
+    const data=await res.json();
+    if(!res.ok||data.error){toast('Error: '+(data.error||'No se pudo crear'),'err');return}
+    // Update conductor with email
+    if(!email) await db.from('conductores').update({email:emailUso}).eq('id',condId);
+    toast(`✓ Usuario creado para ${nombre}`,'ok');
+  }catch(e){toast('Error: '+e.message,'err');}
 }
 
 // ── CONDUCTORES ───────────────────────────────────────────────────────────
