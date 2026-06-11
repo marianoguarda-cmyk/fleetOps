@@ -261,6 +261,34 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
           <div class="stat"><div class="stat-label">Venc. próximos</div><div class="stat-val" id="d-venc" style="color:var(--amber)">—</div><div class="stat-sub">en 30 días</div></div>
           <div class="stat"><div class="stat-label">Alertas activas</div><div class="stat-val" id="d-alertas" style="color:var(--red)">—</div><div class="stat-sub">requieren atención</div></div>
         </div>
+
+        <!-- Liquidación stats -->
+        <div style="margin-bottom:14px">
+          <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:8px">💰 Liquidaciones de hoy</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+            <div class="stat" style="cursor:pointer" onclick="goTo('liquidacion')">
+              <div class="stat-label">Planillas hoy</div>
+              <div class="stat-val" id="d-liq-total" style="color:var(--blue)">—</div>
+              <div class="stat-sub">total</div>
+            </div>
+            <div class="stat" style="cursor:pointer" onclick="goTo('liquidacion')">
+              <div class="stat-label">✓ Liquidadas</div>
+              <div class="stat-val" id="d-liq-ok" style="color:var(--green)">—</div>
+              <div class="stat-sub">completadas</div>
+            </div>
+            <div class="stat" style="cursor:pointer" onclick="goTo('liquidacion')">
+              <div class="stat-label">⏳ Pendientes</div>
+              <div class="stat-val" id="d-liq-pend" style="color:var(--amber)">—</div>
+              <div class="stat-sub">sin liquidar</div>
+            </div>
+            <div class="stat" style="cursor:pointer" onclick="goTo('liquidacion')">
+              <div class="stat-label" id="d-liq-alerta-label">🚨 Alerta +28hs</div>
+              <div class="stat-val" id="d-liq-alerta" style="color:var(--text2)">—</div>
+              <div class="stat-sub">requieren atención</div>
+            </div>
+          </div>
+        </div>
+
         <div class="g2 mb">
           <div class="card"><div class="card-title">🚛 Flota reciente</div><div id="d-fleet-list"><div class="loader"><div class="spin"></div>Cargando...</div></div></div>
           <div class="card"><div class="card-title">🔔 Alertas recientes</div><div id="d-alerts-list"><div class="loader"><div class="spin"></div>Cargando...</div></div></div>
@@ -1407,11 +1435,12 @@ function goTo(sec){
 async function loadDashboard(){
   const today=new Date().toISOString().split('T')[0];
   const paisId = getPaisId() || CP?.pais_id || null;
-  const[{data:veh,error:eveh},{data:chks,error:echks},{data:alts,error:ealts},{data:plan}]=await Promise.all([
+  const[{data:veh,error:eveh},{data:chks,error:echks},{data:alts,error:ealts},{data:plan},{data:liqs}]=await Promise.all([
     withPais(db.from('vehiculos').select('*').eq('activo',true)),
     withPais(db.from('checks_diarios').select('*').eq('fecha',today)),
     withPais(db.from('alertas').select('*').eq('resuelta',false)),
-    withPais(db.from('planificacion').select('vehiculos_planificados').eq('fecha',today))
+    withPais(db.from('planificacion').select('vehiculos_planificados').eq('fecha',today)),
+    withPais(db.from('liquidaciones').select('id,estado,fecha,hora_salida').eq('fecha',today))
   ]);
   if(eveh)console.error('vehiculos error:',eveh.message);
   if(echks)console.error('checks error:',echks.message);
@@ -1423,6 +1452,27 @@ async function loadDashboard(){
   $('d-checks').textContent=totalChecks;
   $('d-alertas').textContent=alts?.length??0;
   const dp=$('d-planificados');if(dp)dp.textContent=totalPlan||'—';
+  // Liquidacion stats
+  const liqData=liqs||[];
+  const liqTotal=liqData.length;
+  const liqOk=liqData.filter(l=>l.estado==='liquidado').length;
+  const liqPend=liqData.filter(l=>l.estado==='pendiente').length;
+  const ahora=new Date();
+  const liqAlerta=liqData.filter(l=>{
+    if(l.estado!=='pendiente') return false;
+    const salida=new Date(l.fecha+'T'+(l.hora_salida||'00:00:00'));
+    return (ahora-salida)/3600000>28;
+  }).length;
+  const dlt=$('d-liq-total');if(dlt)dlt.textContent=liqTotal||'—';
+  const dlok=$('d-liq-ok');if(dlok)dlok.textContent=liqOk||'—';
+  const dlp=$('d-liq-pend');if(dlp)dlp.textContent=liqPend||'—';
+  const dla=$('d-liq-alerta');
+  if(dla){
+    dla.textContent=liqAlerta||'—';
+    dla.style.color=liqAlerta>0?'var(--red)':'var(--green)';
+    const alertaStat=dla.closest('.stat');
+    if(alertaStat) alertaStat.style.borderColor=liqAlerta>0?'var(--red)':'var(--border)';
+  }
   const dc=$('d-cumplimiento');
   if(dc){
     dc.textContent=cumplimiento!==null?cumplimiento+'%':'—';
