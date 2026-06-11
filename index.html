@@ -1141,9 +1141,24 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
           <input type="number" id="liq-cobrado" min="0" step="0.01" placeholder="0.00" oninput="calcularDiferencia()" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit">
         </div>
         <div class="fg">
-          <label class="fl">Diferencia</label>
+          <label class="fl">Diferencia (cobrado vs esperado)</label>
           <input type="text" id="liq-diferencia" readonly style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg3);font-family:inherit;font-weight:600">
         </div>
+      </div>
+      <!-- Diferencial de efectivo -->
+      <div style="background:var(--amber-light);border:1px solid #EF9F27;border-radius:var(--radius-sm);padding:12px;margin-top:10px">
+        <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:8px">💵 Diferencial de efectivo</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="fg">
+            <label class="fl">Efectivo entregado por conductor ($)</label>
+            <input type="number" id="liq-efectivo-entregado" min="0" step="0.01" placeholder="0.00" oninput="calcularDiferenciaEfectivo()" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit">
+          </div>
+          <div class="fg">
+            <label class="fl">Diferencial efectivo</label>
+            <input type="text" id="liq-diferencia-efectivo" readonly placeholder="Se calcula automático" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg3);font-family:inherit;font-weight:600">
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--amber);margin-top:6px">Diferencia = Efectivo entregado − Monto cobrado. Negativo indica faltante.</div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
         <div class="fg">
@@ -3255,7 +3270,7 @@ async function loadLiquidacion(){
       </div>
       <div style="display:flex;gap:6px;align-items:center">
         <span style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;background:${color}20;color:${color}">${estadoLabel[l.estado]||l.estado}</span>
-        ${puedeEditar&&l.estado==='pendiente'?`<button class="btn btn-sm btn-primary" onclick="abrirLiquidar('${l.id}')" style="font-size:11px">💰 Liquidar</button>`:''}
+        ${puedeEditar&&l.estado==='pendiente'?`<button class="btn btn-sm btn-primary" onclick="abrirLiquidar('${l.id}')" style="font-size:11px">💰 Liquidar</button>`:puedeEditar&&l.estado!=='pendiente'?'<span style="font-size:11px;color:var(--text3)">🔒 Cerrada</span>':''}
         ${puedeEditar?`<button class="btn btn-sm" onclick="editarPlanilla('${l.id}')" style="font-size:11px">✏️</button>`:''}
       </div>
     </div>`;
@@ -3327,6 +3342,8 @@ async function abrirLiquidar(liqId){
     </div>`;
   $('liq-entregados').value=liq.bultos_entregados||'';
   $('liq-cobrado').value=liq.monto_cobrado||'';
+  $('liq-efectivo-entregado').value=liq.efectivo_entregado||'';
+  $('liq-diferencia-efectivo').value='';
   $('liq-obs-liq').value=liq.observaciones_liquidacion||'';
   $('liq-hora-reg').value=new Date().toTimeString().slice(0,5);
   // Store salida data for calculations
@@ -3355,6 +3372,20 @@ function calcularDiferencia(){
   if(el){
     el.value=(diff>0?'+':'')+'$ '+diff.toLocaleString('es-AR',{minimumFractionDigits:2});
     el.style.color=diff<0?'var(--red)':diff>0?'var(--amber)':'var(--green)';
+  }
+  calcularDiferenciaEfectivo();
+}
+
+function calcularDiferenciaEfectivo(){
+  const efectivo=parseFloat($('liq-efectivo-entregado')?.value)||0;
+  const cobrado=parseFloat($('liq-cobrado')?.value)||0;
+  const diffEf=efectivo-cobrado;
+  const el=$('liq-diferencia-efectivo');
+  if(el&&(efectivo>0||cobrado>0)){
+    el.value=(diffEf>0?'+':'')+'$ '+diffEf.toLocaleString('es-AR',{minimumFractionDigits:2});
+    el.style.color=diffEf<0?'var(--red)':diffEf>0?'var(--amber)':'var(--green)';
+  } else if(el){
+    el.value='';
   }
 }
 
@@ -3398,11 +3429,15 @@ async function guardarLiquidacion(){
     });
   }
   if(detalles.length) await db.from('liquidaciones_detalle').insert(detalles);
+  const efectivoEntregado=parseFloat($('liq-efectivo-entregado').value)||null;
+  const diffEfectivo=efectivoEntregado!==null?efectivoEntregado-cobrado:null;
   const{error}=await db.from('liquidaciones').update({
     bultos_entregados:entregados,
     bultos_no_entregados:noEntregados,
     monto_cobrado:cobrado,
     monto_diferencia:diff,
+    efectivo_entregado:efectivoEntregado,
+    diferencia_efectivo:diffEfectivo,
     hora_regreso:$('liq-hora-reg').value||null,
     observaciones_liquidacion:$('liq-obs-liq').value.trim()||null,
     liquidado_por:CP?.nombre||CU?.email,
