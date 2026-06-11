@@ -946,7 +946,17 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
       <div class="fg"><label class="fl">Nombre completo</label><input type="text" id="mc-nombre" placeholder="Juan Pérez"></div>
       <div class="fg"><label class="fl">DNI</label><input type="text" id="mc-dni"></div>
       <div class="fg"><label class="fl">Teléfono</label><input type="text" id="mc-tel"></div>
-      <div class="fg"><label class="fl">Email</label><input type="email" id="mc-email"></div>
+      <div class="fg"><label class="fl">Email</label><input type="email" id="mc-email" placeholder="conductor@empresa.com" oninput="$('mc-pass-wrap').style.display=this.value?'block':'none'"></div>
+    </div>
+    <!-- Acceso a la plataforma -->
+    <div class="form-section">Acceso a la plataforma</div>
+    <div id="mc-pass-wrap" style="display:none;background:var(--blue-light);border:1px solid var(--blue);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px">
+      <div style="font-size:12px;color:var(--blue);margin-bottom:8px;font-weight:600">🔐 El conductor podrá iniciar sesión en la app con el email ingresado</div>
+      <div class="fg" style="margin-bottom:8px">
+        <label class="fl">Contraseña de acceso *</label>
+        <input type="password" id="mc-pass" placeholder="Mínimo 6 caracteres" style="width:100%;padding:9px;border:1.5px solid var(--blue);border-radius:var(--radius-sm);font-size:14px;font-family:inherit">
+      </div>
+      <div style="font-size:11px;color:var(--text2)">Solo tendrá acceso a Check diario y Liquidación.</div>
     </div>
     <div class="form-section">Licencia y habilitaciones</div>
     <div class="form-grid">
@@ -3731,7 +3741,11 @@ function editarCond(c){
 async function guardarConductor(){
   const id=$('mc-id').value;
   const nombre=$('mc-nombre').value.trim();
+  const email=$('mc-email').value.trim();
+  const pass=$('mc-pass')?.value||'';
   if(!nombre){toast('El nombre es obligatorio','err');return}
+  // Validar contraseña si se ingresó email
+  if(!id && email && pass.length < 6){toast('La contraseña debe tener al menos 6 caracteres','err');return}
   const btn=$('mc-btn');if(btn){btn.disabled=true;btn.textContent='Guardando...';}
   // Subir foto a Google Drive si hay una seleccionada
   const base64Cond = $('mc-foto-url')?.value || null;
@@ -3764,10 +3778,29 @@ async function guardarConductor(){
     :await db.from('conductores').insert(p);
   if(btn){btn.disabled=false;btn.textContent='✅ Guardar conductor';}
   if(error){toast('Error: '+error.message,'err');return}
-  toast(id?'Conductor actualizado ✓':'Conductor registrado ✓','ok');
+  // Crear usuario en Supabase Auth si se ingresó email + contraseña (solo al crear, no al editar)
+  if(!id && email && pass.length >= 6){
+    try{
+      const res = await fetch('/api/crear-usuario',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({email, password:pass, nombre, rol:'operador', pais_id:$('mc-pais')?.value||getPaisId()||CP?.pais_id||null})
+      });
+      const data = await res.json();
+      if(!res.ok || data.error) toast('⚠ Conductor guardado pero error al crear usuario: '+(data.error||''),'err');
+      else toast('✓ Conductor registrado con acceso a la plataforma','ok');
+    }catch(e){
+      toast('✓ Conductor guardado (error al crear usuario)','err');
+    }
+  } else {
+    toast(id?'Conductor actualizado ✓':'Conductor registrado ✓','ok');
+  }
   closeModal('conductor');
   $('mc-id').value='';
   $('mc-title').textContent='Nuevo conductor';
+  // Reset pass field
+  if($('mc-pass')) $('mc-pass').value='';
+  if($('mc-pass-wrap')) $('mc-pass-wrap').style.display='none';
   loadConductores();
 }
 

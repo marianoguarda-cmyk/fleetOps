@@ -375,6 +375,23 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
       <button class="submit-btn" id="submit-btn" onclick="guardarCheck()">Confirmar check del día</button>
     </div>
 
+    <!-- LIQUIDACIÓN -->
+    <div class="page" id="p-liquidacion">
+      <div class="hist-filters">
+        <button class="hf active" onclick="setLiqF('hoy',this)">Hoy</button>
+        <button class="hf" onclick="setLiqF('semana',this)">Esta semana</button>
+        <button class="hf" onclick="setLiqF('mes',this)">Este mes</button>
+      </div>
+
+      <!-- Alerta pendiente -->
+      <div id="op-liq-alerta" style="display:none;background:var(--amber-light);border:1.5px solid #EF9F27;border-radius:var(--radius);padding:12px 13px;margin-bottom:11px;color:var(--amber)">
+        <div style="font-size:13px;font-weight:600;margin-bottom:3px">⏳ Tenés planillas pendientes de liquidar</div>
+        <div id="op-liq-alerta-sub" style="font-size:12px;line-height:1.4"></div>
+      </div>
+
+      <div id="op-liq-list"><div class="loader"><div class="spin"></div>Cargando...</div></div>
+    </div>
+
     <!-- HISTORIAL -->
     <div class="page" id="p-historial">
       <div class="hist-filters">
@@ -399,12 +416,78 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
     <button class="nav-tab active" onclick="goPage('check')" id="tab-check">
       <div class="nt-icon">✅</div><div class="nt-label">Check</div>
     </button>
+    <button class="nav-tab" onclick="goPage('liquidacion')" id="tab-liquidacion">
+      <div class="nt-icon">💰</div><div class="nt-label">Liquidación</div>
+    </button>
     <button class="nav-tab" onclick="goPage('historial')" id="tab-historial">
       <div class="nt-icon">🕐</div><div class="nt-label">Historial</div>
     </button>
     <button class="nav-tab" onclick="goPage('mapa')" id="tab-mapa">
       <div class="nt-icon">📍</div><div class="nt-label">Mapa</div>
     </button>
+  </div>
+</div>
+
+<!-- MODAL LIQUIDAR OPERADOR -->
+<div class="overlay" id="ov-op-liquidar" style="z-index:2000;align-items:flex-end">
+  <div style="background:var(--bg2);border-radius:20px 20px 0 0;padding:20px 18px calc(var(--safe-bottom)+20px);width:100%;max-height:90dvh;overflow-y:auto">
+    <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>
+    <div style="font-size:15px;font-weight:600;margin-bottom:4px" id="op-liq-modal-title">💰 Registrar liquidación</div>
+    <!-- Info salida -->
+    <div id="op-liq-info" style="background:var(--bg3);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:14px;font-size:13px"></div>
+    <input type="hidden" id="op-liq-id">
+
+    <!-- Bultos -->
+    <div style="margin-bottom:12px">
+      <div class="ew-title">📦 Bultos entregados *</div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <input type="number" id="op-liq-entregados" min="0" placeholder="0" oninput="opCalcLiq()"
+          style="flex:1;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:20px;font-weight:700;text-align:center;font-family:inherit">
+        <div style="font-size:12px;color:var(--text2)">de <span id="op-liq-total-bultos" style="font-weight:700">0</span></div>
+      </div>
+    </div>
+
+    <!-- No entregados detalle -->
+    <div id="op-liq-no-ent-wrap" style="display:none;margin-bottom:12px">
+      <div class="ew-title">📦 Motivo de no entregados</div>
+      <div id="op-liq-detalle-list"></div>
+      <button onclick="opAgregarDetalle()" style="font-size:12px;padding:7px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg);cursor:pointer;font-family:inherit;margin-top:6px">+ Agregar motivo</button>
+    </div>
+
+    <!-- Monto cobrado -->
+    <div style="margin-bottom:12px">
+      <div class="ew-title">💵 Monto cobrado (efectivo) *</div>
+      <input type="number" id="op-liq-cobrado" min="0" step="0.01" placeholder="0.00" oninput="opCalcLiq()"
+        style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:20px;font-weight:700;font-family:inherit">
+    </div>
+
+    <!-- Efectivo entregado -->
+    <div style="background:var(--amber-light);border:1px solid #EF9F27;border-radius:var(--radius-sm);padding:12px;margin-bottom:12px">
+      <div class="ew-title" style="color:var(--amber)">💵 Efectivo que entregás</div>
+      <input type="number" id="op-liq-efectivo" min="0" step="0.01" placeholder="0.00" oninput="opCalcLiq()"
+        style="width:100%;padding:12px;border:1.5px solid #EF9F27;border-radius:var(--radius-sm);font-size:20px;font-weight:700;font-family:inherit;background:white">
+      <div id="op-liq-diff-ef" style="font-size:13px;font-weight:600;margin-top:8px;text-align:center"></div>
+    </div>
+
+    <!-- Diferencia monto -->
+    <div id="op-liq-diff-wrap" style="text-align:center;margin-bottom:12px;font-size:14px;font-weight:600;display:none"></div>
+
+    <!-- Hora regreso -->
+    <div style="margin-bottom:12px">
+      <div class="ew-title">🕐 Hora de regreso</div>
+      <input type="time" id="op-liq-hora-reg"
+        style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:16px;font-family:inherit">
+    </div>
+
+    <!-- Obs -->
+    <div style="margin-bottom:16px">
+      <div class="ew-title">📝 Observaciones</div>
+      <textarea id="op-liq-obs" placeholder="Novedades, incidentes..." rows="3"
+        style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;resize:none"></textarea>
+    </div>
+
+    <button onclick="opGuardarLiquidacion()" style="width:100%;padding:15px;background:var(--blue);color:white;border:none;border-radius:var(--radius);font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:8px">✅ Confirmar liquidación</button>
+    <button onclick="closeOpLiqModal()" style="width:100%;padding:12px;background:var(--bg2);color:var(--text2);border:1px solid var(--border);border-radius:var(--radius);font-size:14px;cursor:pointer;font-family:inherit">Cancelar</button>
   </div>
 </div>
 
@@ -917,10 +1000,213 @@ function goPage(p){
   $('tab-'+p).classList.add('active');
   if(p==='historial') loadHistorial();
   if(p==='mapa') initMapa();
+  if(p==='liquidacion') loadLiquidacionOp();
 }
 
 function showSheet(){$('ov-sheet').classList.add('show')}
 function closeSheet(){$('ov-sheet').classList.remove('show')}
+
+
+// ── LIQUIDACIÓN OPERADOR ─────────────────────────────────────────────────
+let LIQ_F_OP = 'hoy';
+let LIQ_CACHE_OP = [];
+let OP_LIQ_DET_COUNT = 0;
+
+function setLiqF(f, el){
+  LIQ_F_OP = f;
+  document.querySelectorAll('.hf').forEach(x => x.classList.remove('active'));
+  if(el) el.classList.add('active');
+  loadLiquidacionOp();
+}
+
+async function loadLiquidacionOp(){
+  const el = $('op-liq-list');
+  if(!el) return;
+  el.innerHTML = '<div class="loader"><div class="spin"></div>Cargando...</div>';
+
+  const today = new Date().toISOString().split('T')[0];
+  let desde = today;
+  if(LIQ_F_OP === 'semana'){const d=new Date();d.setDate(d.getDate()-7);desde=d.toISOString().split('T')[0];}
+  if(LIQ_F_OP === 'mes'){const d=new Date();d.setDate(d.getDate()-30);desde=d.toISOString().split('T')[0];}
+
+  // Buscar conductor_id por nombre del operador
+  const nombre = CP?.nombre || CU?.email;
+  const{data:cond} = await db.from('conductores').select('id').eq('email', CU?.email).maybeSingle();
+  const condId = cond?.id || null;
+
+  let q = db.from('liquidaciones')
+    .select('*, vehiculos(patente,marca), clientes(nombre)')
+    .gte('fecha', desde)
+    .order('fecha', {ascending:false});
+
+  if(condId) q = q.eq('conductor_id', condId);
+  else q = q.eq('creado_por', nombre); // fallback por nombre
+
+  const{data, error} = await q;
+  LIQ_CACHE_OP = data || [];
+
+  if(error || !LIQ_CACHE_OP.length){
+    el.innerHTML = '<div class="empty">📋 Sin planillas en este período.</div>';
+    $('op-liq-alerta').style.display = 'none';
+    return;
+  }
+
+  // Mostrar alerta si hay pendientes
+  const pendientes = LIQ_CACHE_OP.filter(l => l.estado === 'pendiente');
+  const alertaBox = $('op-liq-alerta');
+  if(pendientes.length && alertaBox){
+    alertaBox.style.display = 'block';
+    $('op-liq-alerta-sub').textContent = `${pendientes.length} planilla${pendientes.length>1?'s':''} pendiente${pendientes.length>1?'s':''} de liquidar.`;
+  } else if(alertaBox){
+    alertaBox.style.display = 'none';
+  }
+
+  const estadoColor = {pendiente:'var(--amber)',liquidado:'var(--green)',con_diferencia:'var(--red)'};
+  const estadoLabel = {pendiente:'⏳ Pendiente',liquidado:'✓ Liquidado',con_diferencia:'⚠ Con diferencia'};
+
+  el.innerHTML = LIQ_CACHE_OP.map(l => {
+    const color = estadoColor[l.estado] || 'var(--text2)';
+    const esPend = l.estado === 'pendiente';
+    return `<div class="hist-item" style="border-left:4px solid ${color}">
+      <div class="hi-top">
+        <div>
+          <div class="hi-pat">${l.vehiculos?.patente || '—'} · ${l.vehiculos?.marca || ''}</div>
+          <div class="hi-meta">${new Date(l.fecha+'T12:00:00').toLocaleDateString('es-AR',{weekday:'short',day:'2-digit',month:'2-digit'})}${l.hora_salida?' · Salida '+l.hora_salida.slice(0,5):''}</div>
+          ${l.clientes?.nombre ? `<div style="font-size:11px;color:var(--blue);margin-top:2px">👤 ${l.clientes.nombre}</div>` : ''}
+        </div>
+        <span class="badge ${l.estado==='liquidado'?'b-ok':l.estado==='con_diferencia'?'b-err':'b-warn'}">${estadoLabel[l.estado]||l.estado}</span>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:12px;margin-top:6px">
+        <span>📦 ${l.bultos_salida||0} bultos</span>
+        <span>💰 Esperado: $${(l.monto_esperado||0).toLocaleString('es-AR')}</span>
+        ${l.monto_cobrado!==null?`<span style="color:var(--green)">✓ Cobrado: $${(l.monto_cobrado||0).toLocaleString('es-AR')}</span>`:''}
+        ${l.monto_diferencia!==null&&l.monto_diferencia!==0?`<span style="color:${l.monto_diferencia<0?'var(--red)':'var(--amber)'}">Dif: ${l.monto_diferencia>=0?'+':''}$${(l.monto_diferencia||0).toLocaleString('es-AR')}</span>`:''}
+      </div>
+      ${l.observaciones_salida?`<div class="hi-obs" style="margin-top:6px">📋 ${l.observaciones_salida}</div>`:''}
+      ${esPend?`<button onclick="opAbrirLiquidar('${l.id}')" style="width:100%;margin-top:10px;padding:12px;background:var(--blue);color:white;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">💰 Registrar liquidación</button>`:''}
+    </div>`;
+  }).join('');
+}
+
+async function opAbrirLiquidar(liqId){
+  const liq = LIQ_CACHE_OP.find(l => l.id === liqId);
+  if(!liq) return;
+  $('op-liq-id').value = liqId;
+  $('op-liq-modal-title').textContent = `💰 Liquidar — ${liq.vehiculos?.patente||''}`;
+  $('op-liq-info').innerHTML = `
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <div><span style="color:var(--text2)">Bultos:</span> <strong>${liq.bultos_salida||0}</strong></div>
+      <div><span style="color:var(--text2)">Esperado:</span> <strong>$${(liq.monto_esperado||0).toLocaleString('es-AR')}</strong></div>
+      ${liq.hora_salida?`<div><span style="color:var(--text2)">Salida:</span> <strong>${liq.hora_salida.slice(0,5)}</strong></div>`:''}
+      ${liq.clientes?.nombre?`<div><span style="color:var(--text2)">Cliente:</span> <strong>${liq.clientes.nombre}</strong></div>`:''}
+    </div>`;
+  $('op-liq-total-bultos').textContent = liq.bultos_salida || 0;
+  $('op-liq-entregados').value = '';
+  $('op-liq-cobrado').value = '';
+  $('op-liq-efectivo').value = '';
+  $('op-liq-obs').value = '';
+  $('op-liq-hora-reg').value = new Date().toTimeString().slice(0,5);
+  $('op-liq-entregados').dataset.bultosTotal = liq.bultos_salida || 0;
+  $('op-liq-entregados').dataset.montoEsp = liq.monto_esperado || 0;
+  $('op-liq-diff-wrap').style.display = 'none';
+  $('op-liq-no-ent-wrap').style.display = 'none';
+  $('op-liq-detalle-list').innerHTML = '';
+  OP_LIQ_DET_COUNT = 0;
+  $('ov-op-liquidar').classList.add('show');
+}
+
+function closeOpLiqModal(){
+  $('ov-op-liquidar').classList.remove('show');
+}
+
+function opCalcLiq(){
+  const entregados = parseInt($('op-liq-entregados')?.value) || 0;
+  const total = parseInt($('op-liq-entregados')?.dataset.bultosTotal) || 0;
+  const noEnt = Math.max(0, total - entregados);
+  const noWrap = $('op-liq-no-ent-wrap');
+  if(noWrap) noWrap.style.display = noEnt > 0 ? 'block' : 'none';
+
+  const cobrado = parseFloat($('op-liq-cobrado')?.value) || 0;
+  const esperado = parseFloat($('op-liq-entregados')?.dataset.montoEsp) || 0;
+  const diff = cobrado - esperado;
+  const dw = $('op-liq-diff-wrap');
+  if(dw && cobrado > 0){
+    dw.style.display = 'block';
+    dw.textContent = `Diferencia: ${diff >= 0 ? '+' : ''}$${diff.toLocaleString('es-AR', {minimumFractionDigits:2})}`;
+    dw.style.color = diff < 0 ? 'var(--red)' : diff > 0 ? 'var(--amber)' : 'var(--green)';
+  }
+
+  const efectivo = parseFloat($('op-liq-efectivo')?.value) || 0;
+  const diffEf = efectivo - cobrado;
+  const def = $('op-liq-diff-ef');
+  if(def && efectivo > 0){
+    def.textContent = `Diferencial: ${diffEf >= 0 ? '+' : ''}$${diffEf.toLocaleString('es-AR', {minimumFractionDigits:2})}`;
+    def.style.color = diffEf < 0 ? 'var(--red)' : diffEf > 0 ? 'var(--amber)' : 'var(--green)';
+  }
+}
+
+function opAgregarDetalle(){
+  OP_LIQ_DET_COUNT++;
+  const i = OP_LIQ_DET_COUNT;
+  const motivos = ['ausente','direccion_incorrecta','rechazo','otro'];
+  const div = document.createElement('div');
+  div.id = `op-det-${i}`;
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 50px 28px;gap:6px;margin-bottom:6px;align-items:center';
+  div.innerHTML = `
+    <select id="op-det-mot-${i}" style="padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+      ${motivos.map(m => `<option value="${m}">${m.replace(/_/g,' ')}</option>`).join('')}
+    </select>
+    <input type="number" id="op-det-cant-${i}" value="1" min="1" style="padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;text-align:center">
+    <button onclick="$('op-det-${i}').remove()" style="background:var(--red-light);color:var(--red);border:none;border-radius:8px;cursor:pointer;font-size:14px;padding:6px">✕</button>`;
+  $('op-liq-detalle-list').appendChild(div);
+}
+
+async function opGuardarLiquidacion(){
+  const liqId = $('op-liq-id').value;
+  if(!liqId){toast('Error: sin ID');return}
+  const entregados = parseInt($('op-liq-entregados').value) || 0;
+  const total = parseInt($('op-liq-entregados').dataset.bultosTotal) || 0;
+  const noEntregados = Math.max(0, total - entregados);
+  const cobrado = parseFloat($('op-liq-cobrado').value) || 0;
+  const efectivo = parseFloat($('op-liq-efectivo').value) || null;
+  const esperado = parseFloat($('op-liq-entregados').dataset.montoEsp) || 0;
+  const diff = cobrado - esperado;
+  const diffEf = efectivo !== null ? efectivo - cobrado : null;
+  const estado = diff === 0 ? 'liquidado' : 'con_diferencia';
+
+  // Guardar detalle no entregados
+  await db.from('liquidaciones_detalle').delete().eq('liquidacion_id', liqId);
+  const detalles = [];
+  for(let i=1; i<=OP_LIQ_DET_COUNT; i++){
+    const mot = $(`op-det-mot-${i}`);
+    if(!mot) continue;
+    detalles.push({
+      liquidacion_id: liqId,
+      motivo: mot.value,
+      cantidad: parseInt($(`op-det-cant-${i}`)?.value) || 1
+    });
+  }
+  if(detalles.length) await db.from('liquidaciones_detalle').insert(detalles);
+
+  const{error} = await db.from('liquidaciones').update({
+    bultos_entregados: entregados,
+    bultos_no_entregados: noEntregados,
+    monto_cobrado: cobrado,
+    monto_diferencia: diff,
+    efectivo_entregado: efectivo,
+    diferencia_efectivo: diffEf,
+    hora_regreso: $('op-liq-hora-reg').value || null,
+    observaciones_liquidacion: $('op-liq-obs').value.trim() || null,
+    liquidado_por: CP?.nombre || CU?.email,
+    estado,
+    updated_at: new Date().toISOString()
+  }).eq('id', liqId);
+
+  if(error){toast('Error: '+error.message);return}
+  toast('✓ Liquidación registrada');
+  closeOpLiqModal();
+  loadLiquidacionOp();
+}
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 $('li-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
