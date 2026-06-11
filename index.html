@@ -202,6 +202,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
       <button class="nav-btn" onclick="goTo('planificacion')">📅 Planificación</button>
       <button class="nav-btn" onclick="goTo('historial')">🕐 Historial</button>
       <button class="nav-btn" onclick="goTo('satelital')">📍 Satelital</button>
+      <button class="nav-btn" onclick="goTo('liquidacion')">💰 Liquidación</button>
       <div class="nav-label">Recursos</div>
       <button class="nav-btn" onclick="goTo('empresas')">🏢 Empresas</button>
       <button class="nav-btn" onclick="goTo('clientes')">👤 Clientes</button>
@@ -612,6 +613,44 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
         </div>
       </div>
 
+      <!-- LIQUIDACIÓN -->
+      <div class="section" id="s-liquidacion">
+        <div class="super-admin-pais-bar" style="display:none;background:var(--blue-light);border-radius:var(--radius);padding:8px 12px;margin-bottom:12px;align-items:center;gap:10px">
+          <span style="font-size:12px;font-weight:600;color:var(--blue)">🌎 Filtrar por país:</span>
+          <select class="sa-pais-filter" style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:white;color:var(--text)" onchange="cambiarPais(this.value)">
+            <option value="">Todos los países</option>
+          </select>
+        </div>
+
+        <div class="ph">
+          <div style="font-size:15px;font-weight:600">💰 Liquidación de ruta</div>
+          <div style="display:flex;gap:8px">
+            <select id="liq-filtro-fecha" style="font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:20px;background:var(--bg2)" onchange="loadLiquidacion()">
+              <option value="hoy">Hoy</option>
+              <option value="semana">Esta semana</option>
+              <option value="mes">Este mes</option>
+            </select>
+            <button class="btn btn-primary admin-only" onclick="openModal('nueva-liquidacion')">+ Nueva planilla</button>
+          </div>
+        </div>
+
+        <!-- Resumen del día -->
+        <div id="liq-resumen" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+          <div class="stat"><div class="stat-label">Planillas hoy</div><div class="stat-val" id="liq-stat-total" style="color:var(--blue)">—</div></div>
+          <div class="stat"><div class="stat-label">Liquidadas</div><div class="stat-val" id="liq-stat-ok" style="color:var(--green)">—</div></div>
+          <div class="stat"><div class="stat-label">Pendientes</div><div class="stat-val" id="liq-stat-pend" style="color:var(--amber)">—</div></div>
+          <div class="stat"><div class="stat-label">Con diferencia</div><div class="stat-val" id="liq-stat-diff" style="color:var(--red)">—</div></div>
+        </div>
+
+        <!-- Lista de liquidaciones -->
+        <div class="data-table">
+          <div class="th" style="grid-template-columns:80px 1fr 120px 100px 100px 100px 120px">
+            <div>Fecha</div><div>Conductor / Vehículo</div><div>Salida</div><div>Entregado</div><div>Cobrado</div><div>Diferencia</div><div>Estado</div>
+          </div>
+          <div id="liq-list"><div class="loader"><div class="spin"></div>Cargando...</div></div>
+        </div>
+      </div>
+
       <div class="section" id="s-historial">
         <div class="ph">
           <div style="font-size:15px;font-weight:600">Historial de checks</div>
@@ -1012,6 +1051,118 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
   </div>
 </div>
 
+
+<!-- MODAL NUEVA LIQUIDACIÓN (Planilla de salida) -->
+<div class="overlay" id="ov-nueva-liquidacion">
+  <div class="modal">
+    <div class="modal-hd"><div class="modal-title">📋 Nueva planilla de salida</div><button class="modal-close" onclick="closeModal('nueva-liquidacion')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="nliq-id">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="fg">
+          <label class="fl">Fecha *</label>
+          <input type="date" id="nliq-fecha" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit">
+        </div>
+        <div class="fg">
+          <label class="fl">Hora de salida</label>
+          <input type="time" id="nliq-hora" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit">
+        </div>
+      </div>
+      <div class="fg" style="margin-top:10px">
+        <label class="fl">Conductor *</label>
+        <select id="nliq-conductor" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg)">
+          <option value="">Seleccioná conductor</option>
+        </select>
+      </div>
+      <div class="fg" style="margin-top:10px">
+        <label class="fl">Vehículo *</label>
+        <select id="nliq-vehiculo" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg)">
+          <option value="">Seleccioná vehículo</option>
+        </select>
+      </div>
+      <div class="fg" style="margin-top:10px">
+        <label class="fl">Cliente</label>
+        <select id="nliq-cliente" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg)">
+          <option value="">Sin cliente asignado</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
+        <div class="fg">
+          <label class="fl">Bultos / paquetes a entregar *</label>
+          <input type="number" id="nliq-bultos" min="0" placeholder="0" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit">
+        </div>
+        <div class="fg">
+          <label class="fl">Monto total esperado ($)</label>
+          <input type="number" id="nliq-monto-esp" min="0" step="0.01" placeholder="0.00" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit">
+        </div>
+      </div>
+      <div class="fg" style="margin-top:10px">
+        <label class="fl">Observaciones de salida</label>
+        <textarea id="nliq-obs-sal" placeholder="Instrucciones, zonas, notas..." style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;resize:none;height:70px"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('nueva-liquidacion')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarPlanillaSalida()">✅ Guardar planilla</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL LIQUIDAR (completa el conductor/admin al regresar) -->
+<div class="overlay" id="ov-liquidar">
+  <div class="modal">
+    <div class="modal-hd"><div class="modal-title" id="liq-modal-title">💰 Registrar liquidación</div><button class="modal-close" onclick="closeModal('liquidar')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="liq-id-actual">
+      <!-- Info de salida (readonly) -->
+      <div id="liq-info-salida" style="background:var(--bg3);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:14px;font-size:13px"></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="fg">
+          <label class="fl">Bultos entregados *</label>
+          <input type="number" id="liq-entregados" min="0" placeholder="0" oninput="calcularDiferencia()" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit">
+        </div>
+        <div class="fg">
+          <label class="fl">Bultos no entregados</label>
+          <input type="number" id="liq-no-entregados" min="0" placeholder="0" readonly style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg3);font-family:inherit">
+        </div>
+      </div>
+
+      <!-- Detalle de no entregados -->
+      <div id="liq-no-entregados-wrap" style="display:none;margin-top:10px">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">📦 Detalle de no entregados</div>
+        <div id="liq-detalle-list"></div>
+        <button class="btn btn-sm" onclick="agregarDetalle()" style="margin-top:6px">+ Agregar motivo</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+        <div class="fg">
+          <label class="fl">Monto cobrado ($) *</label>
+          <input type="number" id="liq-cobrado" min="0" step="0.01" placeholder="0.00" oninput="calcularDiferencia()" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit">
+        </div>
+        <div class="fg">
+          <label class="fl">Diferencia</label>
+          <input type="text" id="liq-diferencia" readonly style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg3);font-family:inherit;font-weight:600">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
+        <div class="fg">
+          <label class="fl">Hora de regreso</label>
+          <input type="time" id="liq-hora-reg" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit">
+        </div>
+      </div>
+      <div class="fg" style="margin-top:10px">
+        <label class="fl">Observaciones de liquidación</label>
+        <textarea id="liq-obs-liq" placeholder="Novedades, incidentes, comentarios..." style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;resize:none;height:70px"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('liquidar')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarLiquidacion()">✅ Confirmar liquidación</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL GPS -->
 <div class="overlay" id="ov-gps">
   <div class="modal modal-sm">
@@ -1175,7 +1326,7 @@ $('li-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
 $('li-email').addEventListener('keydown',e=>{if(e.key==='Enter')$('li-pass').focus()});
 
 // NAV
-const PAGES={dashboard:{title:'Dashboard',sub:'Vista general de la flota'},vehiculos:{title:'Vehículos',sub:'Toda la flota registrada'},planificacion:{title:'Planificación de flota',sub:'Vehículos planificados por semana'},checklist:{title:'Check diario',sub:'Revisión antes de la salida'},historial:{title:'Historial de checks',sub:'Registro completo de revisiones'},satelital:{title:'Satelital en vivo',sub:'Rastreadores GPS en tiempo real'},conductores:{title:'Conductores',sub:'Gestión de choferes'},alertas:{title:'Alertas',sub:'Vencimientos y novedades'},empresas:{title:'Empresas de transporte',sub:'Gestión de empresas y flotas'},clientes:{title:'Clientes',sub:'Gestión de clientes'},paises:{title:'Países',sub:'Operaciones por país'},usuarios:{title:'Usuarios',sub:'Gestión de accesos al sistema'},config:{title:'Configuración',sub:'Ajustes de la aplicación'}};
+const PAGES={dashboard:{title:'Dashboard',sub:'Vista general de la flota'},vehiculos:{title:'Vehículos',sub:'Toda la flota registrada'},liquidacion:{title:'Liquidación de ruta',sub:'Seguimiento de entregas y cobros'},planificacion:{title:'Planificación de flota',sub:'Vehículos planificados por semana'},checklist:{title:'Check diario',sub:'Revisión antes de la salida'},historial:{title:'Historial de checks',sub:'Registro completo de revisiones'},satelital:{title:'Satelital en vivo',sub:'Rastreadores GPS en tiempo real'},conductores:{title:'Conductores',sub:'Gestión de choferes'},alertas:{title:'Alertas',sub:'Vencimientos y novedades'},empresas:{title:'Empresas de transporte',sub:'Gestión de empresas y flotas'},clientes:{title:'Clientes',sub:'Gestión de clientes'},paises:{title:'Países',sub:'Operaciones por país'},usuarios:{title:'Usuarios',sub:'Gestión de accesos al sistema'},config:{title:'Configuración',sub:'Ajustes de la aplicación'}};
 
 function goTo(sec){
   if(sec==='usuarios'&&!isAdmin()){toast('Solo los administradores pueden ver esta sección','err');return}
@@ -2144,7 +2295,7 @@ async function cambiarPais(paisId){
       empresas:loadEmpresas,
       clientes:loadClientes,
       satelital:loadSatelital,
-      planificacion:loadPlanificacion,
+      liquidacion:loadLiquidacion,planificacion:loadPlanificacion,
       checklist:initCheckDiario,
       usuarios:loadUsuarios,
       paises:loadPaises
@@ -3039,6 +3190,249 @@ async function guardarCheckPE(){
   });
 }
 
+
+// ══════════════════════════════════════════════════════════════════════════
+// LIQUIDACIÓN DE RUTA
+// ══════════════════════════════════════════════════════════════════════════
+let LIQ_DETALLE_COUNT = 0;
+
+async function loadLiquidacion(){
+  const el=$('liq-list');
+  if(!el) return;
+  el.innerHTML='<div class="loader"><div class="spin"></div>Cargando...</div>';
+
+  const fechaFiltro=$('liq-filtro-fecha')?.value||'hoy';
+  const today=new Date().toISOString().split('T')[0];
+  let desde=today;
+  if(fechaFiltro==='semana'){const d=new Date();d.setDate(d.getDate()-7);desde=d.toISOString().split('T')[0];}
+  if(fechaFiltro==='mes'){const d=new Date();d.setDate(d.getDate()-30);desde=d.toISOString().split('T')[0];}
+
+  const{data,error}=await withPais(db.from('liquidaciones')
+    .select('*, conductores(nombre), vehiculos(patente,marca), clientes(nombre)')
+    .gte('fecha',desde))
+    .order('fecha',{ascending:false})
+    .order('created_at',{ascending:false});
+
+  if(error){el.innerHTML=`<div class="empty">Error: ${error.message}</div>`;return;}
+  if(!data?.length){el.innerHTML='<div class="empty">📋 Sin liquidaciones en este período.</div>';return;}
+
+  // Stats
+  const total=data.length;
+  const ok=data.filter(l=>l.estado==='liquidado').length;
+  const pend=data.filter(l=>l.estado==='pendiente').length;
+  const diff=data.filter(l=>l.estado==='con_diferencia').length;
+  const sl=$('liq-stat-total');if(sl)sl.textContent=total;
+  const sok=$('liq-stat-ok');if(sok)sok.textContent=ok;
+  const sp=$('liq-stat-pend');if(sp)sp.textContent=pend;
+  const sd=$('liq-stat-diff');if(sd)sd.textContent=diff;
+
+  const estadoColor={pendiente:'var(--amber)',liquidado:'var(--green)',con_diferencia:'var(--red)'};
+  const estadoLabel={pendiente:'⏳ Pendiente',liquidado:'✓ Liquidado',con_diferencia:'⚠ Con diferencia'};
+
+  el.innerHTML=data.map(l=>{
+    const color=estadoColor[l.estado]||'var(--text2)';
+    const puedeEditar=isAdmin();
+    return `<div class="tr" style="grid-template-columns:80px 1fr 120px 100px 100px 100px 120px;border-left:4px solid ${color}">
+      <div style="font-size:12px;color:var(--text2)">${l.fecha?new Date(l.fecha+'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'—'}</div>
+      <div>
+        <div style="font-weight:600">${l.conductores?.nombre||'—'}</div>
+        <div style="font-size:11px;color:var(--text2)">${l.vehiculos?.patente||''} ${l.vehiculos?.marca||''} · ${l.clientes?.nombre||'Sin cliente'}</div>
+      </div>
+      <div style="font-size:12px">
+        <div>${l.bultos_salida||0} bultos</div>
+        <div style="color:var(--text2)">$ ${(l.monto_esperado||0).toLocaleString('es-AR')}</div>
+      </div>
+      <div style="font-size:12px">
+        ${l.bultos_entregados!==null?`<div style="color:var(--green)">✓ ${l.bultos_entregados} entregados</div>`:'<div style="color:var(--text3)">—</div>'}
+        ${l.bultos_no_entregados?`<div style="color:var(--red)">✗ ${l.bultos_no_entregados} devueltos</div>`:''}
+      </div>
+      <div style="font-size:12px">
+        ${l.monto_cobrado!==null?`<div style="font-weight:600">$ ${(l.monto_cobrado||0).toLocaleString('es-AR')}</div>`:'<div style="color:var(--text3)">—</div>'}
+      </div>
+      <div style="font-size:12px;font-weight:600">
+        ${l.monto_diferencia!==null?`<div style="color:${l.monto_diferencia<0?'var(--red)':l.monto_diferencia>0?'var(--amber)':'var(--green)'}">
+          ${l.monto_diferencia>0?'+':''}$ ${(l.monto_diferencia||0).toLocaleString('es-AR')}</div>`:'—'}
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;background:${color}20;color:${color}">${estadoLabel[l.estado]||l.estado}</span>
+        ${puedeEditar&&l.estado==='pendiente'?`<button class="btn btn-sm btn-primary" onclick="abrirLiquidar('${l.id}')" style="font-size:11px">💰 Liquidar</button>`:''}
+        ${puedeEditar?`<button class="btn btn-sm" onclick="editarPlanilla('${l.id}')" style="font-size:11px">✏️</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function openModal_liquidacion(){
+  // Populate selects for nueva liquidacion
+  const today=new Date().toISOString().split('T')[0];
+  const hora=new Date().toTimeString().slice(0,5);
+  $('nliq-fecha').value=today;
+  $('nliq-hora').value=hora;
+  $('nliq-id').value='';
+
+  const[{data:conds},{data:vehs},{data:clis}]=await Promise.all([
+    withPais(db.from('conductores').select('id,nombre').eq('activo',true)).order('nombre'),
+    withPais(db.from('vehiculos').select('id,patente,marca').eq('activo',true)).order('patente'),
+    withPais(db.from('clientes').select('id,nombre').eq('activo',true)).order('nombre')
+  ]);
+  $('nliq-conductor').innerHTML='<option value="">Seleccioná conductor</option>'+(conds||[]).map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  $('nliq-vehiculo').innerHTML='<option value="">Seleccioná vehículo</option>'+(vehs||[]).map(v=>`<option value="${v.id}">${v.patente} — ${v.marca}</option>`).join('');
+  $('nliq-cliente').innerHTML='<option value="">Sin cliente</option>'+(clis||[]).map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  ['nliq-bultos','nliq-monto-esp'].forEach(id=>{const el=$(id);if(el)el.value='';});
+  $('nliq-obs-sal').value='';
+}
+
+async function guardarPlanillaSalida(){
+  const conductor=$('nliq-conductor').value;
+  const vehiculo=$('nliq-vehiculo').value;
+  const bultos=parseInt($('nliq-bultos').value)||0;
+  if(!conductor||!vehiculo){toast('Completá conductor y vehículo','err');return}
+  const id=$('nliq-id').value;
+  const p={
+    fecha:$('nliq-fecha').value,
+    hora_salida:$('nliq-hora').value||null,
+    conductor_id:conductor,
+    vehiculo_id:vehiculo,
+    cliente_id:$('nliq-cliente').value||null,
+    bultos_salida:bultos,
+    monto_esperado:parseFloat($('nliq-monto-esp').value)||0,
+    observaciones_salida:$('nliq-obs-sal').value.trim()||null,
+    pais_id:getPaisId()||CP?.pais_id||null,
+    creado_por:CP?.nombre||CU?.email,
+    estado:'pendiente'
+  };
+  const{error}=id
+    ?await db.from('liquidaciones').update(p).eq('id',id)
+    :await db.from('liquidaciones').insert(p);
+  if(error){toast('Error: '+error.message,'err');return}
+  toast('✓ Planilla guardada','ok');
+  closeModal('nueva-liquidacion');
+  loadLiquidacion();
+}
+
+async function abrirLiquidar(liqId){
+  const{data:liq}=await db.from('liquidaciones')
+    .select('*, conductores(nombre), vehiculos(patente,marca), clientes(nombre)')
+    .eq('id',liqId).maybeSingle();
+  if(!liq) return;
+  $('liq-id-actual').value=liqId;
+  $('liq-modal-title').textContent=`💰 Liquidar — ${liq.conductores?.nombre||''}`;
+  $('liq-info-salida').innerHTML=`
+    <div style="display:flex;gap:16px;flex-wrap:wrap">
+      <div><span style="color:var(--text2)">Vehículo:</span> <strong>${liq.vehiculos?.patente||'—'}</strong></div>
+      <div><span style="color:var(--text2)">Cliente:</span> <strong>${liq.clientes?.nombre||'—'}</strong></div>
+      <div><span style="color:var(--text2)">Bultos salida:</span> <strong>${liq.bultos_salida||0}</strong></div>
+      <div><span style="color:var(--text2)">Monto esperado:</span> <strong>$ ${(liq.monto_esperado||0).toLocaleString('es-AR')}</strong></div>
+      ${liq.hora_salida?`<div><span style="color:var(--text2)">Hora salida:</span> <strong>${liq.hora_salida.slice(0,5)}</strong></div>`:''}
+    </div>`;
+  $('liq-entregados').value=liq.bultos_entregados||'';
+  $('liq-cobrado').value=liq.monto_cobrado||'';
+  $('liq-obs-liq').value=liq.observaciones_liquidacion||'';
+  $('liq-hora-reg').value=new Date().toTimeString().slice(0,5);
+  // Store salida data for calculations
+  $('liq-entregados').dataset.bultosTotal=liq.bultos_salida||0;
+  $('liq-entregados').dataset.montoEsp=liq.monto_esperado||0;
+  calcularDiferencia();
+  // Load existing detalle
+  LIQ_DETALLE_COUNT=0;
+  $('liq-detalle-list').innerHTML='';
+  const{data:det}=await db.from('liquidaciones_detalle').select('*').eq('liquidacion_id',liqId);
+  (det||[]).forEach(d=>agregarDetalle(d));
+  openModal('liquidar');
+}
+
+function calcularDiferencia(){
+  const entregados=parseInt($('liq-entregados')?.value)||0;
+  const total=parseInt($('liq-entregados')?.dataset.bultosTotal)||0;
+  const noEntregados=Math.max(0,total-entregados);
+  const noWrap=$('liq-no-entregados-wrap');
+  if($('liq-no-entregados')) $('liq-no-entregados').value=noEntregados;
+  if(noWrap) noWrap.style.display=noEntregados>0?'block':'none';
+  const cobrado=parseFloat($('liq-cobrado')?.value)||0;
+  const esperado=parseFloat($('liq-entregados')?.dataset.montoEsp)||0;
+  const diff=cobrado-esperado;
+  const el=$('liq-diferencia');
+  if(el){
+    el.value=(diff>0?'+':'')+'$ '+diff.toLocaleString('es-AR',{minimumFractionDigits:2});
+    el.style.color=diff<0?'var(--red)':diff>0?'var(--amber)':'var(--green)';
+  }
+}
+
+function agregarDetalle(data=null){
+  LIQ_DETALLE_COUNT++;
+  const i=LIQ_DETALLE_COUNT;
+  const motivos=['ausente','direccion_incorrecta','rechazo','otro'];
+  const div=document.createElement('div');
+  div.id=`det-${i}`;
+  div.style.cssText='display:grid;grid-template-columns:140px 60px 1fr 30px;gap:6px;margin-bottom:6px;align-items:center';
+  div.innerHTML=`
+    <select id="det-mot-${i}" style="padding:6px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit">
+      ${motivos.map(m=>`<option value="${m}" ${data?.motivo===m?'selected':''}>${m.replace(/_/g,' ')}</option>`).join('')}
+    </select>
+    <input type="number" id="det-cant-${i}" value="${data?.cantidad||1}" min="1" style="padding:6px;border:1px solid var(--border);border-radius:6px;font-size:12px;text-align:center">
+    <input type="text" id="det-desc-${i}" value="${data?.descripcion||''}" placeholder="Descripción..." style="padding:6px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit">
+    <button onclick="$('det-${i}').remove()" style="background:var(--red-light);color:var(--red);border:none;border-radius:6px;cursor:pointer;font-size:14px;padding:4px">✕</button>`;
+  $('liq-detalle-list').appendChild(div);
+}
+
+async function guardarLiquidacion(){
+  const liqId=$('liq-id-actual').value;
+  if(!liqId){toast('Error: sin ID','err');return}
+  const entregados=parseInt($('liq-entregados').value)||0;
+  const noEntregados=parseInt($('liq-no-entregados').value)||0;
+  const cobrado=parseFloat($('liq-cobrado').value)||0;
+  const esperado=parseFloat($('liq-entregados').dataset.montoEsp)||0;
+  const diff=cobrado-esperado;
+  const estado=diff===0?'liquidado':'con_diferencia';
+  // Save detalle
+  await db.from('liquidaciones_detalle').delete().eq('liquidacion_id',liqId);
+  const detalles=[];
+  for(let i=1;i<=LIQ_DETALLE_COUNT;i++){
+    const mot=$(`det-mot-${i}`);
+    if(!mot) continue;
+    detalles.push({
+      liquidacion_id:liqId,
+      motivo:mot.value,
+      cantidad:parseInt($(`det-cant-${i}`)?.value)||1,
+      descripcion:$(`det-desc-${i}`)?.value.trim()||null
+    });
+  }
+  if(detalles.length) await db.from('liquidaciones_detalle').insert(detalles);
+  const{error}=await db.from('liquidaciones').update({
+    bultos_entregados:entregados,
+    bultos_no_entregados:noEntregados,
+    monto_cobrado:cobrado,
+    monto_diferencia:diff,
+    hora_regreso:$('liq-hora-reg').value||null,
+    observaciones_liquidacion:$('liq-obs-liq').value.trim()||null,
+    liquidado_por:CP?.nombre||CU?.email,
+    estado,
+    updated_at:new Date().toISOString()
+  }).eq('id',liqId);
+  if(error){toast('Error: '+error.message,'err');return}
+  toast('✓ Liquidación registrada','ok');
+  closeModal('liquidar');
+  loadLiquidacion();
+}
+
+async function editarPlanilla(liqId){
+  const{data:liq}=await db.from('liquidaciones').select('*').eq('id',liqId).maybeSingle();
+  if(!liq) return;
+  await openModal_liquidacion();
+  setTimeout(()=>{
+    $('nliq-id').value=liqId;
+    $('nliq-fecha').value=liq.fecha||'';
+    $('nliq-hora').value=liq.hora_salida?.slice(0,5)||'';
+    $('nliq-conductor').value=liq.conductor_id||'';
+    $('nliq-vehiculo').value=liq.vehiculo_id||'';
+    $('nliq-cliente').value=liq.cliente_id||'';
+    $('nliq-bultos').value=liq.bultos_salida||'';
+    $('nliq-monto-esp').value=liq.monto_esperado||'';
+    $('nliq-obs-sal').value=liq.observaciones_salida||'';
+  },300);
+  openModal('nueva-liquidacion');
+}
+
 // ── CONDUCTORES ───────────────────────────────────────────────────────────
 async function loadConductores(){
   const el=$('conductores-list');
@@ -3278,6 +3672,7 @@ function onRastreadorChange(gid){
 
 // MODALES
 async function openModal(id){
+  if(id==='nueva-liquidacion'){ await openModal_liquidacion(); }
   if(id==='vehiculo'){
     popularSelectsPais();
     const isEdit = $('mv-id').value !== '';
