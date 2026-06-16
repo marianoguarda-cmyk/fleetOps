@@ -936,54 +936,56 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 </div>
 
 <div class="overlay" id="ov-conductor">
-  <div class="modal">
+  <div class="modal" style="width:760px;max-width:96vw">
     <div class="modal-hd"><div class="modal-title" id="mc-title">Nuevo conductor</div><button class="modal-close" onclick="closeModal('conductor')">✕</button></div>
     <div class="modal-body">
     <input type="hidden" id="mc-id">
+
     <div class="form-section">Datos personales</div>
-    <div class="form-grid">
-      <div class="fg fg-full"><label class="fl">País</label><select id="mc-pais"><option value="">Seleccioná país</option></select></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:10px">
+      <div class="fg fg-full" style="grid-column:1/-1"><label class="fl">País</label><select id="mc-pais"><option value="">Seleccioná país</option></select></div>
       <div class="fg"><label class="fl">Nombre completo</label><input type="text" id="mc-nombre" placeholder="Juan Pérez"></div>
       <div class="fg"><label class="fl">DNI</label><input type="text" id="mc-dni"></div>
       <div class="fg"><label class="fl">Teléfono</label><input type="text" id="mc-tel"></div>
-      <div class="fg"><label class="fl">Email</label><input type="email" id="mc-email" placeholder="conductor@empresa.com"></div>
+      <div class="fg" style="grid-column:1/-1"><label class="fl">Email</label><input type="email" id="mc-email" placeholder="conductor@empresa.com"></div>
     </div>
-    <!-- Acceso a la plataforma (solo al crear) -->
-    <div id="mc-pass-section" style="display:block">
-      <div class="form-section">Acceso a la plataforma</div>
-      <div id="mc-pass-wrap" style="background:var(--blue-light);border:1px solid var(--blue);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px">
-        <div style="font-size:12px;color:var(--blue);margin-bottom:8px;font-weight:600">🔐 Si ingresás un email y una contraseña, el conductor podrá iniciar sesión en la app</div>
-        <div class="fg" style="margin-bottom:8px">
-          <label class="fl">Contraseña de acceso (opcional)</label>
-          <input type="password" id="mc-pass" placeholder="Mínimo 6 caracteres" style="width:100%;padding:9px;border:1.5px solid var(--blue);border-radius:var(--radius-sm);font-size:14px;font-family:inherit">
-        </div>
-        <div style="font-size:11px;color:var(--text2)">Solo tendrá acceso a Check diario y Liquidación.</div>
-      </div>
-    </div>
-    <div id="mc-pass-edit-note" style="display:none;background:var(--bg3);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:10px;font-size:12px;color:var(--text2)">
-      🔐 El acceso a la plataforma se configura solo al crear el conductor. Para cambiar la contraseña, usá la sección de Usuarios.
-    </div>
+
     <div class="form-section">Licencia y habilitaciones</div>
-    <div class="form-grid">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:10px">
       <div class="fg"><label class="fl">N° de licencia</label><input type="text" id="mc-licencia"></div>
       <div class="fg"><label class="fl">Categoría</label><select id="mc-cat"><option>B</option><option>C</option><option>D</option><option>E</option></select></div>
+      <div class="fg"><label class="fl">Vehículo asignado</label><select id="mc-vehiculo"><option value="">Sin asignar</option></select></div>
       <div class="fg"><label class="fl">Venc. licencia</label><input type="date" id="mc-venc-lic"></div>
       <div class="fg"><label class="fl">Venc. libreta sanitaria</label><input type="date" id="mc-venc-lib"></div>
       <div class="fg"><label class="fl">Venc. psicofísico</label><input type="date" id="mc-venc-psico"></div>
-      <div class="fg"><label class="fl">Vehículo asignado</label><select id="mc-vehiculo"><option value="">Sin asignar</option></select></div>
-      <div class="fg"><label class="fl">Empresa de transporte</label><select id="mc-empresa"><option value="">Sin empresa</option></select></div>
+      <div class="fg" style="grid-column:1/-1"><label class="fl">Empresa de transporte</label><select id="mc-empresa"><option value="">Sin empresa</option></select></div>
     </div>
-    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
-      <button class="btn"     <div class="fg" style="margin-bottom:8px">
-      <label class="fl">📷 Foto del conductor</label>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px">
-        <input type="file" accept="image/*" id="mc-foto-input" style="display:none" onchange="previewFotoCond(event)">
-        <button class="btn btn-sm" type="button" onclick="$('mc-foto-input').click()">📷 Seleccionar</button>
-        <span id="mc-foto-nombre" style="font-size:12px;color:var(--text2)">Sin foto seleccionada</span>
+
+    <!-- Foto + Acceso a la plataforma lado a lado -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;margin-top:4px">
+      <div>
+        <div class="form-section" style="margin-top:0">📷 Foto del conductor</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <input type="file" accept="image/*" id="mc-foto-input" style="display:none" onchange="previewFotoCond(event)">
+          <button class="btn btn-sm" type="button" onclick="$('mc-foto-input').click()">📷 Seleccionar</button>
+          <span id="mc-foto-nombre" style="font-size:12px;color:var(--text2)">Sin foto seleccionada</span>
+        </div>
+        <img id="mc-foto-preview" src="" style="display:none;margin-top:8px;max-height:90px;border-radius:8px;border:1px solid var(--border)">
+        <input type="hidden" id="mc-foto-url">
       </div>
-      <img id="mc-foto-preview" src="" style="display:none;margin-top:8px;max-height:120px;border-radius:8px;border:1px solid var(--border)">
-      <input type="hidden" id="mc-foto-url">
+
+      <div>
+        <div class="form-section" style="margin-top:0">🔐 Acceso a la plataforma</div>
+        <div id="mc-pass-section" style="display:block;background:var(--blue-light);border:1px solid var(--blue);border-radius:var(--radius-sm);padding:10px 12px">
+          <div style="font-size:11px;color:var(--blue);margin-bottom:8px;font-weight:600">Email + contraseña habilita el acceso del conductor a Check y Liquidación</div>
+          <input type="password" id="mc-pass" placeholder="Contraseña (opcional, mín. 6 caracteres)" style="width:100%;padding:9px;border:1.5px solid var(--blue);border-radius:var(--radius-sm);font-size:13px;font-family:inherit">
+        </div>
+        <div id="mc-pass-edit-note" style="display:none;background:var(--bg3);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;color:var(--text2)">
+          El acceso se configura solo al crear el conductor. Para cambiar la contraseña, usá Usuarios.
+        </div>
+      </div>
     </div>
+
     </div><!-- end modal-body -->
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('conductor')">Cancelar</button>
@@ -3749,8 +3751,8 @@ async function guardarConductor(){
   const email=$('mc-email').value.trim();
   const pass=$('mc-pass')?.value||'';
   if(!nombre){toast('El nombre es obligatorio','err');return}
-  // Validar contraseña si se ingresó email
-  if(!id && email && pass.length < 6){toast('La contraseña debe tener al menos 6 caracteres','err');return}
+  // Solo validar contraseña si se ingresó (si está vacía, simplemente no se crea acceso)
+  if(!id && pass && pass.length < 6){toast('La contraseña debe tener al menos 6 caracteres, o dejala vacía para no crear acceso','err');return}
   const btn=$('mc-btn');if(btn){btn.disabled=true;btn.textContent='Guardando...';}
   // Subir foto a Google Drive si hay una seleccionada
   const base64Cond = $('mc-foto-url')?.value || null;
@@ -3789,7 +3791,7 @@ async function guardarConductor(){
       const res = await fetch('/api/crear-usuario',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({email, password:pass, nombre, rol:'operador', pais_id:$('mc-pais')?.value||getPaisId()||CP?.pais_id||null})
+        body:JSON.stringify({email, password:pass, nombre, rol:'conductor', pais_id:$('mc-pais')?.value||getPaisId()||CP?.pais_id||null})
       });
       const data = await res.json();
       if(!res.ok || data.error) toast('⚠ Conductor guardado pero error al crear usuario: '+(data.error||''),'err');
