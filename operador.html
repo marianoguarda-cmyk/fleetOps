@@ -622,9 +622,24 @@ async function afterLogin(user){
   const{data:p}=await db.from('profiles').select('*').eq('id',user.id).maybeSingle();
   CP=p;
   if(!p){
-    await db.from('profiles').upsert({id:user.id,email:user.email,nombre:user.user_metadata?.nombre||user.email.split('@')[0],rol:'operador',activo:true},{onConflict:'id'});
+    // Tomar pais_id y rol de los metadatos del usuario (seteados al crearlo)
+    const paisIdMeta = user.user_metadata?.pais_id || null;
+    const rolMeta = user.user_metadata?.rol || 'operador';
+    await db.from('profiles').upsert({
+      id:user.id,
+      email:user.email,
+      nombre:user.user_metadata?.nombre||user.email.split('@')[0],
+      rol:rolMeta,
+      pais_id:paisIdMeta,
+      activo:true
+    },{onConflict:'id'});
     const{data:p2}=await db.from('profiles').select('*').eq('id',user.id).maybeSingle();
     CP=p2;
+  }
+  // Si el perfil existe pero no tiene pais_id, intentar completarlo desde los metadatos
+  if(CP && !CP.pais_id && user.user_metadata?.pais_id){
+    await db.from('profiles').update({pais_id:user.user_metadata.pais_id}).eq('id',user.id);
+    CP.pais_id = user.user_metadata.pais_id;
   }
   setupUI();
   await loadData();
