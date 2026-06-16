@@ -65,8 +65,7 @@ nav{padding:10px 8px;flex:1;overflow-y:auto}
 
 /* Sidebar colapsable */
 .sidebar.collapsed{width:0;border-right:none;overflow:hidden}
-.sidebar-toggle{position:fixed;top:14px;left:14px;z-index:50;width:34px;height:34px;border-radius:50%;background:var(--bg2);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 1px 4px rgba(0,0,0,.08);transition:left .2s}
-.sidebar.collapsed ~ .sidebar-toggle, .layout.sidebar-hidden .sidebar-toggle{left:14px}
+#sidebar-toggle-btn:hover{background:var(--bg2)}
 .nav-footer{padding:10px 8px;border-top:1px solid var(--border)}
 .user-pill{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius);cursor:pointer;transition:background .12s;position:relative}
 .user-pill:hover{background:var(--bg3)}
@@ -203,7 +202,6 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 </div>
 
 <div class="app" id="app">
-  <button class="sidebar-toggle" id="sidebar-toggle-btn" onclick="toggleSidebar()" title="Mostrar/ocultar menú">☰</button>
   <div class="sidebar" id="sidebar">
     <div class="logo">
       <div class="logo-icon">🚛</div>
@@ -270,6 +268,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 
   <div class="main">
     <div class="topbar" style="flex-wrap:wrap;gap:6px">
+      <button id="sidebar-toggle-btn" onclick="toggleSidebar()" title="Mostrar menú" style="display:none;width:32px;height:32px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);cursor:pointer;font-size:15px;align-items:center;justify-content:center;flex-shrink:0;margin-right:4px">☰</button>
       <div style="flex:1;min-width:0">
         <div class="topbar-title" id="tb-title">Dashboard</div>
         <div class="topbar-sub" id="tb-sub"></div>
@@ -1427,7 +1426,14 @@ function setupUI(){
     if(sw) sw.style.display='none';
     if(pi) pi.style.display='none';
   }
-  document.querySelectorAll('.admin-only').forEach(el=>{if(el)el.style.display=isAdmin()?'flex':'none'});
+  document.querySelectorAll('.admin-only').forEach(el=>{
+    if(!el) return;
+    if(!isAdmin()){el.style.display='none';return}
+    // Restaurar el display correcto según el tipo de elemento
+    if(el.classList.contains('nav-group')) el.style.display='block';
+    else if(el.classList.contains('nav-btn')) el.style.display='flex';
+    else el.style.display='';
+  });
   const ami=$('admin-menu-items');if(ami&&(isAdmin()||isSuperAdmin()))ami.style.display='block';
   popularSelectsPais();
 }
@@ -3740,7 +3746,7 @@ function toggleSidebar(){
   const btn=$('sidebar-toggle-btn');
   if(!sb) return;
   const collapsed=sb.classList.toggle('collapsed');
-  if(btn) btn.style.left=collapsed?'14px':'234px';
+  if(btn) btn.style.display=collapsed?'flex':'none';
   localStorage.setItem('fleetops_sidebar_collapsed', collapsed?'1':'0');
 }
 
@@ -3763,7 +3769,7 @@ function restoreNavState(){
     const sb=$('sidebar');
     const btn=$('sidebar-toggle-btn');
     if(sb) sb.classList.add('collapsed');
-    if(btn) btn.style.left='14px';
+    if(btn) btn.style.display='flex';
   }
   // Restaurar grupos colapsados
   const saved=JSON.parse(localStorage.getItem('fleetops_nav_groups')||'{}');
