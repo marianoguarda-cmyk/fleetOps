@@ -212,28 +212,36 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
       <button class="nav-btn active" onclick="goTo('dashboard')" style="margin-bottom:4px">📊 Dashboard</button>
 
       <div class="nav-group">
-        <button class="nav-group-hd" onclick="toggleNavGroup('operaciones')">
-          <span>Operaciones</span><span class="nav-group-arrow" id="arrow-operaciones">▾</span>
+        <button class="nav-group-hd" onclick="toggleNavGroup('operacion')">
+          <span>Operación diaria</span><span class="nav-group-arrow" id="arrow-operacion">▾</span>
         </button>
-        <div class="nav-group-body" id="group-operaciones">
+        <div class="nav-group-body" id="group-operacion">
           <button class="nav-btn" onclick="goTo('checklist')">✅ Check diario</button>
-          <button class="nav-btn" onclick="goTo('planificacion')">📅 Planificación</button>
-          <button class="nav-btn" onclick="goTo('historial')">🕐 Historial</button>
-          <button class="nav-btn" onclick="goTo('satelital')">📍 Satelital</button>
           <button class="nav-btn" onclick="goTo('liquidacion')">💰 Liquidación</button>
+          <button class="nav-btn" onclick="goTo('planificacion')">📅 Planificación</button>
         </div>
       </div>
 
       <div class="nav-group">
-        <button class="nav-group-hd" onclick="toggleNavGroup('recursos')">
-          <span>Recursos</span><span class="nav-group-arrow" id="arrow-recursos">▾</span>
+        <button class="nav-group-hd" onclick="toggleNavGroup('monitoreo')">
+          <span>Monitoreo</span><span class="nav-group-arrow" id="arrow-monitoreo">▾</span>
         </button>
-        <div class="nav-group-body" id="group-recursos">
+        <div class="nav-group-body" id="group-monitoreo">
+          <button class="nav-btn" onclick="goTo('satelital')">📍 Satelital</button>
+          <button class="nav-btn" onclick="goTo('historial')">🕐 Historial</button>
+          <button class="nav-btn" onclick="goTo('alertas')">🔔 Alertas <span id="badge-alertas" class="badge b-err" style="margin-left:auto;font-size:10px;display:none"></span></button>
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <button class="nav-group-hd" onclick="toggleNavGroup('maestros')">
+          <span>Maestros</span><span class="nav-group-arrow" id="arrow-maestros">▾</span>
+        </button>
+        <div class="nav-group-body" id="group-maestros">
           <button class="nav-btn" onclick="goTo('empresas')">🏢 Empresas</button>
           <button class="nav-btn" onclick="goTo('clientes')">👤 Clientes</button>
           <button class="nav-btn" onclick="goTo('vehiculos')">🚛 Vehículos</button>
           <button class="nav-btn" onclick="goTo('conductores')">👥 Conductores</button>
-          <button class="nav-btn" onclick="goTo('alertas')">🔔 Alertas <span id="badge-alertas" class="badge b-err" style="margin-left:auto;font-size:10px;display:none"></span></button>
         </div>
       </div>
 
