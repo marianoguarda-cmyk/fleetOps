@@ -53,6 +53,20 @@ nav{padding:10px 8px;flex:1;overflow-y:auto}
 .nav-btn{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:var(--radius);font-size:13px;color:var(--text2);cursor:pointer;border:none;background:none;width:100%;text-align:left;transition:all .12s}
 .nav-btn:hover{background:var(--bg3);color:var(--text)}
 .nav-btn.active{background:var(--blue-light);color:var(--blue);font-weight:600}
+
+/* Grupos desplegables */
+.nav-group{margin-top:6px}
+.nav-group-hd{display:flex;align-items:center;justify-content:space-between;width:100%;padding:8px;border:none;background:none;cursor:pointer;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;border-radius:var(--radius);transition:all .12s;font-family:inherit}
+.nav-group-hd:hover{background:var(--bg3);color:var(--text2)}
+.nav-group-arrow{font-size:11px;transition:transform .15s;color:var(--text3)}
+.nav-group-arrow.closed{transform:rotate(-90deg)}
+.nav-group-body{overflow:hidden;max-height:1000px;transition:max-height .2s ease}
+.nav-group-body.collapsed{max-height:0}
+
+/* Sidebar colapsable */
+.sidebar.collapsed{width:0;border-right:none;overflow:hidden}
+.sidebar-toggle{position:fixed;top:14px;left:14px;z-index:50;width:34px;height:34px;border-radius:50%;background:var(--bg2);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 1px 4px rgba(0,0,0,.08);transition:left .2s}
+.sidebar.collapsed ~ .sidebar-toggle, .layout.sidebar-hidden .sidebar-toggle{left:14px}
 .nav-footer{padding:10px 8px;border-top:1px solid var(--border)}
 .user-pill{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius);cursor:pointer;transition:background .12s;position:relative}
 .user-pill:hover{background:var(--bg3)}
@@ -189,29 +203,51 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 </div>
 
 <div class="app" id="app">
-  <div class="sidebar">
+  <button class="sidebar-toggle" id="sidebar-toggle-btn" onclick="toggleSidebar()" title="Mostrar/ocultar menú">☰</button>
+  <div class="sidebar" id="sidebar">
     <div class="logo">
       <div class="logo-icon">🚛</div>
       <div><div class="logo-name">FleetOps</div><div class="logo-sub">Gestión de flota</div></div>
+      <button onclick="toggleSidebar()" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:16px;color:var(--text2);padding:4px" title="Ocultar menú">«</button>
     </div>
     <nav>
-      <div class="nav-label">General</div>
-      <button class="nav-btn active" onclick="goTo('dashboard')">📊 Dashboard</button>
-      <div class="nav-label">Operaciones</div>
-      <button class="nav-btn" onclick="goTo('checklist')">✅ Check diario</button>
-      <button class="nav-btn" onclick="goTo('planificacion')">📅 Planificación</button>
-      <button class="nav-btn" onclick="goTo('historial')">🕐 Historial</button>
-      <button class="nav-btn" onclick="goTo('satelital')">📍 Satelital</button>
-      <button class="nav-btn" onclick="goTo('liquidacion')">💰 Liquidación</button>
-      <div class="nav-label">Recursos</div>
-      <button class="nav-btn" onclick="goTo('empresas')">🏢 Empresas</button>
-      <button class="nav-btn" onclick="goTo('clientes')">👤 Clientes</button>
-      <button class="nav-btn" onclick="goTo('vehiculos')">🚛 Vehículos</button>
-      <button class="nav-btn" onclick="goTo('conductores')">👥 Conductores</button>
-      <button class="nav-btn" onclick="goTo('alertas')">🔔 Alertas <span id="badge-alertas" class="badge b-err" style="margin-left:auto;font-size:10px;display:none"></span></button>
-      <div class="nav-label admin-only">Administración</div>
-      <button class="nav-btn admin-only" onclick="goTo('paises')">🌎 Países</button>
-      <button class="nav-btn admin-only" onclick="goTo('usuarios')">👤 Usuarios</button>
+      <button class="nav-btn active" onclick="goTo('dashboard')" style="margin-bottom:4px">📊 Dashboard</button>
+
+      <div class="nav-group">
+        <button class="nav-group-hd" onclick="toggleNavGroup('operaciones')">
+          <span>Operaciones</span><span class="nav-group-arrow" id="arrow-operaciones">▾</span>
+        </button>
+        <div class="nav-group-body" id="group-operaciones">
+          <button class="nav-btn" onclick="goTo('checklist')">✅ Check diario</button>
+          <button class="nav-btn" onclick="goTo('planificacion')">📅 Planificación</button>
+          <button class="nav-btn" onclick="goTo('historial')">🕐 Historial</button>
+          <button class="nav-btn" onclick="goTo('satelital')">📍 Satelital</button>
+          <button class="nav-btn" onclick="goTo('liquidacion')">💰 Liquidación</button>
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <button class="nav-group-hd" onclick="toggleNavGroup('recursos')">
+          <span>Recursos</span><span class="nav-group-arrow" id="arrow-recursos">▾</span>
+        </button>
+        <div class="nav-group-body" id="group-recursos">
+          <button class="nav-btn" onclick="goTo('empresas')">🏢 Empresas</button>
+          <button class="nav-btn" onclick="goTo('clientes')">👤 Clientes</button>
+          <button class="nav-btn" onclick="goTo('vehiculos')">🚛 Vehículos</button>
+          <button class="nav-btn" onclick="goTo('conductores')">👥 Conductores</button>
+          <button class="nav-btn" onclick="goTo('alertas')">🔔 Alertas <span id="badge-alertas" class="badge b-err" style="margin-left:auto;font-size:10px;display:none"></span></button>
+        </div>
+      </div>
+
+      <div class="nav-group admin-only">
+        <button class="nav-group-hd" onclick="toggleNavGroup('admin')">
+          <span>Administración</span><span class="nav-group-arrow" id="arrow-admin">▾</span>
+        </button>
+        <div class="nav-group-body" id="group-admin">
+          <button class="nav-btn admin-only" onclick="goTo('paises')">🌎 Países</button>
+          <button class="nav-btn admin-only" onclick="goTo('usuarios')">👤 Usuarios</button>
+        </div>
+      </div>
     </nav>
     <div class="nav-footer">
       <button class="nav-btn" onclick="goTo('config')">⚙️ Configuración</button>
@@ -1336,6 +1372,7 @@ async function afterLogin(user){
   hideSplash();
   $('login-screen').classList.remove('show');
   $('app').classList.add('show');
+  restoreNavState();
   goTo('dashboard');
 }
 
@@ -3694,6 +3731,50 @@ async function crearUsuarioConductor(condId, nombre, email){
     if(!email) await db.from('conductores').update({email:emailUso}).eq('id',condId);
     toast(`✓ Usuario creado para ${nombre}`,'ok');
   }catch(e){toast('Error: '+e.message,'err');}
+}
+
+
+// ── SIDEBAR TOGGLE Y GRUPOS DESPLEGABLES ──────────────────────────────────
+function toggleSidebar(){
+  const sb=$('sidebar');
+  const btn=$('sidebar-toggle-btn');
+  if(!sb) return;
+  const collapsed=sb.classList.toggle('collapsed');
+  if(btn) btn.style.left=collapsed?'14px':'234px';
+  localStorage.setItem('fleetops_sidebar_collapsed', collapsed?'1':'0');
+}
+
+function toggleNavGroup(name){
+  const body=$('group-'+name);
+  const arrow=$('arrow-'+name);
+  if(!body) return;
+  const isCollapsed=body.classList.toggle('collapsed');
+  if(arrow) arrow.classList.toggle('closed', isCollapsed);
+  // Guardar estado
+  const saved=JSON.parse(localStorage.getItem('fleetops_nav_groups')||'{}');
+  saved[name]=isCollapsed;
+  localStorage.setItem('fleetops_nav_groups', JSON.stringify(saved));
+}
+
+function restoreNavState(){
+  // Restaurar sidebar colapsado
+  const sbCollapsed=localStorage.getItem('fleetops_sidebar_collapsed')==='1';
+  if(sbCollapsed){
+    const sb=$('sidebar');
+    const btn=$('sidebar-toggle-btn');
+    if(sb) sb.classList.add('collapsed');
+    if(btn) btn.style.left='14px';
+  }
+  // Restaurar grupos colapsados
+  const saved=JSON.parse(localStorage.getItem('fleetops_nav_groups')||'{}');
+  Object.keys(saved).forEach(name=>{
+    if(saved[name]){
+      const body=$('group-'+name);
+      const arrow=$('arrow-'+name);
+      if(body) body.classList.add('collapsed');
+      if(arrow) arrow.classList.add('closed');
+    }
+  });
 }
 
 // ── CONDUCTORES ───────────────────────────────────────────────────────────
