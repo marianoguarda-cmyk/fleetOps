@@ -375,6 +375,160 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
       <button class="submit-btn" id="submit-btn" onclick="guardarCheck()">Confirmar check del día</button>
     </div>
 
+    <!-- CHECK PERÚ -->
+    <div class="page" id="p-check-pe">
+      <div class="check-header">
+        <div class="ch-top">
+          <div>
+            <div class="ch-title">Check diario PE</div>
+            <div style="font-size:11px;opacity:.75;margin-top:2px">Checklist de distribución · Unidad y personal</div>
+          </div>
+          <div class="ch-hora" id="pe-ch-hora">⏱ --:--</div>
+        </div>
+        <div class="ch-selects">
+          <div class="ch-sel-wrap">
+            <div class="ch-sel-label">Empresa</div>
+            <select class="ch-sel" id="pe-sel-empresa" onchange="filtrarVehiculosPE(this.value)">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div class="ch-sel-wrap">
+            <div class="ch-sel-label">Vehículo *</div>
+            <select class="ch-sel" id="pe-sel-vehiculo" onchange="onPEVehChange(this.value)">
+              <option value="">Seleccioná</option>
+            </select>
+          </div>
+          <div class="ch-sel-wrap ch-sel-full">
+            <div class="ch-sel-label">Cliente</div>
+            <select class="ch-sel" id="pe-sel-cliente">
+              <option value="">Sin cliente</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="warn-nuevo" id="pe-warn-nuevo">
+        <div class="wn-title">⚠️ Vehículo en período de primeras cargas</div>
+        <div class="wn-sub" id="pe-warn-nuevo-sub"></div>
+      </div>
+
+      <div class="gps-card" id="pe-gps-card">
+        <div class="gps-title">
+          <span id="pe-gps-label">📍 GPS del vehículo</span>
+          <a id="pe-gps-maps-link" href="#" target="_blank" style="color:var(--blue);font-size:12px;display:none">Ver en Maps →</a>
+        </div>
+        <div class="gps-info" id="pe-gps-info">Seleccioná un vehículo</div>
+        <div class="ew-title" style="margin-top:8px">Estado GPS</div>
+        <div class="gps-chips">
+          <button class="echip" id="pe-chip-gps-ok" onclick="setPEChipGPS('ok')">✓ Verificado</button>
+          <button class="echip" id="pe-chip-gps-err" onclick="setPEChipGPS('err')">✕ Sin señal</button>
+        </div>
+      </div>
+
+      <!-- DOCUMENTACIÓN -->
+      <div class="check-section">
+        <div class="cs-title">📄 Documentación</div>
+        <div class="cs-input-row pe-row" data-key="soat">
+          <div class="cs-input-label">SOAT</div>
+          <div class="peon-row" style="margin-bottom:6px">
+            <button class="peon-opt" data-v="si" onclick="setPERadio('soat',this)">Sí</button>
+            <button class="peon-opt" data-v="no" onclick="setPERadio('soat',this)">No</button>
+            <button class="peon-opt" data-v="na" onclick="setPERadio('soat',this)">No aplica</button>
+          </div>
+          <input class="cs-input" id="pe-soat-com" placeholder="Comentario (opcional)">
+        </div>
+        <div class="cs-input-row pe-row" data-key="rtec">
+          <div class="cs-input-label">Revisión técnica</div>
+          <div class="peon-row" style="margin-bottom:6px">
+            <button class="peon-opt" data-v="si" onclick="setPERadio('rtec',this)">Sí</button>
+            <button class="peon-opt" data-v="no" onclick="setPERadio('rtec',this)">No</button>
+            <button class="peon-opt" data-v="na" onclick="setPERadio('rtec',this)">No aplica</button>
+          </div>
+          <input class="cs-input" id="pe-rtec-com" placeholder="Comentario (opcional)">
+        </div>
+        <div class="cs-input-row pe-row" data-key="lic">
+          <div class="cs-input-label">Licencia de conducir</div>
+          <div class="peon-row" style="margin-bottom:6px">
+            <button class="peon-opt" data-v="si" onclick="setPERadio('lic',this)">Sí</button>
+            <button class="peon-opt" data-v="no" onclick="setPERadio('lic',this)">No</button>
+            <button class="peon-opt" data-v="na" onclick="setPERadio('lic',this)">No aplica</button>
+          </div>
+          <input class="cs-input" id="pe-lic-com" placeholder="Comentario (opcional)">
+        </div>
+        <div class="cs-input-row pe-row" data-key="perm">
+          <div class="cs-input-label">Permiso de circulación</div>
+          <div class="peon-row" style="margin-bottom:6px">
+            <button class="peon-opt" data-v="si" onclick="setPERadio('perm',this)">Sí</button>
+            <button class="peon-opt" data-v="no" onclick="setPERadio('perm',this)">No</button>
+            <button class="peon-opt" data-v="na" onclick="setPERadio('perm',this)">No aplica</button>
+          </div>
+          <input class="cs-input" id="pe-perm-com" placeholder="Comentario (opcional)">
+        </div>
+      </div>
+
+      <!-- ESTADO MECÁNICO -->
+      <div class="check-section">
+        <div class="cs-title">🔧 Estado mecánico</div>
+        <div class="cs-input-row pe-row" data-key="comb"><div class="cs-input-label">Nivel de combustible adecuado</div><div class="peon-row" style="margin-bottom:6px"><button class="peon-opt" data-v="si" onclick="setPERadio('comb',this)">Sí</button><button class="peon-opt" data-v="no" onclick="setPERadio('comb',this)">No</button><button class="peon-opt" data-v="na" onclick="setPERadio('comb',this)">No aplica</button></div><input class="cs-input" id="pe-comb-com" placeholder="Comentario (opcional)"></div>
+        <div class="cs-input-row pe-row" data-key="aceite"><div class="cs-input-label">Nivel de aceite</div><div class="peon-row" style="margin-bottom:6px"><button class="peon-opt" data-v="si" onclick="setPERadio('aceite',this)">Sí</button><button class="peon-opt" data-v="no" onclick="setPERadio('aceite',this)">No</button><button class="peon-opt" data-v="na" onclick="setPERadio('aceite',this)">No aplica</button></div><input class="cs-input" id="pe-aceite-com" placeholder="Comentario (opcional)"></div>
+        <div class="cs-input-row pe-row" data-key="lfrenos"><div class="cs-input-label">Líquido de frenos</div><div class="peon-row" style="margin-bottom:6px"><button class="peon-opt" data-v="si" onclick="setPERadio('lfrenos',this)">Sí</button><button class="peon-opt" data-v="no" onclick="setPERadio('lfrenos',this)">No</button><button class="peon-opt" data-v="na" onclick="setPERadio('lfrenos',this)">No aplica</button></div><input class="cs-input" id="pe-lfrenos-com" placeholder="Comentario (opcional)"></div>
+        <div class="cs-input-row pe-row" data-key="luces"><div class="cs-input-label">Luces (altas, bajas, direccionales)</div><div class="peon-row" style="margin-bottom:6px"><button class="peon-opt" data-v="si" onclick="setPERadio('luces',this)">Sí</button><button class="peon-opt" data-v="no" onclick="setPERadio('luces',this)">No</button><button class="peon-opt" data-v="na" onclick="setPERadio('luces',this)">No aplica</button></div><input class="cs-input" id="pe-luces-com" placeholder="Comentario (opcional)"></div>
+        <div class="cs-input-row pe-row" data-key="bocina"><div class="cs-input-label">Bocina operativa</div><div class="peon-row" style="margin-bottom:6px"><button class="peon-opt" data-v="si" onclick="setPERadio('bocina',this)">Sí</button><button class="peon-opt" data-v="no" onclick="setPERadio('bocina',this)">No</button><button class="peon-opt" data-v="na" onclick="setPERadio('bocina',this)">No aplica</button></div><input class="cs-input" id="pe-bocina-com" placeholder="Comentario (opcional)"></div>
+        <div class="cs-input-row pe-row" data-key="frenos"><div class="cs-input-label">Frenos en buen estado</div><div class="peon-row" style="margin-bottom:6px"><button class="peon-opt" data-v="si" onclick="setPERadio('frenos',this)">Sí</button><button class="peon-opt" data-v="no" onclick="setPERadio('frenos',this)">No</button><button class="peon-opt" data-v="na" onclick="setPERadio('frenos',this)">No aplica</button></div><input class="cs-input" id="pe-frenos-com" placeholder="Comentario (opcional)"></div>
+        <div class="cs-input-row pe-row" data-key="neum"><div class="cs-input-label">Neumáticos con presión adecuada</div><div class="peon-row" style="margin-bottom:6px"><button class="peon-opt" data-v="si" onclick="setPERadio('neum',this)">Sí</button><button class="peon-opt" data-v="no" onclick="setPERadio('neum',this)">No</button><button class="peon-opt" data-v="na" onclick="setPERadio('neum',this)">No aplica</button></div><input class="cs-input" id="pe-neum-com" placeholder="Comentario (opcional)"></div>
+        <div class="cs-input-row pe-row" data-key="llanta"><div class="cs-input-label">Llanta de repuesto operativa</div><div class="peon-row" style="margin-bottom:6px"><button class="peon-opt" data-v="si" onclick="setPERadio('llanta',this)">Sí</button><button class="peon-opt" data-v="no" onclick="setPERadio('llanta',this)">No</button><button class="peon-opt" data-v="na" onclick="setPERadio('llanta',this)">No aplica</button></div><input class="cs-input" id="pe-llanta-com" placeholder="Comentario (opcional)"></div>
+        <div class="cs-input-row pe-row" data-key="kit"><div class="cs-input-label">Kit de herramientas</div><div class="peon-row" style="margin-bottom:6px"><button class="peon-opt" data-v="si" onclick="setPERadio('kit',this)">Sí</button><button class="peon-opt" data-v="no" onclick="setPERadio('kit',this)">No</button><button class="peon-opt" data-v="na" onclick="setPERadio('kit',this)">No aplica</button></div><input class="cs-input" id="pe-kit-com" placeholder="Comentario (opcional)"></div>
+      </div>
+
+      <!-- CONDICIONES E IMPLEMENTOS -->
+      <div class="check-section">
+        <div class="cs-title">🔒 Condiciones, implementos y seguridad</div>
+        <div class="cs-input-row pe-row" data-key="limp"><div class="cs-input-label">Unidad limpia (interior/exterior)</div><div class="peon-row" style="margin-bottom:6px"><button class="peon-opt" data-v="si" onclick="setPERadio('limp',this)">Sí</button><button class="peon-opt" data-v="no" onclick="setPERadio('limp',this)">No</button><button class="peon-opt" data-v="na" onclick="setPERadio('limp',this)">No aplica</button></div><input class="cs-input" id="pe-limp-com" placeholder="Comentario (opcional)"></div>
+        <div class="cs-input-row pe-row" data-key="areacarga"><div class="cs-input-label">Área de carga libre de residuos</div><div class="peon-row" style="margin-bottom:6px"><button class="peon-opt" data-v="si" onclick="setPERadio('areacarga',this)">Sí</button><button class="peon-opt" data-v="no" onclick="setPERadio('areacarga',this)">No</button><button class="peon-opt" data-v="na" onclick="setPERadio('areacarga',this)">No aplica</button></div><input class="cs-input" id="pe-areacarga-com" placeholder="Comentario (opcional)"></div>
+        <div class="cs-input-row pe-row" data-key="cand"><div class="cs-input-label">Candados, conos y tacos</div><div class="peon-row" style="margin-bottom:6px"><button class="peon-opt" data-v="si" onclick="setPERadio('cand',this)">Sí</button><button class="peon-opt" data-v="no" onclick="setPERadio('cand',this)">No</button><button class="peon-opt" data-v="na" onclick="setPERadio('cand',this)">No aplica</button></div><input class="cs-input" id="pe-cand-com" placeholder="Comentario (opcional)"></div>
+        <div class="cs-input-row pe-row" data-key="carr"><div class="cs-input-label">Carretilla</div><div class="peon-row" style="margin-bottom:6px"><button class="peon-opt" data-v="si" onclick="setPERadio('carr',this)">Sí</button><button class="peon-opt" data-v="no" onclick="setPERadio('carr',this)">No</button><button class="peon-opt" data-v="na" onclick="setPERadio('carr',this)">No aplica</button></div><input class="cs-input" id="pe-carr-com" placeholder="Comentario (opcional)"></div>
+        <div class="cs-input-row pe-row" data-key="film"><div class="cs-input-label">Film, cutter y wincha</div><div class="peon-row" style="margin-bottom:6px"><button class="peon-opt" data-v="si" onclick="setPERadio('film',this)">Sí</button><button class="peon-opt" data-v="no" onclick="setPERadio('film',this)">No</button><button class="peon-opt" data-v="na" onclick="setPERadio('film',this)">No aplica</button></div><input class="cs-input" id="pe-film-com" placeholder="Comentario (opcional)"></div>
+      </div>
+
+      <!-- PERSONAL -->
+      <div class="check-section">
+        <div class="cs-title">👷 Personal</div>
+        <div class="cs-input-row pe-row" data-key="pcomp"><div class="cs-input-label">Personal completo</div><div class="peon-row" style="margin-bottom:6px"><button class="peon-opt" data-v="si" onclick="setPERadio('pcomp',this)">Sí</button><button class="peon-opt" data-v="no" onclick="setPERadio('pcomp',this)">No</button><button class="peon-opt" data-v="na" onclick="setPERadio('pcomp',this)">No aplica</button></div><input class="cs-input" id="pe-pcomp-com" placeholder="Comentario (opcional)"></div>
+        <div class="cs-input-row pe-row" data-key="cred"><div class="cs-input-label">Credencial laboral</div><div class="peon-row" style="margin-bottom:6px"><button class="peon-opt" data-v="si" onclick="setPERadio('cred',this)">Sí</button><button class="peon-opt" data-v="no" onclick="setPERadio('cred',this)">No</button><button class="peon-opt" data-v="na" onclick="setPERadio('cred',this)">No aplica</button></div><input class="cs-input" id="pe-cred-com" placeholder="Comentario (opcional)"></div>
+        <div class="cs-input-row pe-row" data-key="pant"><div class="cs-input-label">Pantalón jean limpio</div><div class="peon-row" style="margin-bottom:6px"><button class="peon-opt" data-v="si" onclick="setPERadio('pant',this)">Sí</button><button class="peon-opt" data-v="no" onclick="setPERadio('pant',this)">No</button><button class="peon-opt" data-v="na" onclick="setPERadio('pant',this)">No aplica</button></div><input class="cs-input" id="pe-pant-com" placeholder="Comentario (opcional)"></div>
+        <div class="cs-input-row pe-row" data-key="epp"><div class="cs-input-label">EPP's (Casco, chaleco, guantes y zapatos)</div><div class="peon-row" style="margin-bottom:6px"><button class="peon-opt" data-v="si" onclick="setPERadio('epp',this)">Sí</button><button class="peon-opt" data-v="no" onclick="setPERadio('epp',this)">No</button><button class="peon-opt" data-v="na" onclick="setPERadio('epp',this)">No aplica</button></div><input class="cs-input" id="pe-epp-com" placeholder="Comentario (opcional)"></div>
+      </div>
+
+      <!-- PEÓN -->
+      <div class="peon-wrap">
+        <div class="peon-title">👷 ¿Sale con peón?</div>
+        <div class="peon-row">
+          <button class="peon-opt active" id="pe-peon-no" onclick="setPEPeon(false)">No</button>
+          <button class="peon-opt" id="pe-peon-si" onclick="setPEPeon(true)">Sí</button>
+        </div>
+        <div id="pe-peon-nombre-wrap" style="display:none">
+          <input class="cs-input" id="pe-peon-nombre" type="text" placeholder="Nombre del peón">
+        </div>
+      </div>
+
+      <!-- FOTOS -->
+      <div class="fotos-wrap">
+        <div class="fotos-title">📷 Fotos de novedades</div>
+        <div class="fotos-grid" id="pe-fotos-grid"></div>
+        <button class="add-foto" onclick="document.getElementById('pe-foto-input').click()">
+          <span style="font-size:20px">📷</span> Sacar foto
+        </button>
+      </div>
+
+      <!-- OBS -->
+      <div class="obs-wrap">
+        <div class="obs-label">📝 Observaciones</div>
+        <textarea class="obs-input" id="pe-obs" placeholder="Novedades o comentarios..."></textarea>
+      </div>
+
+      <button class="submit-btn" id="pe-submit-btn" onclick="guardarCheckPEOp()">Confirmar checklist</button>
+    </div>
+
     <!-- LIQUIDACIÓN -->
     <div class="page" id="p-liquidacion">
       <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
@@ -491,6 +645,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
 </div>
 
 <input type="file" accept="image/*" capture="environment" id="foto-input" style="display:none" onchange="handleFoto(event)">
+<input type="file" accept="image/*" capture="environment" id="pe-foto-input" style="display:none" onchange="handlePEFoto(event)">
 <div id="toast" style="position:fixed;bottom:calc(var(--safe-bottom)+80px);left:50%;transform:translateX(-50%) translateY(20px);background:#1a1a18;color:white;padding:11px 18px;border-radius:30px;font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center"></div>
 
 <script>
@@ -642,7 +797,14 @@ async function afterLogin(user){
     CP.pais_id = user.user_metadata.pais_id;
   }
   setupUI();
-  await loadData();
+  await cargarPaisesCacheOp();
+  if(esPeruOp()){
+    await initCheckPEOp();
+    $('p-check').classList.remove('active');
+    $('p-check-pe').classList.add('active');
+  } else {
+    await loadData();
+  }
   iniciarReloj();
   await abrirIDB().catch(()=>{});
   if(!navigator.onLine) mostrarConexion(false);
@@ -998,7 +1160,16 @@ function initMapa(){
 function goPage(p){
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));
-  $('p-'+p).classList.add('active');
+  if(p==='check'){
+    if(esPeruOp()){
+      $('p-check-pe').classList.add('active');
+      initCheckPEOp();
+    } else {
+      $('p-check').classList.add('active');
+    }
+  } else {
+    $('p-'+p).classList.add('active');
+  }
   $('tab-'+p).classList.add('active');
   if(p==='historial') loadHistorial();
   if(p==='mapa') initMapa();
@@ -1009,6 +1180,293 @@ function showSheet(){$('ov-sheet').classList.add('show')}
 function closeSheet(){$('ov-sheet').classList.remove('show')}
 
 
+
+
+// ── CHECK PERÚ (operador) ─────────────────────────────────────────────────
+let PAISES_CACHE_OP = [];
+let PE_VEH_CACHE_OP = {};
+let PE_RAST_OP = [];
+let PE_GPS_LIVE_OP = [];
+let PE_RADIOS = {};
+let PE_PEON_ACTIVO = false;
+let PE_GPS_ESTADO_OP = null;
+let PE_FOTOS_OP = [];
+
+function esPeruOp(){
+  const paisId = CP?.pais_id || null;
+  if(!paisId) return false;
+  const pe = PAISES_CACHE_OP.find(p => p.codigo === 'PE');
+  return !!(pe && paisId === pe.id);
+}
+
+async function cargarPaisesCacheOp(){
+  if(PAISES_CACHE_OP.length) return;
+  const{data} = await db.from('paises').select('*');
+  PAISES_CACHE_OP = data || [];
+}
+
+function tickPEReloj(){
+  const el = $('pe-ch-hora');
+  if(el) el.textContent = '⏱ ' + new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(tickPEReloj, 1000);
+
+async function initCheckPEOp(){
+  tickPEReloj();
+  const paisId = CP?.pais_id || null;
+  let qv = db.from('vehiculos').select('*').eq('activo', true);
+  if(paisId) qv = qv.eq('pais_id', paisId);
+  const{data:vehs} = await qv.order('patente');
+  PE_VEH_CACHE_OP = {}; (vehs||[]).forEach(v => PE_VEH_CACHE_OP[v.id] = v);
+
+  let qe = db.from('empresas').select('id,nombre').eq('activo', true);
+  if(paisId) qe = qe.eq('pais_id', paisId);
+  const{data:emps} = await qe.order('nombre');
+  const se = $('pe-sel-empresa');
+  if(se) se.innerHTML = '<option value="">Todas las empresas</option>' + (emps||[]).map(e=>`<option value="${e.id}">${e.nombre}</option>`).join('');
+
+  llenarVehiculosPEOp(vehs||[]);
+
+  let qc = db.from('clientes').select('id,nombre').eq('activo', true);
+  if(paisId) qc = qc.eq('pais_id', paisId);
+  const{data:clis} = await qc.order('nombre');
+  const sc = $('pe-sel-cliente');
+  if(sc) sc.innerHTML = '<option value="">Sin cliente</option>' + (clis||[]).map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+
+  let qr = db.from('rastreadores').select('*').eq('activo', true);
+  if(paisId) qr = qr.eq('pais_id', paisId);
+  const{data:rasts} = await qr;
+  PE_RAST_OP = rasts || [];
+
+  try{
+    const res = await fetch('/api/gps/transmissions');
+    const json = await res.json();
+    if(json.success) PE_GPS_LIVE_OP = json.data || [];
+  }catch(e){ PE_GPS_LIVE_OP = []; }
+}
+
+function llenarVehiculosPEOp(lista){
+  const sv = $('pe-sel-vehiculo');
+  if(!sv) return;
+  sv.innerHTML = '<option value="">Seleccioná vehículo</option>' + lista.map(v=>`<option value="${v.id}">${v.patente} — ${v.marca} ${v.modelo}</option>`).join('');
+}
+
+function filtrarVehiculosPE(empId){
+  const todos = Object.values(PE_VEH_CACHE_OP);
+  const filtrados = empId ? todos.filter(v=>v.empresa_id===empId) : todos;
+  llenarVehiculosPEOp(filtrados);
+}
+
+function onPEVehChange(vid){
+  const v = PE_VEH_CACHE_OP[vid];
+  const wn = $('pe-warn-nuevo');
+  if(v?.created_at){
+    const dias = Math.floor((new Date()-new Date(v.created_at))/86400000);
+    if(dias<=15){
+      wn.style.display = 'block';
+      $('pe-warn-nuevo-sub').textContent = `Dado de alta hace ${dias} días. Quedan ${15-dias} días de seguimiento especial.`;
+    } else wn.style.display = 'none';
+  } else wn.style.display = 'none';
+
+  const gc = $('pe-gps-card');
+  if(vid){
+    gc.style.display = 'block';
+    const rast = PE_RAST_OP.find(r=>r.vehiculo_id===vid);
+    const gpsLive = rast ? PE_GPS_LIVE_OP.find(g=>g.gps_gid===rast.gps_gid) : null;
+    if(rast && gpsLive){
+      $('pe-gps-label').textContent = '🛰 ' + (rast.nombre || rast.gps_id_dispositivo || 'Rastreador');
+      const vel = gpsLive.gps_speed || 0;
+      const ts = gpsLive.gps_tstamp ? new Date(gpsLive.gps_tstamp) : null;
+      const mins = ts ? Math.round((new Date()-ts)/60000) : 999;
+      const estado = mins>30 ? '🔴 Sin reporte' : vel>0 ? `🟢 En ruta · ${vel} km/h` : '🟡 Detenido';
+      $('pe-gps-info').textContent = estado + (gpsLive.gps_ubicacion ? ' · '+gpsLive.gps_ubicacion : '');
+      if(gpsLive.gps_latitud && gpsLive.gps_longitud){
+        const lnk = $('pe-gps-maps-link');
+        lnk.href = `https://maps.google.com/?q=${gpsLive.gps_latitud},${gpsLive.gps_longitud}`;
+        lnk.style.display = 'inline';
+      }
+    } else if(v?.nombre_empresa_gps){
+      $('pe-gps-label').textContent = '📍 ' + (v.nombre_empresa_gps||'GPS');
+      $('pe-gps-info').textContent = v.link_gps ? 'Toca Ver en Maps →' : 'Sin datos en vivo';
+      if(v.link_gps){ const lnk=$('pe-gps-maps-link'); lnk.href=v.link_gps; lnk.style.display='inline'; lnk.textContent='Abrir portal →'; }
+    } else {
+      $('pe-gps-label').textContent = '📍 GPS';
+      $('pe-gps-info').textContent = 'Sin rastreador asignado a este vehículo';
+      $('pe-gps-maps-link').style.display = 'none';
+    }
+  } else {
+    gc.style.display = 'none';
+  }
+  PE_GPS_ESTADO_OP = null;
+  ['pe-chip-gps-ok','pe-chip-gps-err'].forEach(id=>{ const el=$(id); if(el) el.className='echip'; });
+}
+
+function setPEChipGPS(val){
+  PE_GPS_ESTADO_OP = val;
+  $('pe-chip-gps-ok').className = 'echip' + (val==='ok' ? ' s-ok' : '');
+  $('pe-chip-gps-err').className = 'echip' + (val==='err' ? ' s-err' : '');
+}
+
+function setPERadio(key, el){
+  document.querySelectorAll(`.pe-row[data-key="${key}"] .peon-opt`).forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  PE_RADIOS[key] = el.dataset.v;
+}
+
+function setPEPeon(activo){
+  PE_PEON_ACTIVO = activo;
+  $('pe-peon-si').className = 'peon-opt' + (activo ? ' active' : '');
+  $('pe-peon-no').className = 'peon-opt' + (!activo ? ' active' : '');
+  $('pe-peon-nombre-wrap').style.display = activo ? 'block' : 'none';
+}
+
+function handlePEFoto(e){
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX=900; let w=img.width,h=img.height;
+      if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+      canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      PE_FOTOS_OP.push(canvas.toDataURL('image/jpeg',.72));
+      renderPEFotosOp(); toast('📷 Foto agregada');
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file); e.target.value='';
+}
+
+function renderPEFotosOp(){
+  const g = $('pe-fotos-grid');
+  g.innerHTML = PE_FOTOS_OP.map((f,i)=>`
+    <div class="foto-thumb">
+      <img src="${f}">
+      <button class="foto-del" onclick="PE_FOTOS_OP.splice(${i},1);renderPEFotosOp()">✕</button>
+    </div>`).join('');
+}
+
+async function guardarCheckPEOp(){
+  const vid = $('pe-sel-vehiculo').value;
+  if(!vid){ toast('⚠ Seleccioná un vehículo'); return; }
+
+  const requeridos = ['soat','rtec','lic','perm','comb','aceite','lfrenos','luces','bocina','frenos','neum','llanta','kit','limp','areacarga','cand','carr','film','pcomp','cred','pant','epp'];
+  const faltantes = requeridos.filter(k => !PE_RADIOS[k]);
+  if(faltantes.length){ toast('⚠ Completá todos los items del checklist'); return; }
+
+  const btn = $('pe-submit-btn');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+
+  const fotosUrls = [];
+  for(let i=0; i<PE_FOTOS_OP.length; i++){
+    try{
+      const blob = await (await fetch(PE_FOTOS_OP[i])).blob();
+      const fname = `checks/${vid}/pe_${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+      const{error} = await db.storage.from('fleet-fotos').upload(fname, blob, {contentType:'image/jpeg', upsert:true});
+      if(!error){ const{data:url} = db.storage.from('fleet-fotos').getPublicUrl(fname); fotosUrls.push(url.publicUrl); }
+    }catch(e){}
+  }
+
+  const v = PE_VEH_CACHE_OP[vid];
+  const rast = PE_RAST_OP.find(r=>r.vehiculo_id===vid);
+
+  const todos = [PE_RADIOS.soat, PE_RADIOS.rtec, PE_RADIOS.lic, PE_RADIOS.perm, PE_RADIOS.comb, PE_RADIOS.aceite, PE_RADIOS.luces, PE_RADIOS.frenos, PE_RADIOS.pcomp, PE_RADIOS.epp];
+  const ef = todos.includes('no') ? 'warn' : 'ok';
+
+  const checkData = {
+    vehiculo_id: vid,
+    pais_id: CP?.pais_id || null,
+    fecha: new Date().toISOString().split('T')[0],
+    hora_check: new Date().toTimeString().slice(0,8),
+    tipo_check: 'peru',
+    estado_final: ef,
+    doc_soat: PE_RADIOS.soat,
+    doc_revision_tecnica: PE_RADIOS.rtec,
+    doc_chofer_estado: PE_RADIOS.lic,
+    doc_permiso_circulacion: PE_RADIOS.perm,
+    mec_combustible: PE_RADIOS.comb,
+    mec_aceite: PE_RADIOS.aceite,
+    mec_liquido_frenos: PE_RADIOS.lfrenos,
+    mec_luces: PE_RADIOS.luces,
+    mec_bocina: PE_RADIOS.bocina,
+    mec_frenos: PE_RADIOS.frenos,
+    mec_neumaticos: PE_RADIOS.neum,
+    mec_llanta_repuesto: PE_RADIOS.llanta,
+    mec_kit_herramientas: PE_RADIOS.kit,
+    cond_limpieza: PE_RADIOS.limp,
+    cond_area_carga: PE_RADIOS.areacarga,
+    cond_candados: PE_RADIOS.cand,
+    cond_carretilla: PE_RADIOS.carr,
+    cond_film: PE_RADIOS.film,
+    pers_completo: PE_RADIOS.pcomp,
+    pers_credencial: PE_RADIOS.cred,
+    pers_pantalon: PE_RADIOS.pant,
+    pers_epp: PE_RADIOS.epp,
+    comentarios_check: {
+      soat: $('pe-soat-com')?.value || null,
+      rtec: $('pe-rtec-com')?.value || null,
+      lic: $('pe-lic-com')?.value || null,
+      perm: $('pe-perm-com')?.value || null,
+      comb: $('pe-comb-com')?.value || null,
+      aceite: $('pe-aceite-com')?.value || null,
+      lfrenos: $('pe-lfrenos-com')?.value || null,
+      luces: $('pe-luces-com')?.value || null,
+      bocina: $('pe-bocina-com')?.value || null,
+      frenos: $('pe-frenos-com')?.value || null,
+      neum: $('pe-neum-com')?.value || null,
+      llanta: $('pe-llanta-com')?.value || null,
+      kit: $('pe-kit-com')?.value || null,
+      limp: $('pe-limp-com')?.value || null,
+      carga: $('pe-areacarga-com')?.value || null,
+      cand: $('pe-cand-com')?.value || null,
+      carr: $('pe-carr-com')?.value || null,
+      film: $('pe-film-com')?.value || null,
+      pcomp: $('pe-pcomp-com')?.value || null,
+      cred: $('pe-cred-com')?.value || null,
+      pant: $('pe-pant-com')?.value || null,
+      epp: $('pe-epp-com')?.value || null,
+    },
+    vehiculo_ok: true,
+    vehiculo_estado: 'ok',
+    carga_ok: true,
+    carga_estado: 'ok',
+    doc_chofer_ok: PE_RADIOS.lic === 'si',
+    gps_estado: PE_GPS_ESTADO_OP || null,
+    rastreador_gid: rast?.gps_gid || null,
+    rastreador_nombre: rast?.nombre || rast?.gps_id_dispositivo || null,
+    link_gps_check: v?.link_gps || null,
+    empresa_gps: v?.nombre_empresa_gps || null,
+    sale_con_peon: PE_PEON_ACTIVO,
+    nombre_peon: PE_PEON_ACTIVO ? ($('pe-peon-nombre').value.trim() || null) : null,
+    cliente_id: $('pe-sel-cliente')?.value || null,
+    observaciones: $('pe-obs').value.trim() || null,
+    registrado_por: CP?.nombre || CU?.email,
+    fotos: fotosUrls.length ? fotosUrls : null,
+  };
+
+  if(estaOnline){
+    const{error} = await db.from('checks_diarios').insert(checkData);
+    if(error){ btn.disabled=false; btn.textContent='Confirmar checklist'; toast('Error: '+error.message); return; }
+  } else {
+    await guardarCheckLocal(checkData);
+    toast('⏳ Guardado localmente — se sincronizará al recuperar conexión');
+  }
+
+  // Reset
+  PE_RADIOS = {}; PE_FOTOS_OP = []; PE_PEON_ACTIVO = false; PE_GPS_ESTADO_OP = null;
+  document.querySelectorAll('#p-check-pe .peon-opt').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#p-check-pe input[type=text]').forEach(i=>i.value='');
+  $('pe-obs').value = '';
+  renderPEFotosOp();
+  setPEPeon(false);
+  $('pe-sel-vehiculo').value = '';
+  onPEVehChange('');
+
+  toast(ef==='ok' ? '✅ Checklist OK' : '⚠️ Checklist con observación');
+  btn.disabled = false; btn.textContent = 'Confirmar checklist';
+}
 
 // ── NUEVA PLANILLA (conductor crea, NO puede liquidar) ───────────────────
 async function opAbrirNuevaPlanilla(){
