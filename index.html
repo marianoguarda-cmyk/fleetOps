@@ -946,17 +946,22 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
       <div class="fg"><label class="fl">Nombre completo</label><input type="text" id="mc-nombre" placeholder="Juan Pérez"></div>
       <div class="fg"><label class="fl">DNI</label><input type="text" id="mc-dni"></div>
       <div class="fg"><label class="fl">Teléfono</label><input type="text" id="mc-tel"></div>
-      <div class="fg"><label class="fl">Email</label><input type="email" id="mc-email" placeholder="conductor@empresa.com" oninput="$('mc-pass-wrap').style.display=this.value?'block':'none'"></div>
+      <div class="fg"><label class="fl">Email</label><input type="email" id="mc-email" placeholder="conductor@empresa.com"></div>
     </div>
-    <!-- Acceso a la plataforma -->
-    <div class="form-section">Acceso a la plataforma</div>
-    <div id="mc-pass-wrap" style="display:none;background:var(--blue-light);border:1px solid var(--blue);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px">
-      <div style="font-size:12px;color:var(--blue);margin-bottom:8px;font-weight:600">🔐 El conductor podrá iniciar sesión en la app con el email ingresado</div>
-      <div class="fg" style="margin-bottom:8px">
-        <label class="fl">Contraseña de acceso *</label>
-        <input type="password" id="mc-pass" placeholder="Mínimo 6 caracteres" style="width:100%;padding:9px;border:1.5px solid var(--blue);border-radius:var(--radius-sm);font-size:14px;font-family:inherit">
+    <!-- Acceso a la plataforma (solo al crear) -->
+    <div id="mc-pass-section" style="display:block">
+      <div class="form-section">Acceso a la plataforma</div>
+      <div id="mc-pass-wrap" style="background:var(--blue-light);border:1px solid var(--blue);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px">
+        <div style="font-size:12px;color:var(--blue);margin-bottom:8px;font-weight:600">🔐 Si ingresás un email y una contraseña, el conductor podrá iniciar sesión en la app</div>
+        <div class="fg" style="margin-bottom:8px">
+          <label class="fl">Contraseña de acceso (opcional)</label>
+          <input type="password" id="mc-pass" placeholder="Mínimo 6 caracteres" style="width:100%;padding:9px;border:1.5px solid var(--blue);border-radius:var(--radius-sm);font-size:14px;font-family:inherit">
+        </div>
+        <div style="font-size:11px;color:var(--text2)">Solo tendrá acceso a Check diario y Liquidación.</div>
       </div>
-      <div style="font-size:11px;color:var(--text2)">Solo tendrá acceso a Check diario y Liquidación.</div>
+    </div>
+    <div id="mc-pass-edit-note" style="display:none;background:var(--bg3);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:10px;font-size:12px;color:var(--text2)">
+      🔐 El acceso a la plataforma se configura solo al crear el conductor. Para cambiar la contraseña, usá la sección de Usuarios.
     </div>
     <div class="form-section">Licencia y habilitaciones</div>
     <div class="form-grid">
@@ -3798,9 +3803,7 @@ async function guardarConductor(){
   closeModal('conductor');
   $('mc-id').value='';
   $('mc-title').textContent='Nuevo conductor';
-  // Reset pass field
   if($('mc-pass')) $('mc-pass').value='';
-  if($('mc-pass-wrap')) $('mc-pass-wrap').style.display='none';
   loadConductores();
 }
 
@@ -3974,7 +3977,11 @@ async function openModal(id){
     if(!isEditCond){
       $('mc-title').textContent='Nuevo conductor';
       ['mc-nombre','mc-dni','mc-tel','mc-email','mc-licencia','mc-venc-lic','mc-venc-lib','mc-venc-psico'].forEach(f=>$(f).value='');
+      if($('mc-pass')) $('mc-pass').value='';
     }
+    // Mostrar sección de contraseña solo al crear, nota informativa al editar
+    if($('mc-pass-section')) $('mc-pass-section').style.display = isEditCond ? 'none' : 'block';
+    if($('mc-pass-edit-note')) $('mc-pass-edit-note').style.display = isEditCond ? 'block' : 'none';
     if(!EMPRESAS_CACHE.length){const{data}=await db.from('empresas').select('id,nombre').order('nombre');EMPRESAS_CACHE=data||[];}
     $('mc-empresa').innerHTML='<option value="">Sin empresa</option>'+EMPRESAS_CACHE.map(e=>`<option value="${e.id}">${e.nombre}</option>`).join('');
   }
