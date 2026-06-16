@@ -149,8 +149,14 @@ app.post('/api/crear-usuario', async (req, res) => {
   }
 });
 
-app.get('/operador', (req, res) => res.sendFile(path.join(__dirname, 'operador.html')));
-app.get('/operador.html', (req, res) => res.sendFile(path.join(__dirname, 'operador.html')));
+app.get('/operador', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(__dirname, 'operador.html'));
+});
+app.get('/operador.html', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(__dirname, 'operador.html'));
+});
 app.get('/sw.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-cache');

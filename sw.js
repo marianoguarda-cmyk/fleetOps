@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fleetops-v1';
+const CACHE_NAME = 'fleetops-v2';
 const SYNC_TAG = 'sync-checks';
 
 // Archivos a cachear para funcionar offline
