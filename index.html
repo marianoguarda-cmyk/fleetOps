@@ -3873,6 +3873,12 @@ function restoreNavState(){
 // DASHBOARD — GRÁFICOS Y FILTROS
 // ══════════════════════════════════════════════════════════════════════════
 let DASH_CHARTS = {};
+function fdCorto(fechaStr){
+  const d=new Date(fechaStr+'T12:00:00');
+  const dia=d.toLocaleDateString('es-AR',{weekday:'short'}).replace('.','');
+  const dm=d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'});
+  return dia.charAt(0).toUpperCase()+dia.slice(1)+' '+dm;
+}
 let DASH_FILTROS_CARGADOS = false;
 
 async function initDashboardFiltros(){
@@ -3939,7 +3945,7 @@ async function loadDashboardGraficos(){
   if(ctx1){
     DASH_CHARTS['chart-cumplimiento']=new Chart(ctx1,{
       type:'line',
-      data:{labels:fechas.map(f=>f.slice(5)),datasets:[{
+      data:{labels:fechas.map(f=>fdCorto(f)),datasets:[{
         label:'Cumplimiento %',data:cumplimientoData,
         borderColor:'#185FA5',backgroundColor:'rgba(24,95,165,.1)',
         tension:.3,fill:true,pointRadius:2,spanGaps:true
@@ -3956,7 +3962,7 @@ async function loadDashboardGraficos(){
   if(ctx2){
     DASH_CHARTS['chart-estados']=new Chart(ctx2,{
       type:'bar',
-      data:{labels:fechas.map(f=>f.slice(5)),datasets:[
+      data:{labels:fechas.map(f=>fdCorto(f)),datasets:[
         {label:'OK',data:fechas.map(f=>estadosPorFecha[f]?.ok||0),backgroundColor:'#3B6D11'},
         {label:'Obs.',data:fechas.map(f=>estadosPorFecha[f]?.warn||0),backgroundColor:'#EF9F27'},
         {label:'Error',data:fechas.map(f=>estadosPorFecha[f]?.err||0),backgroundColor:'#A32D2D'}
@@ -3991,7 +3997,7 @@ async function loadDashboardGraficos(){
   if(ctx3){
     DASH_CHARTS['chart-liquidacion']=new Chart(ctx3,{
       type:'bar',
-      data:{labels:fechas.map(f=>f.slice(5)),datasets:[
+      data:{labels:fechas.map(f=>fdCorto(f)),datasets:[
         {label:'Esperado',data:fechas.map(f=>esperadoPorFecha[f]),backgroundColor:'rgba(24,95,165,.35)'},
         {label:'Cobrado',data:fechas.map(f=>cobradoPorFecha[f]),backgroundColor:'#185FA5'}
       ]},
@@ -4008,7 +4014,7 @@ async function loadDashboardGraficos(){
     const diffData=fechas.map(f=>difPorFecha[f]);
     DASH_CHARTS['chart-diferencias']=new Chart(ctx4,{
       type:'bar',
-      data:{labels:fechas.map(f=>f.slice(5)),datasets:[{
+      data:{labels:fechas.map(f=>fdCorto(f)),datasets:[{
         label:'Diferencia',data:diffData,
         backgroundColor:diffData.map(v=>v<0?'#A32D2D':v>0?'#EF9F27':'#3B6D11')
       }]},
@@ -4051,15 +4057,31 @@ async function loadDashboardGraficos(){
     });
   }
 
-  // Top conductores — desde checks_diarios.registrado_por (nombre)
-  let qActC=withPais(db.from('checks_diarios').select('registrado_por,cliente_id,vehiculo_id').gte('fecha',desdeStr));
+  // Top conductores — vincular cada check al conductor asignado al vehículo (no a quien lo registró)
+  let qActC=withPais(db.from('checks_diarios').select('cliente_id,vehiculo_id').gte('fecha',desdeStr));
   if(clienteId) qActC=qActC.eq('cliente_id',clienteId);
   if(vehiculoId) qActC=qActC.eq('vehiculo_id',vehiculoId);
   const{data:actCData}=await qActC;
+  let checksParaCond=actCData||[];
+  if(empresaId){
+    const{data:vehsFiltered2}=await withPais(db.from('vehiculos').select('id').eq('empresa_id',empresaId));
+    const idsPermitidos2=new Set((vehsFiltered2||[]).map(v=>v.id));
+    checksParaCond=checksParaCond.filter(c=>idsPermitidos2.has(c.vehiculo_id));
+  }
+  // Mapa vehiculo_id -> conductor (el conductor activo asignado a ese vehículo)
+  let qCondVeh=withPais(db.from('conductores').select('id,nombre,vehiculo_id').eq('activo',true));
+  if(conductorId) qCondVeh=qCondVeh.eq('id',conductorId);
+  const{data:condsData}=await qCondVeh;
+  const condPorVehiculo={};
+  (condsData||[]).forEach(c=>{ if(c.vehiculo_id) condPorVehiculo[c.vehiculo_id]=c.nombre; });
+  const idsCondPermitidos=conductorId?new Set((condsData||[]).map(c=>c.id)):null;
+
   const countByCond={};
-  (actCData||[]).forEach(c=>{
-    const nom=c.registrado_por||'—';
-    countByCond[nom]=(countByCond[nom]||0)+1;
+  checksParaCond.forEach(c=>{
+    const nombreCond=condPorVehiculo[c.vehiculo_id];
+    if(!nombreCond) return; // sin conductor asignado a ese vehículo
+    if(conductorId && !condPorVehiculo[c.vehiculo_id]) return;
+    countByCond[nombreCond]=(countByCond[nombreCond]||0)+1;
   });
   const topCond=Object.entries(countByCond).sort((a,b)=>b[1]-a[1]).slice(0,10);
 
