@@ -168,6 +168,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 .btn-danger{background:var(--red-light);color:var(--red);border:1px solid #F09595}
 #sat-map{z-index:1}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -332,7 +333,80 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
           </div>
         </div>
 
-        <div class="g2 mb">
+
+        <!-- FILTROS + GRÁFICOS -->
+        <div class="card mb">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <span>📈 Análisis y tendencias</span>
+            <select id="dash-rango" onchange="loadDashboardGraficos()" style="font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:20px;background:var(--bg2)">
+              <option value="7">Últimos 7 días</option>
+              <option value="14">Últimos 14 días</option>
+              <option value="30" selected>Últimos 30 días</option>
+              <option value="90">Últimos 90 días</option>
+            </select>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+            <div class="fg">
+              <label class="fl">Empresa</label>
+              <select id="dash-f-empresa" onchange="loadDashboardGraficos()" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--bg)">
+                <option value="">Todas</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label class="fl">Cliente</label>
+              <select id="dash-f-cliente" onchange="loadDashboardGraficos()" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--bg)">
+                <option value="">Todos</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label class="fl">Vehículo</label>
+              <select id="dash-f-vehiculo" onchange="loadDashboardGraficos()" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--bg)">
+                <option value="">Todos</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label class="fl">Conductor</label>
+              <select id="dash-f-conductor" onchange="loadDashboardGraficos()" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--bg)">
+                <option value="">Todos</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="g2 mb" style="margin-bottom:16px">
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Cumplimiento de checks por día (%)</div>
+              <div style="position:relative;height:220px"><canvas id="chart-cumplimiento"></canvas></div>
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Estados de check por día</div>
+              <div style="position:relative;height:220px"><canvas id="chart-estados"></canvas></div>
+            </div>
+          </div>
+
+          <div class="g2 mb" style="margin-bottom:16px">
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Liquidaciones: cobrado vs esperado por día ($)</div>
+              <div style="position:relative;height:220px"><canvas id="chart-liquidacion"></canvas></div>
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Diferencias de liquidación por día ($)</div>
+              <div style="position:relative;height:220px"><canvas id="chart-diferencias"></canvas></div>
+            </div>
+          </div>
+
+          <div class="g2">
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Top 10 vehículos por cantidad de checks</div>
+              <div style="position:relative;height:260px"><canvas id="chart-top-vehiculos"></canvas></div>
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Top 10 conductores por cantidad de checks</div>
+              <div style="position:relative;height:260px"><canvas id="chart-top-conductores"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+                <div class="g2 mb">
           <div class="card"><div class="card-title">🚛 Flota reciente</div><div id="d-fleet-list"><div class="loader"><div class="spin"></div>Cargando...</div></div></div>
           <div class="card"><div class="card-title">🔔 Alertas recientes</div><div id="d-alerts-list"><div class="loader"><div class="spin"></div>Cargando...</div></div></div>
         </div>
@@ -1556,6 +1630,9 @@ async function loadDashboard(){
   const al=$('d-alerts-list');
   if(!alts?.length){al.innerHTML='<div class="empty" style="color:var(--green)">✓ Sin alertas activas</div>';return}
   al.innerHTML=alts.slice(0,5).map(a=>`<div class="alert-row"><div class="alert-dot ${a.nivel==='err'?'d-err':'d-warn'}"></div><div><div style="font-size:13px">${a.descripcion}</div><div style="font-size:11px;color:var(--text2)">${a.dias_restantes<0?`Venció hace ${Math.abs(a.dias_restantes)} días`:a.dias_restantes+' días restantes'}</div></div></div>`).join('');
+  // Cargar filtros y gráficos del dashboard
+  await initDashboardFiltros();
+  await loadDashboardGraficos();
 }
 
 // VEHICULOS
@@ -3789,6 +3866,216 @@ function restoreNavState(){
       if(arrow) arrow.classList.add('closed');
     }
   });
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════
+// DASHBOARD — GRÁFICOS Y FILTROS
+// ══════════════════════════════════════════════════════════════════════════
+let DASH_CHARTS = {};
+let DASH_FILTROS_CARGADOS = false;
+
+async function initDashboardFiltros(){
+  if(DASH_FILTROS_CARGADOS) return;
+  const[{data:emps},{data:clis},{data:vehs},{data:conds}]=await Promise.all([
+    withPais(db.from('empresas').select('id,nombre').eq('activo',true)).order('nombre'),
+    withPais(db.from('clientes').select('id,nombre').eq('activo',true)).order('nombre'),
+    withPais(db.from('vehiculos').select('id,patente').eq('activo',true)).order('patente'),
+    withPais(db.from('conductores').select('id,nombre').eq('activo',true)).order('nombre')
+  ]);
+  const fe=$('dash-f-empresa');if(fe)fe.innerHTML='<option value="">Todas</option>'+(emps||[]).map(e=>`<option value="${e.id}">${e.nombre}</option>`).join('');
+  const fc=$('dash-f-cliente');if(fc)fc.innerHTML='<option value="">Todos</option>'+(clis||[]).map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  const fv=$('dash-f-vehiculo');if(fv)fv.innerHTML='<option value="">Todos</option>'+(vehs||[]).map(v=>`<option value="${v.id}">${v.patente}</option>`).join('');
+  const fco=$('dash-f-conductor');if(fco)fco.innerHTML='<option value="">Todos</option>'+(conds||[]).map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  DASH_FILTROS_CARGADOS=true;
+}
+
+function destroyChart(id){
+  if(DASH_CHARTS[id]){DASH_CHARTS[id].destroy();delete DASH_CHARTS[id];}
+}
+
+async function loadDashboardGraficos(){
+  const dias=parseInt($('dash-rango')?.value)||30;
+  const empresaId=$('dash-f-empresa')?.value||'';
+  const clienteId=$('dash-f-cliente')?.value||'';
+  const vehiculoId=$('dash-f-vehiculo')?.value||'';
+  const conductorId=$('dash-f-conductor')?.value||'';
+
+  const desde=new Date();desde.setDate(desde.getDate()-dias);
+  const desdeStr=desde.toISOString().split('T')[0];
+
+  // ── CHECKS ──────────────────────────────────────────────────────────────
+  let qChecks=withPais(db.from('checks_diarios').select('fecha,estado_final,vehiculo_id,vehiculos(patente,empresa_id),cliente_id').gte('fecha',desdeStr));
+  if(clienteId) qChecks=qChecks.eq('cliente_id',clienteId);
+  if(vehiculoId) qChecks=qChecks.eq('vehiculo_id',vehiculoId);
+  const{data:checksData}=await qChecks;
+  let checks=checksData||[];
+  if(empresaId) checks=checks.filter(c=>c.vehiculos?.empresa_id===empresaId);
+
+  // Agrupar por fecha
+  const fechasSet=new Set();
+  const d=new Date(desde);
+  const hoy=new Date();
+  while(d<=hoy){fechasSet.add(d.toISOString().split('T')[0]);d.setDate(d.getDate()+1);}
+  const fechas=Array.from(fechasSet).sort();
+
+  const cumplimientoPorFecha={};
+  const estadosPorFecha={};
+  fechas.forEach(f=>{cumplimientoPorFecha[f]={total:0,ok:0};estadosPorFecha[f]={ok:0,warn:0,err:0};});
+  checks.forEach(c=>{
+    if(!cumplimientoPorFecha[c.fecha]) return;
+    cumplimientoPorFecha[c.fecha].total++;
+    if(c.estado_final==='ok') cumplimientoPorFecha[c.fecha].ok++;
+    if(estadosPorFecha[c.fecha] && c.estado_final) estadosPorFecha[c.fecha][c.estado_final]=(estadosPorFecha[c.fecha][c.estado_final]||0)+1;
+  });
+  const cumplimientoData=fechas.map(f=>{
+    const d=cumplimientoPorFecha[f];
+    return d.total>0?Math.round((d.ok/d.total)*100):null;
+  });
+
+  // ── GRÁFICO: Cumplimiento (líneas) ──────────────────────────────────────
+  destroyChart('chart-cumplimiento');
+  const ctx1=$('chart-cumplimiento')?.getContext('2d');
+  if(ctx1){
+    DASH_CHARTS['chart-cumplimiento']=new Chart(ctx1,{
+      type:'line',
+      data:{labels:fechas.map(f=>f.slice(5)),datasets:[{
+        label:'Cumplimiento %',data:cumplimientoData,
+        borderColor:'#185FA5',backgroundColor:'rgba(24,95,165,.1)',
+        tension:.3,fill:true,pointRadius:2,spanGaps:true
+      }]},
+      options:{responsive:true,maintainAspectRatio:false,
+        scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}},
+        plugins:{legend:{display:false}}}
+    });
+  }
+
+  // ── GRÁFICO: Estados (barras apiladas) ──────────────────────────────────
+  destroyChart('chart-estados');
+  const ctx2=$('chart-estados')?.getContext('2d');
+  if(ctx2){
+    DASH_CHARTS['chart-estados']=new Chart(ctx2,{
+      type:'bar',
+      data:{labels:fechas.map(f=>f.slice(5)),datasets:[
+        {label:'OK',data:fechas.map(f=>estadosPorFecha[f]?.ok||0),backgroundColor:'#3B6D11'},
+        {label:'Obs.',data:fechas.map(f=>estadosPorFecha[f]?.warn||0),backgroundColor:'#EF9F27'},
+        {label:'Error',data:fechas.map(f=>estadosPorFecha[f]?.err||0),backgroundColor:'#A32D2D'}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{stepSize:1}}},
+        plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}}}}
+    });
+  }
+
+  // ── LIQUIDACIONES ───────────────────────────────────────────────────────
+  let qLiq=withPais(db.from('liquidaciones').select('fecha,monto_esperado,monto_cobrado,monto_diferencia,vehiculo_id,conductor_id,cliente_id,vehiculos(empresa_id)').gte('fecha',desdeStr));
+  if(clienteId) qLiq=qLiq.eq('cliente_id',clienteId);
+  if(vehiculoId) qLiq=qLiq.eq('vehiculo_id',vehiculoId);
+  if(conductorId) qLiq=qLiq.eq('conductor_id',conductorId);
+  const{data:liqData}=await qLiq;
+  let liqs=liqData||[];
+  if(empresaId) liqs=liqs.filter(l=>l.vehiculos?.empresa_id===empresaId);
+
+  const esperadoPorFecha={},cobradoPorFecha={},difPorFecha={};
+  fechas.forEach(f=>{esperadoPorFecha[f]=0;cobradoPorFecha[f]=0;difPorFecha[f]=0;});
+  liqs.forEach(l=>{
+    if(esperadoPorFecha[l.fecha]===undefined) return;
+    esperadoPorFecha[l.fecha]+=l.monto_esperado||0;
+    cobradoPorFecha[l.fecha]+=l.monto_cobrado||0;
+    difPorFecha[l.fecha]+=l.monto_diferencia||0;
+  });
+
+  // ── GRÁFICO: Liquidación cobrado vs esperado ────────────────────────────
+  destroyChart('chart-liquidacion');
+  const ctx3=$('chart-liquidacion')?.getContext('2d');
+  if(ctx3){
+    DASH_CHARTS['chart-liquidacion']=new Chart(ctx3,{
+      type:'bar',
+      data:{labels:fechas.map(f=>f.slice(5)),datasets:[
+        {label:'Esperado',data:fechas.map(f=>esperadoPorFecha[f]),backgroundColor:'rgba(24,95,165,.35)'},
+        {label:'Cobrado',data:fechas.map(f=>cobradoPorFecha[f]),backgroundColor:'#185FA5'}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        scales:{y:{beginAtZero:true,ticks:{callback:v=>'$'+v.toLocaleString('es-AR')}}},
+        plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}}}}
+    });
+  }
+
+  // ── GRÁFICO: Diferencias ────────────────────────────────────────────────
+  destroyChart('chart-diferencias');
+  const ctx4=$('chart-diferencias')?.getContext('2d');
+  if(ctx4){
+    const diffData=fechas.map(f=>difPorFecha[f]);
+    DASH_CHARTS['chart-diferencias']=new Chart(ctx4,{
+      type:'bar',
+      data:{labels:fechas.map(f=>f.slice(5)),datasets:[{
+        label:'Diferencia',data:diffData,
+        backgroundColor:diffData.map(v=>v<0?'#A32D2D':v>0?'#EF9F27':'#3B6D11')
+      }]},
+      options:{responsive:true,maintainAspectRatio:false,
+        scales:{y:{ticks:{callback:v=>'$'+v.toLocaleString('es-AR')}}},
+        plugins:{legend:{display:false}}}
+    });
+  }
+
+  // ── TOP VEHÍCULOS Y CONDUCTORES ─────────────────────────────────────────
+  let qActV=withPais(db.from('checks_diarios').select('vehiculo_id,vehiculos(patente),cliente_id').gte('fecha',desdeStr));
+  if(clienteId) qActV=qActV.eq('cliente_id',clienteId);
+  if(vehiculoId) qActV=qActV.eq('vehiculo_id',vehiculoId);
+  const{data:actVData}=await qActV;
+  let actV=actVData||[];
+  if(empresaId){
+    // Filter by empresa requires vehiculos.empresa_id, refetch with join
+    const{data:vehsFiltered}=await withPais(db.from('vehiculos').select('id').eq('empresa_id',empresaId));
+    const idsPermitidos=new Set((vehsFiltered||[]).map(v=>v.id));
+    actV=actV.filter(c=>idsPermitidos.has(c.vehiculo_id));
+  }
+  const countByVeh={};
+  actV.forEach(c=>{
+    const pat=c.vehiculos?.patente||'—';
+    countByVeh[pat]=(countByVeh[pat]||0)+1;
+  });
+  const topVeh=Object.entries(countByVeh).sort((a,b)=>b[1]-a[1]).slice(0,10);
+
+  destroyChart('chart-top-vehiculos');
+  const ctx5=$('chart-top-vehiculos')?.getContext('2d');
+  if(ctx5){
+    DASH_CHARTS['chart-top-vehiculos']=new Chart(ctx5,{
+      type:'bar',
+      data:{labels:topVeh.map(v=>v[0]),datasets:[{
+        label:'Checks',data:topVeh.map(v=>v[1]),backgroundColor:'#185FA5'
+      }]},
+      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+        scales:{x:{beginAtZero:true,ticks:{stepSize:1}}},
+        plugins:{legend:{display:false}}}
+    });
+  }
+
+  // Top conductores — desde checks_diarios.registrado_por (nombre)
+  let qActC=withPais(db.from('checks_diarios').select('registrado_por,cliente_id,vehiculo_id').gte('fecha',desdeStr));
+  if(clienteId) qActC=qActC.eq('cliente_id',clienteId);
+  if(vehiculoId) qActC=qActC.eq('vehiculo_id',vehiculoId);
+  const{data:actCData}=await qActC;
+  const countByCond={};
+  (actCData||[]).forEach(c=>{
+    const nom=c.registrado_por||'—';
+    countByCond[nom]=(countByCond[nom]||0)+1;
+  });
+  const topCond=Object.entries(countByCond).sort((a,b)=>b[1]-a[1]).slice(0,10);
+
+  destroyChart('chart-top-conductores');
+  const ctx6=$('chart-top-conductores')?.getContext('2d');
+  if(ctx6){
+    DASH_CHARTS['chart-top-conductores']=new Chart(ctx6,{
+      type:'bar',
+      data:{labels:topCond.map(c=>c[0]),datasets:[{
+        label:'Checks',data:topCond.map(c=>c[1]),backgroundColor:'#3B6D11'
+      }]},
+      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+        scales:{x:{beginAtZero:true,ticks:{stepSize:1}}},
+        plugins:{legend:{display:false}}}
+    });
+  }
 }
 
 // ── CONDUCTORES ───────────────────────────────────────────────────────────
