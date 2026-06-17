@@ -1116,7 +1116,10 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 </div>
 
 <div class="overlay" id="ov-check-det">
-  <div class="modal modal-sm"><div class="modal-hd"><div class="modal-title" id="chd-title">Check</div><button class="modal-close" onclick="closeModal('check-det')">✕</button></div><div id="chd-body"></div></div>
+  <div class="modal" style="width:600px">
+    <div class="modal-hd"><div class="modal-title" id="chd-title">Check</div><button class="modal-close" onclick="closeModal('check-det')">✕</button></div>
+    <div class="modal-body" id="chd-body"></div>
+  </div>
 </div>
 
 <div class="overlay" id="ov-apikey">
@@ -2033,14 +2036,14 @@ async function loadHistorial(){
   }
   HIST_RAST_ACTUAL_CACHE=rastActuales;
 
-  el.innerHTML=data.map(h=>{
+  el.innerHTML=data.map((h,i)=>{
     const ef=h.estado_final;
     const color=ef==='ok'?'var(--green)':ef==='warn'?'var(--amber)':'var(--red)';
     const bgColor=ef==='ok'?'var(--green-light)':ef==='warn'?'var(--amber-light)':'var(--red-light)';
     const icono=ef==='ok'?'✅':ef==='warn'?'⚠️':'❌';
     const emp=h.vehiculos?.empresas?.nombre||'—';
     return `
-    <div style="background:var(--bg2);border:1px solid var(--border);border-left:4px solid ${color};border-radius:var(--radius-lg);padding:16px;margin-bottom:10px">
+    <div onclick="verDetalleCheck(${i})" style="background:var(--bg2);border:1px solid var(--border);border-left:4px solid ${color};border-radius:var(--radius-lg);padding:16px;margin-bottom:10px;cursor:pointer;transition:box-shadow .12s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.08)'" onmouseout="this.style.boxShadow='none'">
       <!-- Header -->
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:10px">
         <div style="display:flex;align-items:center;gap:10px;flex:1">
@@ -2082,17 +2085,107 @@ async function loadHistorial(){
       <!-- Observaciones -->
       ${h.observaciones?`<div style="background:var(--bg3);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text2);border-left:3px solid var(--border2)"><span style="font-weight:600;color:var(--text)">📝 Obs:</span> ${h.observaciones}</div>`:''}
       <!-- Fotos -->
-      ${h.fotos&&h.fotos.length?`<div style="display:flex;gap:6px;margin-top:8px;overflow-x:auto;padding-bottom:4px">${h.fotos.map(f=>`<img src="${f}" onclick="window.open('${f}','_blank')" style="height:60px;width:60px;object-fit:cover;border-radius:6px;cursor:pointer;flex-shrink:0;border:1px solid var(--border)">`).join('')}</div>`:''}
+      ${h.fotos&&h.fotos.length?`<div style="display:flex;gap:6px;margin-top:8px;overflow-x:auto;padding-bottom:4px">${h.fotos.map(f=>`<img src="${f}" onclick="event.stopPropagation();window.open('${f}','_blank')" style="height:60px;width:60px;object-fit:cover;border-radius:6px;cursor:pointer;flex-shrink:0;border:1px solid var(--border)">`).join('')}</div>`:''}
       <!-- Footer -->
       <div style="margin-top:8px;font-size:11px;color:var(--text3)">👤 ${h.registrado_por||'—'}</div>
     </div>`;
   }).join('');
 }
 
+function verDetalleCheck(i){
+  const h=HIST_DATA_CACHE[i];
+  if(!h) return;
+  verCheckDet(h);
+}
+
+function valPE(v){
+  if(v==='si') return '<span style="color:var(--green);font-weight:600">✓ Sí</span>';
+  if(v==='no') return '<span style="color:var(--red);font-weight:600">✕ No</span>';
+  if(v==='na') return '<span style="color:var(--text3)">No aplica</span>';
+  return '<span style="color:var(--text3)">—</span>';
+}
+
+function filaPE(label,valor,comentario){
+  if(valor===null||valor===undefined) return '';
+  return `<span style="color:var(--text2)">${label}</span><span>${valPE(valor)}${comentario?` <span style="color:var(--text2);font-size:12px">· ${comentario}</span>`:''}</span>`;
+}
+
 function verCheckDet(h){
   $('chd-title').textContent='Check — '+(h.vehiculos?.patente||'')+' · '+fd(h.fecha);
   const raActual=HIST_RAST_ACTUAL_CACHE[h.vehiculo_id];
-  $('chd-body').innerHTML=`<div style="display:grid;grid-template-columns:auto 1fr;gap:7px 16px;font-size:13px"><span style="color:var(--text2)">Vehículo</span><span>${h.vehiculos?.patente||'—'}</span><span style="color:var(--text2)">Fecha</span><span>${fd(h.fecha)}</span><span style="color:var(--text2)">Doc. chofer</span><span>${bdg(h.doc_chofer_estado)}</span><span style="color:var(--text2)">Carga</span><span>${bdg(h.carga_estado)}</span><span style="color:var(--text2)">Vehículo</span><span>${bdg(h.vehiculo_estado)}</span><span style="color:var(--text2)">Estado final</span><span>${bdg(h.estado_final)}</span>${h.hora_check?`<span style="color:var(--text2)">Hora</span><span>${h.hora_check?.slice(0,5)}</span>`:''}${(h.rastreador_nombre||h.rastreador_gid)?`<span style="color:var(--text2)">GPS al momento del check</span><span>🛰 ${h.rastreador_nombre||'GPS #'+h.rastreador_gid}</span>`:''}${raActual?`<span style="color:var(--text2)">GPS actual de la unidad</span><span>📡 ${raActual.nombre||raActual.gps_id_dispositivo||'GPS #'+raActual.gps_gid}</span>`:''}${h.sale_con_peon!==undefined?`<span style="color:var(--text2)">Sale con peón</span><span>${h.sale_con_peon?'Sí'+(h.nombre_peon?' · '+h.nombre_peon:''):'No'}</span>`:''}${h.cliente_nombre?`<span style="color:var(--text2)">Cliente</span><span>${h.cliente_nombre}</span>`:''}${h.precinto_numero?`<span style="color:var(--text2)">Precinto N°</span><span>${h.precinto_numero}</span>`:''}${h.registrado_por?`<span style="color:var(--text2)">Registrado por</span><span>${h.registrado_por}</span>`:''}${h.observaciones?`<span style="color:var(--text2)">Observaciones</span><span>${h.observaciones}</span>`:''}</div>`;
+  const esPeCheck=h.tipo_check==='peru';
+  const com=h.comentarios_check||{};
+
+  let html=`<div style="display:grid;grid-template-columns:auto 1fr;gap:7px 16px;font-size:13px">
+    <span style="color:var(--text2)">Vehículo</span><span>${h.vehiculos?.patente||'—'} · ${h.vehiculos?.marca||''} ${h.vehiculos?.modelo||''}</span>
+    <span style="color:var(--text2)">Empresa</span><span>${h.vehiculos?.empresas?.nombre||'—'}</span>
+    <span style="color:var(--text2)">Fecha</span><span>${fd(h.fecha)}${h.hora_check?' · '+h.hora_check.slice(0,5):''}</span>
+    <span style="color:var(--text2)">Estado final</span><span>${bdg(h.estado_final)}</span>
+    ${h.cliente_nombre||h.clientes?.nombre?`<span style="color:var(--text2)">Cliente</span><span>${h.cliente_nombre||h.clientes?.nombre}</span>`:''}
+    ${(h.rastreador_nombre||h.rastreador_gid)?`<span style="color:var(--text2)">GPS al momento del check</span><span>🛰 ${h.rastreador_nombre||'GPS #'+h.rastreador_gid}</span>`:''}
+    ${raActual?`<span style="color:var(--text2)">GPS actual de la unidad</span><span>📡 ${raActual.nombre||raActual.gps_id_dispositivo||'GPS #'+raActual.gps_gid}</span>`:''}
+    ${h.gps_estado?`<span style="color:var(--text2)">Estado GPS</span><span>${h.gps_estado==='ok'?'✓ Verificado':'✕ Sin señal'}</span>`:''}
+    ${h.precinto_numero?`<span style="color:var(--text2)">Precinto N°</span><span>${h.precinto_numero}</span>`:''}
+    <span style="color:var(--text2)">${esPeCheck?'¿Sale con auxiliar?':'Sale con peón'}</span><span>${h.sale_con_peon?'Sí'+(h.nombre_peon?' · '+h.nombre_peon:''):'No'}</span>
+    ${h.registrado_por?`<span style="color:var(--text2)">Registrado por</span><span>${h.registrado_por}</span>`:''}
+  </div>`;
+
+  if(esPeCheck){
+    html+=`<div class="form-section" style="margin-top:14px">📄 Documentación</div>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13px">
+      ${filaPE('SOAT',h.doc_soat,com.soat)}
+      ${filaPE('Revisión técnica',h.doc_revision_tecnica,com.rtec)}
+      ${filaPE('Licencia de conducir',h.doc_chofer_estado,com.lic)}
+      ${filaPE('Permiso de circulación',h.doc_permiso_circulacion,com.perm)}
+    </div>
+    <div class="form-section" style="margin-top:12px">🔧 Estado mecánico</div>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13px">
+      ${filaPE('Combustible',h.mec_combustible,com.comb)}
+      ${filaPE('Aceite',h.mec_aceite,com.aceite)}
+      ${filaPE('Líquido de frenos',h.mec_liquido_frenos,com.lfrenos)}
+      ${filaPE('Luces',h.mec_luces,com.luces)}
+      ${filaPE('Bocina',h.mec_bocina,com.bocina)}
+      ${filaPE('Frenos',h.mec_frenos,com.frenos)}
+      ${filaPE('Neumáticos',h.mec_neumaticos,com.neum)}
+      ${filaPE('Llanta de repuesto',h.mec_llanta_repuesto,com.llanta)}
+      ${filaPE('Kit de herramientas',h.mec_kit_herramientas,com.kit)}
+    </div>
+    <div class="form-section" style="margin-top:12px">🔒 Condiciones, implementos y seguridad</div>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13px">
+      ${filaPE('Limpieza',h.cond_limpieza,com.limp)}
+      ${filaPE('Área de carga',h.cond_area_carga,com.carga)}
+      ${filaPE('Candados/conos/tacos',h.cond_candados,com.cand)}
+      ${filaPE('Carretilla',h.cond_carretilla,com.carr)}
+      ${filaPE('Film/cutter/wincha',h.cond_film,com.film)}
+    </div>
+    <div class="form-section" style="margin-top:12px">👷 Personal</div>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13px">
+      ${filaPE('Personal completo',h.pers_completo,com.pcomp)}
+      ${filaPE('Credencial laboral',h.pers_credencial,com.cred)}
+      ${filaPE('Pantalón jean limpio',h.pers_pantalon,com.pant)}
+      ${filaPE("EPP's",h.pers_epp,com.epp)}
+    </div>`;
+  } else {
+    html+=`<div class="form-section" style="margin-top:14px">Detalle del check estándar</div>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13px">
+      <span style="color:var(--text2)">Doc. chofer</span><span>${bdg(h.doc_chofer_estado)}</span>
+      <span style="color:var(--text2)">Carga / Remito</span><span>${bdg(h.carga_estado)}</span>
+      <span style="color:var(--text2)">Vehículo</span><span>${bdg(h.vehiculo_estado)}</span>
+    </div>`;
+  }
+
+  if(h.observaciones){
+    html+=`<div style="background:var(--bg3);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text2);border-left:3px solid var(--border2);margin-top:14px"><span style="font-weight:600;color:var(--text)">📝 Observaciones:</span> ${h.observaciones}</div>`;
+  }
+
+  if(h.fotos&&h.fotos.length){
+    html+=`<div class="form-section" style="margin-top:14px">📷 Fotos</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${h.fotos.map(f=>`<img src="${f}" onclick="window.open('${f}','_blank')" style="height:100px;width:100px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid var(--border)">`).join('')}
+    </div>`;
+  }
+
+  $('chd-body').innerHTML=html;
   openModal('check-det');
 }
 
