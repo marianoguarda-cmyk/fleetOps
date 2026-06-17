@@ -1540,9 +1540,11 @@ function setupUI(){
     if(!el) return;
     if(!isAdmin()){el.style.display='none';return}
     // Restaurar el display correcto según el tipo de elemento
+    // (asignar '' no sobreescribe la regla CSS .admin-only{display:none}; hace falta un valor explícito)
     if(el.classList.contains('nav-group')) el.style.display='block';
     else if(el.classList.contains('nav-btn')) el.style.display='flex';
-    else el.style.display='';
+    else if(el.tagName==='BUTTON') el.style.display='inline-flex';
+    else el.style.display='block';
   });
   const ami=$('admin-menu-items');if(ami&&(isAdmin()||isSuperAdmin()))ami.style.display='block';
   popularSelectsPais();
