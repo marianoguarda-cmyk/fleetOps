@@ -724,7 +724,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 
         <!-- PEÓN -->
         <div class="card mb">
-          <div class="card-title">👷 ¿Sale con peón?</div>
+          <div class="card-title">👷 ¿Sale con auxiliar?</div>
           <div style="display:flex;gap:8px;margin-bottom:8px">
             <label style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:14px">
               <input type="radio" name="pe-peon" value="no" checked style="display:none"> No
@@ -734,7 +734,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
             </label>
           </div>
           <div id="pe-peon-nombre-wrap" style="display:none">
-            <input type="text" id="pe-peon-nombre" placeholder="Nombre del peón" class="form-control" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit">
+            <input type="text" id="pe-peon-nombre" placeholder="Nombre del auxiliar" class="form-control" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit">
           </div>
         </div>
 
@@ -1981,6 +1981,7 @@ function renderCheckFotos(){
 
 // HISTORIAL
 let HIST_DATA_CACHE = [];
+let HIST_RAST_ACTUAL_CACHE = {};
 
 async function loadHistorial(){
   const el=$('historial-list');
@@ -2023,6 +2024,15 @@ async function loadHistorial(){
   if(!data?.length){el.innerHTML='<div class="empty">Sin checks en este período.</div>';return;}
   HIST_DATA_CACHE=data;
 
+  // Mapa de GPS ACTUALMENTE asignado a cada vehículo (rastreador vivo + GPS manual del vehículo)
+  const vehIds=[...new Set(data.map(h=>h.vehiculo_id).filter(Boolean))];
+  let rastActuales={};
+  if(vehIds.length){
+    const{data:rastsAct}=await db.from('rastreadores').select('vehiculo_id,nombre,gps_id_dispositivo,gps_gid').eq('activo',true).in('vehiculo_id',vehIds);
+    (rastsAct||[]).forEach(r=>{ rastActuales[r.vehiculo_id]=r; });
+  }
+  HIST_RAST_ACTUAL_CACHE=rastActuales;
+
   el.innerHTML=data.map(h=>{
     const ef=h.estado_final;
     const color=ef==='ok'?'var(--green)':ef==='warn'?'var(--amber)':'var(--red)';
@@ -2049,7 +2059,8 @@ async function loadHistorial(){
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         ${h.clientes?.nombre?`<span style="background:var(--blue-light);color:var(--blue);font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px">👤 ${h.clientes.nombre}</span>`:''}
         ${h.precinto_numero?`<span style="background:var(--bg3);color:var(--text2);font-size:12px;font-weight:500;padding:3px 10px;border-radius:20px">🔒 Precinto: ${h.precinto_numero}</span>`:''}
-      ${h.rastreador_nombre||h.rastreador_gid?`<span style="background:var(--blue-light);color:var(--blue);font-size:12px;font-weight:500;padding:3px 10px;border-radius:20px">🛰 ${h.rastreador_nombre||'GPS #'+h.rastreador_gid}</span>`:''}
+      ${h.rastreador_nombre||h.rastreador_gid?`<span style="background:var(--blue-light);color:var(--blue);font-size:12px;font-weight:500;padding:3px 10px;border-radius:20px" title="GPS asignado al momento del check">🛰 ${h.rastreador_nombre||'GPS #'+h.rastreador_gid}</span>`:''}
+      ${(()=>{const ra=HIST_RAST_ACTUAL_CACHE[h.vehiculo_id];return ra?`<span style="background:var(--bg3);color:var(--text);font-size:12px;font-weight:500;padding:3px 10px;border-radius:20px" title="GPS actualmente asignado a la unidad">📡 Actual: ${ra.nombre||ra.gps_id_dispositivo||'GPS #'+ra.gps_gid}</span>`:'';})()}
         ${h.sale_con_peon?`<span style="background:#FFF0E6;color:#C05200;font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px">👷 Peón${h.nombre_peon?' · '+h.nombre_peon:''}</span>`:''}
         ${h.gps_estado?`<span style="background:${h.gps_estado==='ok'?'var(--green-light)':'var(--red-light)'};color:${h.gps_estado==='ok'?'var(--green)':'var(--red)'};font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px">📍 GPS ${h.gps_estado==='ok'?'Verificado':'Sin señal'}</span>`:''}
       </div>
@@ -2080,7 +2091,8 @@ async function loadHistorial(){
 
 function verCheckDet(h){
   $('chd-title').textContent='Check — '+(h.vehiculos?.patente||'')+' · '+fd(h.fecha);
-  $('chd-body').innerHTML=`<div style="display:grid;grid-template-columns:auto 1fr;gap:7px 16px;font-size:13px"><span style="color:var(--text2)">Vehículo</span><span>${h.vehiculos?.patente||'—'}</span><span style="color:var(--text2)">Fecha</span><span>${fd(h.fecha)}</span><span style="color:var(--text2)">Doc. chofer</span><span>${bdg(h.doc_chofer_estado)}</span><span style="color:var(--text2)">Carga</span><span>${bdg(h.carga_estado)}</span><span style="color:var(--text2)">Vehículo</span><span>${bdg(h.vehiculo_estado)}</span><span style="color:var(--text2)">Estado final</span><span>${bdg(h.estado_final)}</span>${h.hora_check?`<span style="color:var(--text2)">Hora</span><span>${h.hora_check?.slice(0,5)}</span>`:''}${h.sale_con_peon!==undefined?`<span style="color:var(--text2)">Sale con peón</span><span>${h.sale_con_peon?'Sí'+(h.nombre_peon?' · '+h.nombre_peon:''):'No'}</span>`:''}${h.cliente_nombre?`<span style="color:var(--text2)">Cliente</span><span>${h.cliente_nombre}</span>`:''}${h.precinto_numero?`<span style="color:var(--text2)">Precinto N°</span><span>${h.precinto_numero}</span>`:''}${h.registrado_por?`<span style="color:var(--text2)">Registrado por</span><span>${h.registrado_por}</span>`:''}${h.observaciones?`<span style="color:var(--text2)">Observaciones</span><span>${h.observaciones}</span>`:''}</div>`;
+  const raActual=HIST_RAST_ACTUAL_CACHE[h.vehiculo_id];
+  $('chd-body').innerHTML=`<div style="display:grid;grid-template-columns:auto 1fr;gap:7px 16px;font-size:13px"><span style="color:var(--text2)">Vehículo</span><span>${h.vehiculos?.patente||'—'}</span><span style="color:var(--text2)">Fecha</span><span>${fd(h.fecha)}</span><span style="color:var(--text2)">Doc. chofer</span><span>${bdg(h.doc_chofer_estado)}</span><span style="color:var(--text2)">Carga</span><span>${bdg(h.carga_estado)}</span><span style="color:var(--text2)">Vehículo</span><span>${bdg(h.vehiculo_estado)}</span><span style="color:var(--text2)">Estado final</span><span>${bdg(h.estado_final)}</span>${h.hora_check?`<span style="color:var(--text2)">Hora</span><span>${h.hora_check?.slice(0,5)}</span>`:''}${(h.rastreador_nombre||h.rastreador_gid)?`<span style="color:var(--text2)">GPS al momento del check</span><span>🛰 ${h.rastreador_nombre||'GPS #'+h.rastreador_gid}</span>`:''}${raActual?`<span style="color:var(--text2)">GPS actual de la unidad</span><span>📡 ${raActual.nombre||raActual.gps_id_dispositivo||'GPS #'+raActual.gps_gid}</span>`:''}${h.sale_con_peon!==undefined?`<span style="color:var(--text2)">Sale con peón</span><span>${h.sale_con_peon?'Sí'+(h.nombre_peon?' · '+h.nombre_peon:''):'No'}</span>`:''}${h.cliente_nombre?`<span style="color:var(--text2)">Cliente</span><span>${h.cliente_nombre}</span>`:''}${h.precinto_numero?`<span style="color:var(--text2)">Precinto N°</span><span>${h.precinto_numero}</span>`:''}${h.registrado_por?`<span style="color:var(--text2)">Registrado por</span><span>${h.registrado_por}</span>`:''}${h.observaciones?`<span style="color:var(--text2)">Observaciones</span><span>${h.observaciones}</span>`:''}</div>`;
   openModal('check-det');
 }
 
@@ -2094,7 +2106,7 @@ async function exportarHistorial(){
     'Estado Final','Registrado por',
     // Check estándar
     'Doc. Chofer','Estado Chofer','Remito','Estado Carga','Precinto N°',
-    'Estado Vehículo','GPS Estado','Rastreador','Empresa GPS',
+    'Estado Vehículo','GPS Estado','Rastreador','Empresa GPS','GPS Actual de la Unidad',
     'Sale con Peón','Nombre Peón','Observaciones',
     // Check Perú — Documentación
     'PE: SOAT','PE: Revisión técnica','PE: Licencia conducir','PE: Permiso circulación',
@@ -2142,6 +2154,7 @@ async function exportarHistorial(){
       h.gps_estado||'',
       h.rastreador_nombre||'',
       h.empresa_gps||'',
+      (()=>{const ra=HIST_RAST_ACTUAL_CACHE[h.vehiculo_id];return ra?(ra.nombre||ra.gps_id_dispositivo||'GPS #'+ra.gps_gid):'';})(),
       h.sale_con_peon?'Sí':'No',
       h.nombre_peon||'',
       (h.observaciones||'').replace(/,/g,';'),
