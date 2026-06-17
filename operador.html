@@ -260,8 +260,14 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
           </div>
           <div class="ch-sel-wrap">
             <div class="ch-sel-label">Vehículo *</div>
-            <select class="ch-sel" id="sel-vehiculo" onchange="onVehChange(this.value)">
+            <select class="ch-sel" id="sel-vehiculo" onchange="onVehChange(this.value);autoSelCondOp(this.value)">
               <option value="">Seleccioná</option>
+            </select>
+          </div>
+          <div class="ch-sel-wrap">
+            <div class="ch-sel-label">Conductor</div>
+            <select class="ch-sel" id="sel-conductor">
+              <option value="">Sin conductor</option>
             </select>
           </div>
           <div class="ch-sel-wrap ch-sel-full">
@@ -394,8 +400,14 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
           </div>
           <div class="ch-sel-wrap">
             <div class="ch-sel-label">Vehículo *</div>
-            <select class="ch-sel" id="pe-sel-vehiculo" onchange="onPEVehChange(this.value)">
+            <select class="ch-sel" id="pe-sel-vehiculo" onchange="onPEVehChange(this.value);autoSelCondPEOp(this.value)">
               <option value="">Seleccioná</option>
+            </select>
+          </div>
+          <div class="ch-sel-wrap">
+            <div class="ch-sel-label">Conductor</div>
+            <select class="ch-sel" id="pe-sel-conductor">
+              <option value="">Sin conductor</option>
             </select>
           </div>
           <div class="ch-sel-wrap ch-sel-full">
@@ -659,6 +671,7 @@ let VEHS={},FOTOS=[],HIST_F='hoy';
 let PEON_ACTIVO=false,GPS_ESTADO=null;
 let MAP=null,MAP_MARKER=null;
 let RASTREADORES=[];
+let CONDUCTORES_OP=[];
 let GPS_LIVE=[];
 
 // CHIPS state
@@ -845,16 +858,20 @@ async function loadData(){
   const paisId=CP?.pais_id||null;
   let qv=db.from('vehiculos').select('*').eq('activo',true).order('patente');
   if(paisId) qv=qv.eq('pais_id',paisId);
+  let qc=db.from('conductores').select('id,nombre,vehiculo_id').eq('activo',true).order('nombre');
+  if(paisId) qc=qc.eq('pais_id',paisId);
 
-  const[{data:vehs},{data:emps},{data:clis},{data:rasts}]=await Promise.all([
+  const[{data:vehs},{data:emps},{data:clis},{data:rasts},{data:conds}]=await Promise.all([
     qv,
     db.from('empresas').select('id,nombre').eq('activo',true).order('nombre'),
     db.from('clientes').select('id,nombre').eq('activo',true).order('nombre'),
     db.from('rastreadores').select('*').eq('activo',true),
+    qc,
   ]);
 
   VEHS={};(vehs||[]).forEach(v=>VEHS[v.id]=v);
   RASTREADORES=rasts||[];
+  CONDUCTORES_OP=conds||[];
 
   // Cargar GPS en vivo
   try{
@@ -871,10 +888,25 @@ async function loadData(){
   // Popular vehículos
   llenarVehiculos(vehs||[]);
 
+  // Popular conductores
+  const scd=$('sel-conductor');
+  if(scd){
+    scd.innerHTML='<option value="">Sin conductor</option>';
+    CONDUCTORES_OP.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.nombre;scd.appendChild(o)});
+  }
+
   // Popular clientes
   const sc=$('sel-cliente');
   sc.innerHTML='<option value="">Sin cliente</option>';
   (clis||[]).forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.nombre;sc.appendChild(o)});
+}
+
+function autoSelCondOp(vehiculoId){
+  const sel=$('sel-conductor');
+  if(!sel) return;
+  if(!vehiculoId){ sel.value=''; return; }
+  const cond=(CONDUCTORES_OP||[]).find(c=>c.vehiculo_id===vehiculoId);
+  sel.value=cond?cond.id:'';
 }
 
 function llenarVehiculos(lista){
@@ -1023,6 +1055,7 @@ async function guardarCheck(){
     sale_con_peon:PEON_ACTIVO,
     nombre_peon:PEON_ACTIVO?($('peon-nombre').value.trim()||null):null,
     cliente_id:$('sel-cliente').value||null,
+    conductor_id:$('sel-conductor')?.value||null,
     link_gps_check:v?.link_gps||null,
     empresa_gps:v?.nombre_empresa_gps||null,
     rastreador_gid:rast?.gps_gid||null,
@@ -1186,6 +1219,7 @@ function closeSheet(){$('ov-sheet').classList.remove('show')}
 let PAISES_CACHE_OP = [];
 let PE_VEH_CACHE_OP = {};
 let PE_RAST_OP = [];
+let PE_CONDUCTORES_OP = [];
 let PE_GPS_LIVE_OP = [];
 let PE_RADIOS = {};
 let PE_PEON_ACTIVO = false;
@@ -1233,6 +1267,13 @@ async function initCheckPEOp(){
   const sc = $('pe-sel-cliente');
   if(sc) sc.innerHTML = '<option value="">Sin cliente</option>' + (clis||[]).map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
 
+  let qcond = db.from('conductores').select('id,nombre,vehiculo_id').eq('activo', true);
+  if(paisId) qcond = qcond.eq('pais_id', paisId);
+  const{data:conds} = await qcond.order('nombre');
+  PE_CONDUCTORES_OP = conds || [];
+  const scond = $('pe-sel-conductor');
+  if(scond) scond.innerHTML = '<option value="">Sin conductor</option>' + (conds||[]).map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+
   let qr = db.from('rastreadores').select('*').eq('activo', true);
   if(paisId) qr = qr.eq('pais_id', paisId);
   const{data:rasts} = await qr;
@@ -1243,6 +1284,14 @@ async function initCheckPEOp(){
     const json = await res.json();
     if(json.success) PE_GPS_LIVE_OP = json.data || [];
   }catch(e){ PE_GPS_LIVE_OP = []; }
+}
+
+function autoSelCondPEOp(vehiculoId){
+  const sel=$('pe-sel-conductor');
+  if(!sel) return;
+  if(!vehiculoId){ sel.value=''; return; }
+  const cond=(PE_CONDUCTORES_OP||[]).find(c=>c.vehiculo_id===vehiculoId);
+  sel.value=cond?cond.id:'';
 }
 
 function llenarVehiculosPEOp(lista){
@@ -1377,6 +1426,7 @@ async function guardarCheckPEOp(){
 
   const checkData = {
     vehiculo_id: vid,
+    conductor_id: $('pe-sel-conductor')?.value || null,
     pais_id: CP?.pais_id || null,
     fecha: new Date().toISOString().split('T')[0],
     hora_check: new Date().toTimeString().slice(0,8),
@@ -1462,6 +1512,7 @@ async function guardarCheckPEOp(){
   renderPEFotosOp();
   setPEPeon(false);
   $('pe-sel-vehiculo').value = '';
+  if($('pe-sel-conductor')) $('pe-sel-conductor').value = '';
   onPEVehChange('');
 
   toast(ef==='ok' ? '✅ Checklist OK' : '⚠️ Checklist con observación');

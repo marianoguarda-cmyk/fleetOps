@@ -220,6 +220,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
           <button class="nav-btn" onclick="goTo('checklist')">✅ Check diario</button>
           <button class="nav-btn" onclick="goTo('liquidacion')">💰 Liquidación</button>
           <button class="nav-btn" onclick="goTo('planificacion')">📅 Planificación</button>
+          <button class="nav-btn" onclick="goTo('historial')">🕐 Historial</button>
         </div>
       </div>
 
@@ -229,7 +230,6 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
         </button>
         <div class="nav-group-body" id="group-monitoreo">
           <button class="nav-btn" onclick="goTo('satelital')">📍 Satelital</button>
-          <button class="nav-btn" onclick="goTo('historial')">🕐 Historial</button>
           <button class="nav-btn" onclick="goTo('alertas')">🔔 Alertas <span id="badge-alertas" class="badge b-err" style="margin-left:auto;font-size:10px;display:none"></span></button>
         </div>
       </div>
@@ -442,6 +442,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
           <select id="plan-cliente-sel" style="font-size:13px;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2)" onchange="loadPlanificacion()">
             <option value="">Todos los clientes</option>
           </select>
+          <button class="btn btn-sm" onclick="exportarPlanificacionCSV()">⬇ Exportar CSV</button>
           <div id="plan-lock-info" style="font-size:12px;color:var(--text2)"></div>
         </div>
 
@@ -468,7 +469,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
             </div>
             <div style="background:rgba(255,255,255,.2);padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600" id="check-hora-live">⏱ --:--</div>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px">
             <div>
               <div style="font-size:11px;opacity:.7;margin-bottom:4px">Empresa de transporte</div>
               <select id="check-empresa-sel" style="width:100%;font-size:13px;background:rgba(255,255,255,.9);color:var(--text);border:none;border-radius:var(--radius);padding:7px 10px" onchange="updateVehiculosByEmpresa(this.value)">
@@ -477,8 +478,14 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
             </div>
             <div>
               <div style="font-size:11px;opacity:.7;margin-bottom:4px">Vehículo</div>
-              <select id="check-vehiculo-sel" style="width:100%;font-size:13px;background:rgba(255,255,255,.9);color:var(--text);border:none;border-radius:var(--radius);padding:7px 10px" onchange="updateCheckGPS(this.value)">
+              <select id="check-vehiculo-sel" style="width:100%;font-size:13px;background:rgba(255,255,255,.9);color:var(--text);border:none;border-radius:var(--radius);padding:7px 10px" onchange="updateCheckGPS(this.value);autoSeleccionarConductor(this.value)">
                 <option value="">— Seleccioná vehículo —</option>
+              </select>
+            </div>
+            <div>
+              <div style="font-size:11px;opacity:.7;margin-bottom:4px">Conductor</div>
+              <select id="check-conductor-sel" style="width:100%;font-size:13px;background:rgba(255,255,255,.9);color:var(--text);border:none;border-radius:var(--radius);padding:7px 10px">
+                <option value="">— Sin conductor —</option>
               </select>
             </div>
             <div>
@@ -600,11 +607,16 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
             </div>
             <div>
               <div style="font-size:10px;opacity:.75;margin-bottom:3px">Vehículo *</div>
-              <select class="form-control" id="pe-vehiculo-sel" onchange="onPEVehiculoChange(this.value)" style="font-size:13px;background:rgba(255,255,255,.92);color:var(--text);border:none;border-radius:8px;padding:7px 9px;width:100%">
+              <select class="form-control" id="pe-vehiculo-sel" onchange="onPEVehiculoChange(this.value);autoSeleccionarConductorPE(this.value)" style="font-size:13px;background:rgba(255,255,255,.92);color:var(--text);border:none;border-radius:8px;padding:7px 9px;width:100%">
                 <option value="">Seleccioná</option>
               </select>
             </div>
-
+            <div>
+              <div style="font-size:10px;opacity:.75;margin-bottom:3px">Conductor</div>
+              <select class="form-control" id="pe-conductor-sel" style="font-size:13px;background:rgba(255,255,255,.92);color:var(--text);border:none;border-radius:8px;padding:7px 9px;width:100%">
+                <option value="">Sin conductor</option>
+              </select>
+            </div>
           <div style="grid-column:1/-1">
               <div style="font-size:10px;opacity:.75;margin-bottom:3px">Cliente</div>
               <select class="form-control" id="pe-cliente-sel" style="font-size:13px;background:rgba(255,255,255,.92);color:var(--text);border:none;border-radius:8px;padding:7px 9px;width:100%">
@@ -1033,8 +1045,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
     </div>
     <div class="form-section">Observaciones</div>
     <textarea id="mv-obs" placeholder="Información adicional..."></textarea>
-    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
-      <button class="btn"     <div class="fg" style="margin-bottom:8px">
+    <div class="fg" style="margin-bottom:8px">
       <label class="fl">📷 Foto del vehículo</label>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px">
         <input type="file" accept="image/*" id="mv-foto-input" style="display:none" onchange="previewFotoVeh(event)">
@@ -1112,7 +1123,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 </div>
 
 <div class="overlay" id="ov-detalle">
-  <div class="modal"><div class="modal-hd"><div class="modal-title" id="det-title">Detalle</div><button class="modal-close" onclick="closeModal('detalle')">✕</button></div><div id="det-body"></div></div>
+  <div class="modal"><div class="modal-hd"><div class="modal-title" id="det-title">Detalle</div><button class="modal-close" onclick="closeModal('detalle')">✕</button></div><div class="modal-body" id="det-body"></div></div>
 </div>
 
 <div class="overlay" id="ov-check-det">
@@ -1125,10 +1136,12 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 <div class="overlay" id="ov-apikey">
   <div class="modal modal-sm">
     <div class="modal-hd"><div class="modal-title">🛰 Conectar HawkGPS</div><button class="modal-close" onclick="closeModal('apikey')">✕</button></div>
+    <div class="modal-body">
     <div style="background:var(--blue-light);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--blue);margin-bottom:14px">Ingresá las mismas credenciales que usás para entrar al portal web de HawkGPS.</div>
     <div class="fg" style="margin-bottom:11px"><label class="fl">Usuario HawkGPS</label><input type="text" id="hawk-usuario" placeholder="tu_usuario"></div>
-    <div class="fg" style="margin-bottom:18px"><label class="fl">Contraseña HawkGPS</label><input type="password" id="hawk-password" placeholder="tu_contraseña"></div>
-    <div style="display:flex;justify-content:flex-end;gap:8px">
+    <div class="fg" style="margin-bottom:0"><label class="fl">Contraseña HawkGPS</label><input type="password" id="hawk-password" placeholder="tu_contraseña"></div>
+    </div><!-- end modal-body -->
+    <div class="modal-footer">
       <button class="btn" onclick="closeModal('apikey')">Cancelar</button>
       <button class="btn btn-primary" id="hawk-connect-btn" onclick="conectarHawk()">🔌 Conectar HawkGPS</button>
     </div>
@@ -1138,6 +1151,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 <div class="overlay" id="ov-nuevo-usuario">
   <div class="modal modal-sm">
     <div class="modal-hd"><div class="modal-title">Nuevo usuario</div><button class="modal-close" onclick="closeModal('nuevo-usuario')">✕</button></div>
+    <div class="modal-body">
     <div style="background:var(--blue-light);border-radius:var(--radius);padding:9px 12px;font-size:12px;color:var(--blue);margin-bottom:14px">La persona ingresa con el email y contraseña que asignés acá.</div>
     <div class="fg" style="margin-bottom:11px"><label class="fl">Nombre completo *</label><input type="text" id="nu-nombre" placeholder="Juan Pérez"></div>
     <div class="fg" style="margin-bottom:11px"><label class="fl">Email *</label><input type="email" id="nu-email" placeholder="usuario@empresa.com"></div>
@@ -1150,12 +1164,13 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
         <option value="super_admin">Super Admin — acceso global a todos los países</option>
       </select>
     </div>
-    <div class="fg" style="margin-bottom:16px" id="nu-pais-wrap">
+    <div class="fg" style="margin-bottom:0" id="nu-pais-wrap">
       <label class="fl">País asignado</label>
       <select id="nu-pais"><option value="">Seleccioná país</option></select>
       <div style="font-size:11px;color:var(--text2);margin-top:4px">El Super Admin no necesita país asignado.</div>
     </div>
-    <div style="display:flex;justify-content:flex-end;gap:8px">
+    </div><!-- end modal-body -->
+    <div class="modal-footer">
       <button class="btn" onclick="closeModal('nuevo-usuario')">Cancelar</button>
       <button class="btn btn-primary" id="nu-btn" onclick="crearUsuario()">✅ Crear usuario</button>
     </div>
@@ -1166,6 +1181,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 <div class="overlay" id="ov-empresa">
   <div class="modal modal-sm">
     <div class="modal-hd"><div class="modal-title" id="emp-modal-title">Nueva empresa</div><button class="modal-close" onclick="closeModal('empresa')">✕</button></div>
+    <div class="modal-body">
     <input type="hidden" id="emp-id">
     <div class="form-grid">
       <div class="fg fg-full"><label class="fl">País</label><select id="emp-pais"><option value="">Seleccioná país</option></select></div>
@@ -1175,7 +1191,8 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
       <div class="fg"><label class="fl">Email</label><input type="email" id="emp-email" placeholder="contacto@empresa.com"></div>
       <div class="fg fg-full"><label class="fl">Dirección</label><input type="text" id="emp-dir" placeholder="Av. Corrientes 1234, CABA"></div>
     </div>
-    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
+    </div><!-- end modal-body -->
+    <div class="modal-footer">
       <button class="btn" onclick="closeModal('empresa')">Cancelar</button>
       <button class="btn btn-primary" onclick="guardarEmpresa()">✅ Guardar empresa</button>
     </div>
@@ -1185,9 +1202,11 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 <div class="overlay" id="ov-cambiar-pass">
   <div class="modal modal-sm">
     <div class="modal-hd"><div class="modal-title">Cambiar contraseña</div><button class="modal-close" onclick="closeModal('cambiar-pass')">✕</button></div>
+    <div class="modal-body">
     <div class="fg" style="margin-bottom:11px"><label class="fl">Nueva contraseña</label><input type="password" id="cp-new" placeholder="Mínimo 6 caracteres"></div>
-    <div class="fg" style="margin-bottom:18px"><label class="fl">Repetir contraseña</label><input type="password" id="cp-rep" placeholder="Repetí la contraseña"></div>
-    <div style="display:flex;justify-content:flex-end;gap:8px">
+    <div class="fg" style="margin-bottom:0"><label class="fl">Repetir contraseña</label><input type="password" id="cp-rep" placeholder="Repetí la contraseña"></div>
+    </div><!-- end modal-body -->
+    <div class="modal-footer">
       <button class="btn" onclick="closeModal('cambiar-pass')">Cancelar</button>
       <button class="btn btn-primary" onclick="cambiarPassword()">🔑 Cambiar contraseña</button>
     </div>
@@ -1200,13 +1219,15 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 <div class="overlay" id="ov-cliente">
   <div class="modal modal-sm">
     <div class="modal-hd"><div class="modal-title" id="cli-modal-title">Nuevo cliente</div><button class="modal-close" onclick="closeModal('cliente')">✕</button></div>
+    <div class="modal-body">
     <input type="hidden" id="cli-id">
     <div class="fg" style="margin-bottom:11px"><label class="fl">País</label><select id="cli-pais" style="margin-bottom:0"><option value="">Seleccioná país</option></select></div>
     <div class="fg" style="margin-bottom:11px"><label class="fl">Nombre *</label><input type="text" id="cli-nombre" placeholder="Nombre del cliente o empresa"></div>
     <div class="fg" style="margin-bottom:11px"><label class="fl">Dirección</label><input type="text" id="cli-dir" placeholder="Av. Corrientes 1234, CABA"></div>
     <div class="fg" style="margin-bottom:11px"><label class="fl">Teléfono / Contacto</label><input type="text" id="cli-tel" placeholder="11 1234-5678"></div>
-    <div class="fg" style="margin-bottom:16px"><label class="fl">Email</label><input type="email" id="cli-email" placeholder="contacto@cliente.com"></div>
-    <div style="display:flex;justify-content:flex-end;gap:8px">
+    <div class="fg" style="margin-bottom:0"><label class="fl">Email</label><input type="email" id="cli-email" placeholder="contacto@cliente.com"></div>
+    </div><!-- end modal-body -->
+    <div class="modal-footer">
       <button class="btn" onclick="closeModal('cliente')">Cancelar</button>
       <button class="btn btn-primary" onclick="guardarCliente()">✅ Guardar cliente</button>
     </div>
@@ -1218,6 +1239,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 <div class="overlay" id="ov-rastreador">
   <div class="modal modal-sm">
     <div class="modal-hd"><div class="modal-title" id="rast-title">Vincular rastreador</div><button class="modal-close" onclick="closeModal('rastreador')">✕</button></div>
+    <div class="modal-body">
     <div style="background:var(--blue-light);border-radius:var(--radius);padding:9px 12px;font-size:12px;color:var(--blue);margin-bottom:14px">
       Los rastreadores se obtienen automáticamente desde la API GPS. Seleccioná uno y asignalo a un vehículo.
     </div>
@@ -1235,13 +1257,14 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
     </div>
     <input type="hidden" id="rast-nombre">
     <input type="hidden" id="rast-pais">
-    <div class="fg" style="margin-bottom:16px">
+    <div class="fg" style="margin-bottom:0">
       <label class="fl">Vehículo asignado</label>
       <select id="rast-vehiculo-sel" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg)">
         <option value="">Sin asignar</option>
       </select>
     </div>
-    <div style="display:flex;justify-content:flex-end;gap:8px">
+    </div><!-- end modal-body -->
+    <div class="modal-footer">
       <button class="btn" onclick="closeModal('rastreador')">Cancelar</button>
       <button class="btn btn-primary" onclick="guardarRastreador()">✅ Guardar</button>
     </div>
@@ -1379,6 +1402,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 <div class="overlay" id="ov-gps">
   <div class="modal modal-sm">
     <div class="modal-hd"><div class="modal-title" id="gps-modal-title">Nuevo acceso GPS</div><button class="modal-close" onclick="closeModal('gps')">✕</button></div>
+    <div class="modal-body">
     <input type="hidden" id="gps-id">
     <div class="fg" style="margin-bottom:11px">
       <label class="fl">Tipo de acceso</label>
@@ -1398,8 +1422,9 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
     <div class="fg" style="margin-bottom:11px"><label class="fl">Nombre del proveedor GPS</label><input type="text" id="gps-nombre" placeholder="Ej: HawkGPS, Traksat, Copiloto..."></div>
     <div class="fg" style="margin-bottom:11px"><label class="fl">Link de acceso (URL del portal)</label><input type="url" id="gps-link" placeholder="https://portal.hawkgps.com.ar/..."></div>
     <div class="fg" style="margin-bottom:11px"><label class="fl">Usuario de acceso</label><input type="text" id="gps-usuario" placeholder="usuario@empresa.com"></div>
-    <div class="fg" style="margin-bottom:16px"><label class="fl">Contraseña</label><input type="password" id="gps-password" placeholder="Contraseña del portal"></div>
-    <div style="display:flex;justify-content:flex-end;gap:8px">
+    <div class="fg" style="margin-bottom:0"><label class="fl">Contraseña</label><input type="password" id="gps-password" placeholder="Contraseña del portal"></div>
+    </div><!-- end modal-body -->
+    <div class="modal-footer">
       <button class="btn" onclick="closeModal('gps')">Cancelar</button>
       <button class="btn btn-primary" onclick="guardarGPS()">✅ Guardar acceso</button>
     </div>
@@ -1572,7 +1597,7 @@ function goTo(sec){
   if(sec==='paises') a.innerHTML='';
   if(sec==='clientes')a.innerHTML=`<button class="btn btn-primary" onclick="openModal('cliente')">+ Nuevo cliente</button>`;
   if(sec==='empresas')a.innerHTML=`<button class="btn btn-primary" onclick="openModal('empresa')">+ Nueva empresa</button>`;
-  const L={dashboard:loadDashboard,vehiculos:loadVehiculos,historial:loadHistorial,conductores:loadConductores,alertas:loadAlertas,satelital:loadSatelital,usuarios:loadUsuarios,empresas:loadEmpresas,clientes:loadClientes,checklist:initCheckDiario,paises:loadPaises,planificacion:loadPlanificacion};
+  const L={dashboard:loadDashboard,vehiculos:loadVehiculos,historial:loadHistorial,conductores:loadConductores,alertas:loadAlertas,satelital:loadSatelital,usuarios:loadUsuarios,empresas:loadEmpresas,clientes:loadClientes,checklist:initCheckDiario,paises:loadPaises,planificacion:loadPlanificacion,liquidacion:loadLiquidacion};
   if(L[sec])L[sec]();
 }
 
@@ -1758,6 +1783,14 @@ function updateVehiculosByEmpresa(empresaId){
 }
 
 // Cargar selects del check cuando se entra a la sección
+function autoSeleccionarConductor(vehiculoId){
+  const sel=$('check-conductor-sel');
+  if(!sel) return;
+  if(!vehiculoId){ sel.value=''; return; }
+  const cond=CONDUCTORES_CACHE_CHECK.find(c=>c.vehiculo_id===vehiculoId);
+  sel.value=cond?cond.id:'';
+}
+
 async function initCheckSelects(){
   // Reloj
   iniciarRelojCheck();
@@ -1785,6 +1818,14 @@ async function initCheckSelects(){
     csel.innerHTML = '<option value="">— Sin cliente asignado —</option>' +
       CLIENTES_CACHE.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
   }
+  // Conductores filtrados por país activo (para autocompletar y permitir edición manual)
+  const consel = $('check-conductor-sel');
+  if(consel){
+    const {data:conds} = await withPais(db.from('conductores').select('id,nombre,vehiculo_id').eq('activo',true)).order('nombre');
+    CONDUCTORES_CACHE_CHECK = conds || [];
+    consel.innerHTML = '<option value="">— Sin conductor —</option>' +
+      CONDUCTORES_CACHE_CHECK.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  }
   // Vehículos (todos del país)
   updateVehiculosByEmpresa('');
   // Reset completo del formulario
@@ -1802,6 +1843,7 @@ function resetCheckForm(){
   const o=$('check-obs');if(o)o.value='';
   // Limpiar selects
   const vs=$('check-vehiculo-sel');if(vs)vs.value='';
+  const condSel=$('check-conductor-sel');if(condSel)condSel.value='';
   const cs=$('check-cliente-sel');if(cs)cs.value='';
   const es=$('check-empresa-sel');if(es)es.value='';
   // Ocultar advertencia vehículo nuevo
@@ -1853,6 +1895,7 @@ function abrirVincularDesdeCheck(){
 
 // GPS info en checklist
 let VEH_CACHE_CHECK={};
+let CONDUCTORES_CACHE_CHECK=[];
 
 function checkVehiculoNuevo(v){
   // Muestra advertencia si el vehículo fue dado de alta hace menos de 15 días
@@ -1929,12 +1972,21 @@ async function guardarCheck(){
     }catch(e){console.warn('Error subiendo foto:',e);}
   }
   const{error}=await db.from('checks_diarios').insert({vehiculo_id:vid,fecha:new Date().toISOString().split('T')[0],doc_chofer_ok:$('dc1').checked&&$('dc2').checked,doc_chofer_estado:dc,carga_ok:$('ca1').checked&&$('ca2').checked,carga_estado:cc,precinto_numero:$('precinto-num')?.value.trim()||null,vehiculo_ok:$('ve1').checked&&$('ve2').checked&&$('ve3').checked&&$('ve4').checked,vehiculo_estado:vc,estado_final:ef,observaciones:$('check-obs').value.trim(),registrado_por:CP?.nombre||CU?.email,
+    item_licencia:$('dc1').checked,
+    item_dni:$('dc2').checked,
+    item_remito:$('ca1').checked,
+    item_precinto_ok:$('ca2').checked,
+    item_carroceria:$('ve1').checked,
+    item_espejos:$('ve2').checked,
+    item_fluidos:$('ve3').checked,
+    item_limpieza:$('ve4').checked,
     link_gps_check:VEH_CACHE_CHECK[vid]?.link_gps||null,
     empresa_gps:VEH_CACHE_CHECK[vid]?.nombre_empresa_gps||null,
     rastreador_gid:(()=>{const r=RASTREADORES_DB.find(x=>x.vehiculo_id===vid);return r?.gps_gid||null;})(),
     rastreador_nombre:(()=>{const r=RASTREADORES_DB.find(x=>x.vehiculo_id===vid);return r?.nombre||r?.gps_id_dispositivo||null;})(),
     gps_estado:getChip('chips-gps')||null,
     cliente_id:$('check-cliente-sel')?.value||null,
+    conductor_id:$('check-conductor-sel')?.value||null,
     pais_id:getPaisId()||null,
     sale_con_peon:$('peon-si')?.checked||false,
     nombre_peon:$('peon-si')?.checked?($('peon-nombre')?.value.trim()||null):null,
@@ -2166,11 +2218,25 @@ function verCheckDet(h){
       ${filaPE("EPP's",h.pers_epp,com.epp)}
     </div>`;
   } else {
-    html+=`<div class="form-section" style="margin-top:14px">Detalle del check estándar</div>
+    html+=`<div class="form-section" style="margin-top:14px">📄 Documentación del chofer</div>
     <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13px">
-      <span style="color:var(--text2)">Doc. chofer</span><span>${bdg(h.doc_chofer_estado)}</span>
-      <span style="color:var(--text2)">Carga / Remito</span><span>${bdg(h.carga_estado)}</span>
-      <span style="color:var(--text2)">Vehículo</span><span>${bdg(h.vehiculo_estado)}</span>
+      <span style="color:var(--text2)">Licencia de conducir vigente</span><span>${valPE(h.item_licencia===true?'si':h.item_licencia===false?'no':null)}</span>
+      <span style="color:var(--text2)">Identificación (DNI)</span><span>${valPE(h.item_dni===true?'si':h.item_dni===false?'no':null)}</span>
+      <span style="color:var(--text2)">Resultado</span><span>${bdg(h.doc_chofer_estado)}</span>
+    </div>
+    <div class="form-section" style="margin-top:12px">📦 Carga y remito</div>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13px">
+      <span style="color:var(--text2)">Remito y documentación</span><span>${valPE(h.item_remito===true?'si':h.item_remito===false?'no':null)}</span>
+      <span style="color:var(--text2)">Precinto</span><span>${valPE(h.item_precinto_ok===true?'si':h.item_precinto_ok===false?'no':null)}${h.precinto_numero?` <span style="color:var(--text2);font-size:12px">· N° ${h.precinto_numero}</span>`:''}</span>
+      <span style="color:var(--text2)">Resultado</span><span>${bdg(h.carga_estado)}</span>
+    </div>
+    <div class="form-section" style="margin-top:12px">🚛 Estado del vehículo</div>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13px">
+      <span style="color:var(--text2)">Carrocería sin daños</span><span>${valPE(h.item_carroceria===true?'si':h.item_carroceria===false?'no':null)}</span>
+      <span style="color:var(--text2)">Espejos y vidrios OK</span><span>${valPE(h.item_espejos===true?'si':h.item_espejos===false?'no':null)}</span>
+      <span style="color:var(--text2)">Sin pérdida de fluidos</span><span>${valPE(h.item_fluidos===true?'si':h.item_fluidos===false?'no':null)}</span>
+      <span style="color:var(--text2)">Limpieza general</span><span>${valPE(h.item_limpieza===true?'si':h.item_limpieza===false?'no':null)}</span>
+      <span style="color:var(--text2)">Resultado</span><span>${bdg(h.vehiculo_estado)}</span>
     </div>`;
   }
 
@@ -2697,6 +2763,7 @@ async function loadPaises(){
 // PLANIFICACIÓN DE FLOTA
 // ══════════════════════════════════════════════════════════════════════════
 let PLAN_SEMANA_INICIO = null; // lunes de la semana actual
+let PLAN_EXPORT_CACHE = null;
 
 function getLunesDeSemana(fecha){
   const d = new Date(fecha);
@@ -2748,11 +2815,14 @@ function semanaSiguiente(){
 async function initPlanCliente(){
   const sel = $('plan-cliente-sel');
   if(!sel) return;
+  const valorActual = sel.value;
   // Siempre recargar clientes filtrados por país activo
   const{data}=await withPais(db.from('clientes').select('id,nombre').eq('activo',true)).order('nombre');
   CLIENTES_CACHE = data || [];
   sel.innerHTML = '<option value="">Todos los clientes</option>' +
     CLIENTES_CACHE.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  // Restaurar selección previa si sigue siendo válida
+  if(valorActual && CLIENTES_CACHE.find(c=>c.id===valorActual)) sel.value = valorActual;
 }
 
 async function loadPlanificacion(){
@@ -2820,13 +2890,17 @@ async function loadPlanificacion(){
 
   const hoy = fechaStr(new Date());
 
+  // Cache para exportación CSV
+  PLAN_EXPORT_CACHE = { dias, planMap, planMapDetalle, checksMap, clienteId, clienteNombre: clienteId ? (CLIENTES_CACHE.find(c=>c.id===clienteId)?.nombre||'') : 'Todos los clientes' };
+
   grid.innerHTML = dias.map(fecha => {
     const plan = clienteId ? planMapDetalle[fecha+'_'+clienteId] : planMap[fecha];
     const planificados = plan?.vehiculos_planificados || 0;
     const checks = checksMap[fecha] || 0;
     const esFuturo = fecha > hoy;
     const esHoy = fecha === hoy;
-    const puedeEditar = isAdmin();
+    const puedeEditar = isAdmin() && fecha >= hoy;
+    const diaFinalizado = fecha < hoy;
 
     const porcentaje = planificados > 0 ? Math.min(100, Math.round(checks/planificados*100)) : 0;
     const color = planificados === 0 ? 'var(--border)' :
@@ -2844,7 +2918,8 @@ async function loadPlanificacion(){
           onchange="guardarPlanDia('${fecha}','${plan?.id||''}','${clienteId||''}')"
         >
       ` : `
-        <div style="font-size:28px;font-weight:700;color:var(--blue);margin-bottom:4px">${planificados}</div>
+        <div style="font-size:28px;font-weight:700;color:${diaFinalizado?'var(--text2)':'var(--blue)'};margin-bottom:4px">${planificados}</div>
+        ${diaFinalizado?'<div style="font-size:10px;color:var(--text3)">🔒 Día finalizado</div>':''}
       `}
       <div style="font-size:11px;color:var(--text2);margin-top:6px">Planificados</div>
       <div style="height:4px;background:var(--border);border-radius:2px;margin:8px 0">
@@ -2881,8 +2956,40 @@ async function loadPlanificacion(){
   }
 }
 
+function exportarPlanificacionCSV(){
+  if(!PLAN_EXPORT_CACHE){toast('Primero cargá la planificación','err');return}
+  const{dias,planMap,planMapDetalle,checksMap,clienteId,clienteNombre}=PLAN_EXPORT_CACHE;
+  const headers=['Fecha','Día','Cliente','Vehículos planificados','Checks realizados','Cumplimiento %','Creado por'];
+  const rows=dias.map(fecha=>{
+    const plan=clienteId?planMapDetalle[fecha+'_'+clienteId]:planMap[fecha];
+    const planificados=plan?.vehiculos_planificados||0;
+    const checks=checksMap[fecha]||0;
+    const cumplimiento=planificados>0?Math.round(checks/planificados*100):0;
+    return [
+      formatFecha(fecha),
+      formatDiaNombre(fecha),
+      clienteNombre,
+      planificados,
+      checks,
+      cumplimiento+'%',
+      plan?.creado_por||''
+    ];
+  });
+  const csv=[headers,...rows].map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`planificacion_${dias[0]}_a_${dias[6]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('✓ CSV descargado','ok');
+}
+
 async function guardarPlanDia(fecha, planId, clienteId){
   if(!isAdmin()){toast('Sin permisos','err');return}
+  const hoy = fechaStr(new Date());
+  if(fecha < hoy){toast('⚠ No se puede modificar la planificación de un día ya finalizado','err');setTimeout(loadPlanificacion,500);return}
   const input = $('plan-input-'+fecha);
   if(!input) return;
   const cantidad = parseInt(input.value)||0;
@@ -3224,6 +3331,7 @@ function previewFotoVeh(e){
 // ══════════════════════════════════════════════════════════════════════════
 let PE_FOTOS = [];
 let PE_VEH_CACHE = {};
+let PE_CONDUCTORES_CACHE = [];
 
 function esPeru(){
   // Para super admin usa PAIS_ACTIVO, para admin/operador usa su pais_id
@@ -3270,6 +3378,19 @@ async function initCheckPE(){
   const{data:clis}=await withPais(db.from('clientes').select('id,nombre').eq('activo',true)).order('nombre');
   const csel=$('pe-cliente-sel');
   if(csel) csel.innerHTML='<option value="">Sin cliente</option>'+(clis||[]).map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  // Conductores (para autocompletar y permitir edición manual)
+  const{data:conds}=await withPais(db.from('conductores').select('id,nombre,vehiculo_id').eq('activo',true)).order('nombre');
+  PE_CONDUCTORES_CACHE=conds||[];
+  const consel=$('pe-conductor-sel');
+  if(consel) consel.innerHTML='<option value="">Sin conductor</option>'+(conds||[]).map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+}
+
+function autoSeleccionarConductorPE(vehiculoId){
+  const sel=$('pe-conductor-sel');
+  if(!sel) return;
+  if(!vehiculoId){ sel.value=''; return; }
+  const cond=(PE_CONDUCTORES_CACHE||[]).find(c=>c.vehiculo_id===vehiculoId);
+  sel.value=cond?cond.id:'';
 }
 
 function llenarVehiculosPE(lista){
@@ -3439,6 +3560,7 @@ async function guardarCheckPE(){
   const v=PE_VEH_CACHE[vid];
   const checkData={
     vehiculo_id:vid,
+    conductor_id:$('pe-conductor-sel')?.value||null,
     pais_id:getPaisId()||CP?.pais_id||null,
     fecha:new Date().toISOString().split('T')[0],
     hora_check:new Date().toTimeString().slice(0,8),
@@ -3528,6 +3650,7 @@ async function guardarCheckPE(){
   document.querySelectorAll('#s-checklist-pe input[type=radio]').forEach(r=>r.checked=false);
   document.querySelectorAll('#s-checklist-pe input[type=text]').forEach(r=>r.value='');
   $('pe-vehiculo-sel').value='';
+  if($('pe-conductor-sel')) $('pe-conductor-sel').value='';
   if($('pe-obs')) $('pe-obs').value='';
   if($('pe-cliente-sel')) $('pe-cliente-sel').value='';
   if($('pe-warn-nuevo')) $('pe-warn-nuevo').style.display='none';
