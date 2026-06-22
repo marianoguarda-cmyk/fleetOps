@@ -1828,7 +1828,8 @@ async function recargarTiposPorPais(paisId){
   if(!mvTipo) return;
   mvTipo.innerHTML = '<option value="">— Cargando tipos... —</option>';
   let qTv = db.from('tipos_vehiculo').select('id,nombre,color,capacidad_tn').eq('activo',true).order('orden').order('nombre');
-  if(paisId) qTv = qTv.eq('pais_id', paisId);
+  if(paisId) qTv = qTv.or(`pais_id.eq.${paisId},pais_id.is.null`);
+  // Si no hay país, trae todos incluyendo globales
   const {data:tvData} = await qTv;
   mvTipo.innerHTML = '<option value="">— Seleccioná un tipo —</option>' +
     (tvData||[]).map(t=>`<option value="${t.id}">${t.nombre}${t.capacidad_tn?' ('+t.capacidad_tn+' tn)':''}</option>`).join('');
@@ -2829,15 +2830,14 @@ async function loadTiposVehiculo(){
     }
   }
 
-  // Construir query filtrada
+  // Construir query: siempre incluir globales (pais_id null) + los del país activo
+  const paisActivo = isSuperAdmin() ? (filterSel?.value || getPaisId()) : getPaisId();
   let q = db.from('tipos_vehiculo').select('*,paises(nombre,codigo)').eq('activo',true).order('orden').order('nombre');
-  if(isSuperAdmin()){
-    const pFilt = filterSel?.value || getPaisId();
-    if(pFilt) q = q.eq('pais_id', pFilt);
-    // Si no hay filtro activo, mostrar todos
-  } else {
-    q = q.eq('pais_id', getPaisId());
+  if(paisActivo){
+    // Tipos del país activo + globales
+    q = q.or(`pais_id.eq.${paisActivo},pais_id.is.null`);
   }
+  // Si no hay país activo (super_admin vista global) → trae todos
 
   const {data, error} = await q;
   if(error){ el.innerHTML='<div style="padding:20px;color:var(--red)">Error al cargar tipos</div>'; return; }
@@ -2862,13 +2862,14 @@ async function loadTiposVehiculo(){
           <div><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${t.color||'#6b7280'}"></span></div>
           <div style="display:flex;align-items:center;gap:8px">
             <span style="background:${t.color||'#6b7280'};color:#fff;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500">${t.nombre}</span>
+            ${!t.pais_id?'<span style="font-size:10px;color:var(--text2);background:var(--bg3);padding:1px 6px;border-radius:10px">🌎 Global</span>':''}
           </div>
-          <div style="font-size:13px">${t.paises?.codigo||''} ${t.paises?.nombre||'—'}</div>
+          <div style="font-size:13px">${t.pais_id?(t.paises?.codigo||'')+' '+(t.paises?.nombre||''):'Todos los países'}</div>
           <div style="font-size:13px">${t.capacidad_tn!=null?t.capacidad_tn+' tn':'—'}</div>
           <div style="font-size:13px">${t.orden}</div>
           <div style="display:flex;gap:6px">
-            <button class="btn btn-sm" onclick="editarTipoVehiculo('${t.id}')">✏</button>
-            <button class="btn btn-sm" style="color:var(--red)" onclick="eliminarTipoVehiculo('${t.id}','${t.nombre.replace(/'/g,"\\'")}')">🗑</button>
+            ${t.pais_id||isSuperAdmin()?`<button class="btn btn-sm" onclick="editarTipoVehiculo('${t.id}')">✏</button>`:''}
+            ${t.pais_id||isSuperAdmin()?`<button class="btn btn-sm" style="color:var(--red)" onclick="eliminarTipoVehiculo('${t.id}','${t.nombre.replace(/'/g,"\\'")}')">🗑</button>`:''}
           </div>
         </div>`).join('')}
     </div>`;
@@ -4849,7 +4850,8 @@ async function openModal(id){
       let qTv = db.from('tipos_vehiculo').select('id,nombre,color,capacidad_tn').eq('activo',true).order('orden').order('nombre');
       // Prioridad: 1) país seleccionado en el modal, 2) país activo global
       const pId = $('mv-pais')?.dataset.pendingVal || $('mv-pais')?.value || getPaisId();
-      if(pId) qTv = qTv.eq('pais_id', pId);
+      if(pId) qTv = qTv.or(`pais_id.eq.${pId},pais_id.is.null`);
+      // Si no hay país, trae todos (incluye globales)
       const {data:tvData} = await qTv;
       const pendingTipo = mvTipo.dataset.pendingVal || mvTipo.value;
       mvTipo.innerHTML = '<option value="">— Seleccioná un tipo —</option>' +
