@@ -292,7 +292,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
             <option value="">🌎 Todos los países</option>
           </select>
         </div>
-        <div id="tb-actions"></div>
+        
       </div>
     </div>
     <div class="content">
@@ -1653,14 +1653,6 @@ function goTo(sec, pushState=true){
   }
   document.querySelectorAll('.nav-btn').forEach(b=>{if(b.getAttribute('onclick')?.includes(`'${sec}'`))b.classList.add('active')});
   const p=PAGES[sec];$('tb-title').textContent=p.title;$('tb-sub').textContent=p.sub;
-  const a=$('tb-actions');a.innerHTML='';
-  if(sec==='vehiculos')a.innerHTML=`<button class="btn btn-primary" onclick="openModal('vehiculo')">+ Nuevo vehículo</button>`;
-  if(sec==='conductores')a.innerHTML=`<button class="btn btn-primary" onclick="openModal('conductor')">+ Agregar conductor</button>`;
-  if(sec==='satelital')a.innerHTML=`<button class="btn btn-primary" onclick="openModal('gps')">+ Agregar GPS</button>`;
-  if(sec==='usuarios')a.innerHTML=`<button class="btn btn-primary" onclick="openModal('nuevo-usuario')">+ Nuevo usuario</button>`;
-  if(sec==='paises') a.innerHTML='';
-  if(sec==='clientes')a.innerHTML=`<button class="btn btn-primary" onclick="openModal('cliente')">+ Nuevo cliente</button>`;
-  if(sec==='empresas')a.innerHTML=`<button class="btn btn-primary" onclick="openModal('empresa')">+ Nueva empresa</button>`;
   const L={dashboard:loadDashboard,vehiculos:loadVehiculos,historial:loadHistorial,conductores:loadConductores,alertas:loadAlertas,satelital:loadSatelital,usuarios:loadUsuarios,empresas:loadEmpresas,clientes:loadClientes,checklist:initCheckDiario,paises:loadPaises,planificacion:loadPlanificacion,liquidacion:loadLiquidacion,'tipos-vehiculo':loadTiposVehiculo};
   if(L[sec])L[sec]();
   // Actualizar URL sin recargar la página
