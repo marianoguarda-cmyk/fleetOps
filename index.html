@@ -1535,7 +1535,16 @@ async function afterLogin(user){
   $('login-screen').classList.remove('show');
   $('app').classList.add('show');
   restoreNavState();
-  goTo('dashboard');
+  // Detectar si se entró por URL directa (ej: /vehiculos)
+  const pathSec = location.pathname.replace(/^\//, '').replace(/\/$/, '') || 'dashboard';
+  const validSecs = ['dashboard','vehiculos','historial','conductores','alertas','satelital','usuarios','empresas','clientes','checklist','paises','planificacion','liquidacion','tipos-vehiculo'];
+  const initSec = validSecs.includes(pathSec) ? pathSec : 'dashboard';
+  goTo(initSec, false); // false = no hacer pushState en la carga inicial
+  // Listener para botón atrás/adelante del navegador
+  window.addEventListener('popstate', e=>{
+    const sec = e.state?.sec || location.pathname.replace(/^\//, '').replace(/\/$/, '') || 'dashboard';
+    if(validSecs.includes(sec)) goTo(sec, false);
+  });
 }
 
 // Banderas por código de país
@@ -1628,7 +1637,7 @@ $('li-email').addEventListener('keydown',e=>{if(e.key==='Enter')$('li-pass').foc
 // NAV
 const PAGES={dashboard:{title:'Dashboard',sub:'Vista general de la flota'},vehiculos:{title:'Vehículos',sub:'Toda la flota registrada'},liquidacion:{title:'Liquidación de ruta',sub:'Seguimiento de entregas y cobros'},planificacion:{title:'Planificación de flota',sub:'Vehículos planificados por semana'},checklist:{title:'Check diario',sub:'Revisión antes de la salida'},historial:{title:'Historial de checks',sub:'Registro completo de revisiones'},satelital:{title:'Satelital en vivo',sub:'Rastreadores GPS en tiempo real'},conductores:{title:'Conductores',sub:'Gestión de choferes'},alertas:{title:'Alertas',sub:'Vencimientos y novedades'},empresas:{title:'Empresas de transporte',sub:'Gestión de empresas y flotas'},clientes:{title:'Clientes',sub:'Gestión de clientes'},paises:{title:'Países',sub:'Operaciones por país'},usuarios:{title:'Usuarios',sub:'Gestión de accesos al sistema'},config:{title:'Configuración',sub:'Ajustes de la aplicación'}};
 
-function goTo(sec){
+function goTo(sec, pushState=true){
   if(sec==='usuarios'&&!isAdmin()){toast('Solo los administradores pueden ver esta sección','err');return}
   // Si el país cambió, forzar recarga de la sección
   const forceReload = window._paisCambiadoPendiente;
@@ -1654,6 +1663,11 @@ function goTo(sec){
   if(sec==='empresas')a.innerHTML=`<button class="btn btn-primary" onclick="openModal('empresa')">+ Nueva empresa</button>`;
   const L={dashboard:loadDashboard,vehiculos:loadVehiculos,historial:loadHistorial,conductores:loadConductores,alertas:loadAlertas,satelital:loadSatelital,usuarios:loadUsuarios,empresas:loadEmpresas,clientes:loadClientes,checklist:initCheckDiario,paises:loadPaises,planificacion:loadPlanificacion,liquidacion:loadLiquidacion,'tipos-vehiculo':loadTiposVehiculo};
   if(L[sec])L[sec]();
+  // Actualizar URL sin recargar la página
+  if(pushState){
+    const url = '/'+sec;
+    if(location.pathname !== url) history.pushState({sec}, '', url);
+  }
 }
 
 // DASHBOARD
