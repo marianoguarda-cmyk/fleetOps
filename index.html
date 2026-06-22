@@ -1078,7 +1078,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
     <div class="form-section">Datos básicos</div>
     <div class="form-grid">
       <div class="fg"><label class="fl">País</label><select id="mv-pais"><option value="">Seleccioná país</option></select></div>
-      <div class="fg"><label class="fl">Tipo</label><select id="mv-tipo"><option value="camion">Camión</option><option value="utilitario">Utilitario</option></select></div>
+      <div class="fg"><label class="fl">Tipo de vehículo</label><select id="mv-tipo"><option value="">— Seleccioná un tipo —</option></select></div>
       <div class="fg"><label class="fl">Patente</label><input type="text" id="mv-patente" placeholder="AB 123 CD"></div>
       <div class="fg"><label class="fl">Marca</label><input type="text" id="mv-marca"></div>
       <div class="fg"><label class="fl">Modelo</label><input type="text" id="mv-modelo"></div>
@@ -1727,7 +1727,7 @@ async function loadDashboard(){
 // VEHICULOS
 async function loadVehiculos(){
   const el=$('vehiculos-list');el.innerHTML='<div class="loader"><div class="spin"></div>Cargando...</div>';
-  const{data,error}=await withPais(db.from('vehiculos').select('*, conductores(nombre), empresas(nombre)').eq('activo',true)).order('created_at',{ascending:false});
+  const{data,error}=await withPais(db.from('vehiculos').select('*, conductores(nombre), empresas(nombre), tipos_vehiculo(id,nombre,color)').eq('activo',true)).order('created_at',{ascending:false});
   console.log('vehiculos query result:',data?.length,'error:',error?.message);
   if(error){el.innerHTML=`<div class="empty">Error al cargar: ${error.message}<br><small>Verificá las políticas RLS en Supabase</small></div>`;return}
   if(!data?.length){el.innerHTML='<div class="empty">Sin vehículos. <button class="btn btn-sm btn-primary" onclick="openModal(\'vehiculo\')">+ Agregar</button></div>';return}
@@ -1742,8 +1742,25 @@ async function loadVehiculos(){
   const vehsFiltrados = data || [];
   $('hist-filtro-v').innerHTML='<option value="">Todos los vehículos</option>'+vehsFiltrados.map(v=>`<option value="${v.id}">${v.patente}</option>`).join('');
   $('mc-vehiculo').innerHTML='<option value="">Sin asignar</option>'+data.map(v=>`<option value="${v.id}">${v.patente} — ${v.marca}</option>`).join('');
-  el.innerHTML=data.map(v=>{const es=ev(v.venc_seguro),evv=ev(v.venc_vtv),ef=es==='err'||evv==='err'?'err':es==='warn'||evv==='warn'?'warn':'ok';
-    return `<div class="tr tc-v" onclick="verDetalle(${JSON.stringify(v).replace(/"/g,'&quot;')})"><div class="v-icon ${v.tipo==='camion'?'vi-c':'vi-u'}">${v.tipo==='camion'?'🚛':'🚐'}</div><div><div style="font-weight:600">${v.patente}</div><div style="font-size:11px;color:var(--text2)">${v.marca||''} ${v.modelo||''} · ${v.anio||''}</div></div><div><span class="badge ${v.tipo==='camion'?'b-blue':'b-ok'}">${v.tipo==='camion'?'Camión':'Utilitario'}</span></div><div style="font-size:12px">${v.empresas?.nombre||'—'}</div><div style="font-size:12px">${fd(v.venc_seguro)}<br><span style="color:var(--${es==='ok'?'green':es==='warn'?'amber':'red'})">${es==='ok'?'Vigente':es==='warn'?dh(v.venc_seguro)+' días':'Vencido'}</span></div><div style="font-size:12px">${fd(v.venc_vtv)}<br><span style="color:var(--${evv==='ok'?'green':evv==='warn'?'amber':'red'})">${evv==='ok'?'Vigente':evv==='warn'?dh(v.venc_vtv)+' días':'Vencido'}</span></div><div style="font-size:12px">${v.conductores?.nombre||'—'}</div><div>${bdg(ef)}</div><div style="display:flex;gap:4px"><button class="btn btn-sm" onclick="event.stopPropagation();editarV(JSON.parse(decodeURIComponent(this.dataset.v)))" data-v="${encodeURIComponent(JSON.stringify(v))}" title="Editar">✏️</button>${isSuperAdmin()?`<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();eliminarRegistro('vehiculos','${v.id}',loadVehiculos)" title="Eliminar">🗑️</button>`:''}</div></div>`;;}).join('');
+  el.innerHTML=data.map(v=>{
+    const es=ev(v.venc_seguro),evv=ev(v.venc_vtv),ef=es==='err'||evv==='err'?'err':es==='warn'||evv==='warn'?'warn':'ok';
+    const tv=v.tipos_vehiculo;
+    const tipoBadge=tv?`<span style="background:${tv.color||'#6b7280'};color:#fff;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:500">${tv.nombre}</span>`:`<span style="color:var(--text2);font-size:12px">—</span>`;
+    return `<div class="tr tc-v" onclick="verDetalle(${JSON.stringify(v).replace(/"/g,'&quot;')})">
+      <div class="v-icon">${tv?.nombre?.toLowerCase().includes('moto')?'🏍':tv?.nombre?.toLowerCase().includes('van')||tv?.nombre?.toLowerCase().includes('auto')?'🚐':'🚛'}</div>
+      <div><div style="font-weight:600">${v.patente}</div><div style="font-size:11px;color:var(--text2)">${v.marca||''} ${v.modelo||''} · ${v.anio||''}</div></div>
+      <div>${tipoBadge}</div>
+      <div style="font-size:12px">${v.empresas?.nombre||'—'}</div>
+      <div style="font-size:12px">${fd(v.venc_seguro)}<br><span style="color:var(--${es==='ok'?'green':es==='warn'?'amber':'red'})">${es==='ok'?'Vigente':es==='warn'?dh(v.venc_seguro)+' días':'Vencido'}</span></div>
+      <div style="font-size:12px">${fd(v.venc_vtv)}<br><span style="color:var(--${evv==='ok'?'green':evv==='warn'?'amber':'red'})">${evv==='ok'?'Vigente':evv==='warn'?dh(v.venc_vtv)+' días':'Vencido'}</span></div>
+      <div style="font-size:12px">${v.conductores?.nombre||'—'}</div>
+      <div>${bdg(ef)}</div>
+      <div style="display:flex;gap:4px">
+        <button class="btn btn-sm" onclick="event.stopPropagation();editarV(JSON.parse(decodeURIComponent(this.dataset.v)))" data-v="${encodeURIComponent(JSON.stringify(v))}" title="Editar">✏️</button>
+        ${isSuperAdmin()?`<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();eliminarRegistro('vehiculos','${v.id}',loadVehiculos)" title="Eliminar">🗑️</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 async function guardarVehiculo(){
@@ -1760,7 +1777,7 @@ async function guardarVehiculo(){
       toast('📷 Foto subida a Drive ✓');
     }catch(e){ toast('Error subiendo foto: '+e.message,'err'); }
   }
-  const p={tipo:$('mv-tipo').value,patente:$('mv-patente').value.trim().toUpperCase(),marca:$('mv-marca').value.trim(),modelo:$('mv-modelo').value.trim(),anio:parseInt($('mv-anio').value)||null,color:$('mv-color').value.trim(),nro_chasis:$('mv-chasis').value.trim(),nro_motor:$('mv-motor').value.trim(),aseguradora:$('mv-aseguradora').value.trim(),nro_poliza:$('mv-poliza').value.trim(),venc_seguro:$('mv-venc-seguro').value||null,venc_vtv:$('mv-venc-vtv').value||null,venc_habilitacion_municipal:$('mv-venc-hab').value||null,nro_permiso_transporte:$('mv-permiso').value.trim(),observaciones:$('mv-obs').value.trim(),empresa_id:$('mv-empresa')?.value||null,nombre_empresa_gps:$('mv-gps-empresa')?.value.trim()||null,link_gps:$('mv-gps-link')?.value.trim()||null,pais_id:$('mv-pais')?.value||getPaisId()||null,activo:true};
+  const p={tipo:$('mv-tipo').value,tipo_vehiculo_id:$('mv-tipo').value||null,patente:$('mv-patente').value.trim().toUpperCase(),marca:$('mv-marca').value.trim(),modelo:$('mv-modelo').value.trim(),anio:parseInt($('mv-anio').value)||null,color:$('mv-color').value.trim(),nro_chasis:$('mv-chasis').value.trim(),nro_motor:$('mv-motor').value.trim(),aseguradora:$('mv-aseguradora').value.trim(),nro_poliza:$('mv-poliza').value.trim(),venc_seguro:$('mv-venc-seguro').value||null,venc_vtv:$('mv-venc-vtv').value||null,venc_habilitacion_municipal:$('mv-venc-hab').value||null,nro_permiso_transporte:$('mv-permiso').value.trim(),observaciones:$('mv-obs').value.trim(),empresa_id:$('mv-empresa')?.value||null,nombre_empresa_gps:$('mv-gps-empresa')?.value.trim()||null,link_gps:$('mv-gps-link')?.value.trim()||null,pais_id:$('mv-pais')?.value||getPaisId()||null,activo:true};
   if(!p.patente){toast('La patente es obligatoria','err');if(btn){btn.disabled=false;btn.textContent='✅ Guardar vehículo';}return}
   if(fotoVehUrl) p.foto_url = fotoVehUrl;
   const{error}=id?await db.from('vehiculos').update(p).eq('id',id):await db.from('vehiculos').insert(p);
@@ -1771,7 +1788,7 @@ async function guardarVehiculo(){
 
 function verDetalle(v){
   $('det-title').textContent=v.patente+' — '+(v.marca||'')+' '+(v.modelo||'');
-  $('det-body').innerHTML=`<div style="display:grid;grid-template-columns:auto 1fr;gap:7px 16px;font-size:13px;margin-bottom:14px"><span style="color:var(--text2)">Tipo</span><span style="text-transform:capitalize">${v.tipo}</span><span style="color:var(--text2)">Marca / Modelo</span><span>${v.marca||'—'} ${v.modelo||''}</span><span style="color:var(--text2)">Año</span><span>${v.anio||'—'}</span><span style="color:var(--text2)">Color</span><span>${v.color||'—'}</span><span style="color:var(--text2)">Chasis</span><span>${v.nro_chasis||'—'}</span><span style="color:var(--text2)">Motor</span><span>${v.nro_motor||'—'}</span><span style="color:var(--text2)">Aseguradora</span><span>${v.aseguradora||'—'}</span><span style="color:var(--text2)">Póliza</span><span>${v.nro_poliza||'—'}</span><span style="color:var(--text2)">Venc. seguro</span><span>${fd(v.venc_seguro)}</span><span style="color:var(--text2)">Venc. VTV</span><span>${fd(v.venc_vtv)}</span>${v.observaciones?`<span style="color:var(--text2)">Notas</span><span>${v.observaciones}</span>`:''}</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" onclick="editarV(${JSON.stringify(v).replace(/"/g,'&quot;')});closeModal('detalle')">✏️ Editar</button><button class="btn btn-sm" onclick="closeModal('detalle');goTo('checklist')">✅ Check hoy</button><button class="btn btn-sm btn-danger" onclick="elimV('${v.id}')">🗑 Dar de baja</button></div>`;
+  $('det-body').innerHTML=`<div style="display:grid;grid-template-columns:auto 1fr;gap:7px 16px;font-size:13px;margin-bottom:14px"><span style="color:var(--text2)">Tipo</span><span>${v.tipos_vehiculo?`<span style="background:${v.tipos_vehiculo.color||'#6b7280'};color:#fff;padding:2px 9px;border-radius:20px;font-size:12px">${v.tipos_vehiculo.nombre}</span>`:'—'}</span><span style="color:var(--text2)">Marca / Modelo</span><span>${v.marca||'—'} ${v.modelo||''}</span><span style="color:var(--text2)">Año</span><span>${v.anio||'—'}</span><span style="color:var(--text2)">Color</span><span>${v.color||'—'}</span><span style="color:var(--text2)">Chasis</span><span>${v.nro_chasis||'—'}</span><span style="color:var(--text2)">Motor</span><span>${v.nro_motor||'—'}</span><span style="color:var(--text2)">Aseguradora</span><span>${v.aseguradora||'—'}</span><span style="color:var(--text2)">Póliza</span><span>${v.nro_poliza||'—'}</span><span style="color:var(--text2)">Venc. seguro</span><span>${fd(v.venc_seguro)}</span><span style="color:var(--text2)">Venc. VTV</span><span>${fd(v.venc_vtv)}</span>${v.observaciones?`<span style="color:var(--text2)">Notas</span><span>${v.observaciones}</span>`:''}</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" onclick="editarV(${JSON.stringify(v).replace(/"/g,'&quot;')});closeModal('detalle')">✏️ Editar</button><button class="btn btn-sm" onclick="closeModal('detalle');goTo('checklist')">✅ Check hoy</button><button class="btn btn-sm btn-danger" onclick="elimV('${v.id}')">🗑 Dar de baja</button></div>`;
   openModal('detalle');
 }
 
@@ -1784,6 +1801,8 @@ function editarV(v){
   if(mvEmp) mvEmp.dataset.pendingVal = v.empresa_id||'';
   const mvPais = $('mv-pais');
   if(mvPais) mvPais.dataset.pendingVal = v.pais_id||'';
+  const mvTipo = $('mv-tipo');
+  if(mvTipo) mvTipo.dataset.pendingVal = v.tipo_vehiculo_id||'';
   // Abrir modal (async - carga selects)
   openModal('vehiculo').then(()=>{
     // Restaurar todos los campos después de que el modal terminó de cargar
@@ -4811,6 +4830,18 @@ async function openModal(id){
     if(!isEdit){
       $('mv-title').textContent='Nuevo vehículo';
       ['mv-patente','mv-marca','mv-modelo','mv-anio','mv-color','mv-chasis','mv-motor','mv-aseguradora','mv-poliza','mv-permiso','mv-obs','mv-venc-seguro','mv-venc-vtv','mv-venc-hab','mv-gps-empresa','mv-gps-link'].forEach(f=>$(f).value='');
+    }
+    // Cargar tipos de vehículo según país activo
+    const mvTipo = $('mv-tipo');
+    if(mvTipo){
+      let qTv = db.from('tipos_vehiculo').select('id,nombre,color,capacidad_tn').eq('activo',true).order('orden').order('nombre');
+      const pId = $('mv-pais')?.value || getPaisId();
+      if(pId) qTv = qTv.eq('pais_id', pId);
+      const {data:tvData} = await qTv;
+      const pendingTipo = mvTipo.dataset.pendingVal || mvTipo.value;
+      mvTipo.innerHTML = '<option value="">— Seleccioná un tipo —</option>' +
+        (tvData||[]).map(t=>`<option value="${t.id}" style="color:${t.color||'inherit'}">${t.nombre}${t.capacidad_tn?' ('+t.capacidad_tn+' tn)':''}</option>`).join('');
+      if(isEdit && pendingTipo) mvTipo.value = pendingTipo;
     }
     // Cargar empresas en select
     if(!EMPRESAS_CACHE.length){const{data}=await db.from('empresas').select('id,nombre').order('nombre');EMPRESAS_CACHE=data||[];}
