@@ -1381,6 +1381,17 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
         <label class="fl">Observaciones de salida</label>
         <textarea id="nliq-obs-sal" placeholder="Instrucciones, zonas, notas..." style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;resize:none;height:70px"></textarea>
       </div>
+      <div class="fg" style="margin-top:10px">
+        <label class="fl">📎 Comprobante de salida <span style="font-size:11px;color:var(--text2)">(opcional)</span></label>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+          <input type="file" id="nliq-comprobante-input" accept="image/*,application/pdf" style="display:none" onchange="previewComprobanteNliq(event)">
+          <button class="btn btn-sm" type="button" onclick="$('nliq-comprobante-input').click()">📎 Seleccionar archivo</button>
+          <span id="nliq-comprobante-nombre" style="font-size:12px;color:var(--text2)">Sin archivo</span>
+        </div>
+        <div id="nliq-comprobante-preview" style="display:none;margin-top:8px">
+          <img id="nliq-comprobante-img" src="" style="max-height:100px;max-width:100%;border-radius:6px;border:1px solid var(--border)">
+        </div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('nueva-liquidacion')">Cancelar</button>
@@ -1450,6 +1461,17 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
       <div class="fg" style="margin-top:10px">
         <label class="fl">Observaciones de liquidación</label>
         <textarea id="liq-obs-liq" placeholder="Novedades, incidentes, comentarios..." style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;resize:none;height:70px"></textarea>
+      </div>
+      <div class="fg" style="margin-top:10px">
+        <label class="fl">📎 Comprobante de cierre <span style="font-size:11px;color:var(--text2)">(opcional)</span></label>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+          <input type="file" id="liq-comprobante-input" accept="image/*,application/pdf" style="display:none" onchange="previewComprobanteLiq(event)">
+          <button class="btn btn-sm" type="button" onclick="$('liq-comprobante-input').click()">📎 Seleccionar archivo</button>
+          <span id="liq-comprobante-nombre" style="font-size:12px;color:var(--text2)">Sin archivo</span>
+        </div>
+        <div id="liq-comprobante-preview" style="display:none;margin-top:8px">
+          <img id="liq-comprobante-img" src="" style="max-height:100px;max-width:100%;border-radius:6px;border:1px solid var(--border)">
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -4104,12 +4126,72 @@ async function openModal_liquidacion(){
   $('nliq-obs-sal').value='';
 }
 
+// ── COMPROBANTES LIQUIDACIÓN ──────────────────────────────────────────────
+function previewComprobanteNliq(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  $('nliq-comprobante-nombre').textContent = file.name;
+  if(file.type.startsWith('image/')){
+    const reader = new FileReader();
+    reader.onload = e => {
+      $('nliq-comprobante-img').src = e.target.result;
+      $('nliq-comprobante-preview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  } else {
+    $('nliq-comprobante-preview').style.display = 'none';
+  }
+}
+
+function previewComprobanteLiq(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  $('liq-comprobante-nombre').textContent = file.name;
+  if(file.type.startsWith('image/')){
+    const reader = new FileReader();
+    reader.onload = e => {
+      $('liq-comprobante-img').src = e.target.result;
+      $('liq-comprobante-preview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  } else {
+    $('liq-comprobante-preview').style.display = 'none';
+  }
+}
+
+async function subirComprobanteStorage(file, tipo){
+  try{
+    const pais = PAISES_CACHE.find(p=>p.id===getPaisId());
+    const paisNombre = pais?.nombre?.replace(/\s+/g,'-') || 'sin-pais';
+    const ext = file.name.split('.').pop();
+    const ts = Date.now();
+    const path = `${paisNombre}/Liquidaciones/${tipo}_${ts}.${ext}`;
+    const{data, error} = await db.storage.from('liquidaciones').upload(path, file, {upsert:true});
+    if(error){ console.error('Storage error:', error); return null; }
+    const{data:{publicUrl}} = db.storage.from('liquidaciones').getPublicUrl(path);
+    return publicUrl;
+  } catch(e){
+    console.error('subirComprobanteStorage error:', e);
+    return null;
+  }
+}
+
 async function guardarPlanillaSalida(){
   const conductor=$('nliq-conductor').value;
   const vehiculo=$('nliq-vehiculo').value;
   const bultos=parseInt($('nliq-bultos').value)||0;
   if(!conductor||!vehiculo){toast('Completá conductor y vehículo','err');return}
   const id=$('nliq-id').value;
+
+  // Subir comprobante si hay archivo seleccionado
+  let comprobanteUrl = null;
+  const archivoSalida = $('nliq-comprobante-input')?.files?.[0];
+  if(archivoSalida){
+    toast('⬆ Subiendo comprobante...','ok');
+    comprobanteUrl = await subirComprobanteStorage(archivoSalida, 'salida');
+    if(!comprobanteUrl){toast('Error al subir el comprobante','err');return}
+  }
+
   const p={
     fecha:$('nliq-fecha').value,
     hora_salida:$('nliq-hora').value||null,
@@ -4123,12 +4205,18 @@ async function guardarPlanillaSalida(){
     creado_por:CP?.nombre||CU?.email,
     estado:'pendiente'
   };
+  if(comprobanteUrl) p.comprobante_salida_url = comprobanteUrl;
+
   const{error}=id
     ?await db.from('liquidaciones').update(p).eq('id',id)
     :await db.from('liquidaciones').insert(p);
   if(error){toast('Error: '+error.message,'err');return}
   toast('✓ Planilla guardada','ok');
   closeModal('nueva-liquidacion');
+  // Limpiar comprobante
+  if($('nliq-comprobante-input')) $('nliq-comprobante-input').value='';
+  if($('nliq-comprobante-nombre')) $('nliq-comprobante-nombre').textContent='Sin archivo';
+  if($('nliq-comprobante-preview')) $('nliq-comprobante-preview').style.display='none';
   loadLiquidacion();
 }
 
@@ -4146,6 +4234,7 @@ async function abrirLiquidar(liqId){
       <div><span style="color:var(--text2)">Bultos salida:</span> <strong>${liq.bultos_salida||0}</strong></div>
       <div><span style="color:var(--text2)">Monto esperado:</span> <strong>$ ${(liq.monto_esperado||0).toLocaleString('es-AR')}</strong></div>
       ${liq.hora_salida?`<div><span style="color:var(--text2)">Hora salida:</span> <strong>${liq.hora_salida.slice(0,5)}</strong></div>`:''}
+      ${liq.comprobante_salida_url?`<div><a href="${liq.comprobante_salida_url}" target="_blank" style="font-size:12px;color:var(--blue)">📎 Ver comprobante de salida</a></div>`:''}
     </div>`;
   $('liq-entregados').value=liq.bultos_entregados||'';
   $('liq-cobrado').value=liq.monto_cobrado||'';
@@ -4222,6 +4311,16 @@ async function guardarLiquidacion(){
   const esperado=parseFloat($('liq-entregados').dataset.montoEsp)||0;
   const diff=cobrado-esperado;
   const estado=diff===0?'liquidado':'con_diferencia';
+
+  // Subir comprobante de cierre si hay archivo
+  let comprobanteCierreUrl = null;
+  const archivoCierre = $('liq-comprobante-input')?.files?.[0];
+  if(archivoCierre){
+    toast('⬆ Subiendo comprobante...','ok');
+    comprobanteCierreUrl = await subirComprobanteStorage(archivoCierre, 'cierre');
+    if(!comprobanteCierreUrl){toast('Error al subir el comprobante','err');return}
+  }
+
   // Save detalle
   await db.from('liquidaciones_detalle').delete().eq('liquidacion_id',liqId);
   const detalles=[];
@@ -4238,7 +4337,7 @@ async function guardarLiquidacion(){
   if(detalles.length) await db.from('liquidaciones_detalle').insert(detalles);
   const efectivoEntregado=parseFloat($('liq-efectivo-entregado').value)||null;
   const diffEfectivo=efectivoEntregado!==null?efectivoEntregado-cobrado:null;
-  const{error}=await db.from('liquidaciones').update({
+  const updateData={
     bultos_entregados:entregados,
     bultos_no_entregados:noEntregados,
     monto_cobrado:cobrado,
@@ -4250,10 +4349,17 @@ async function guardarLiquidacion(){
     liquidado_por:CP?.nombre||CU?.email,
     estado,
     updated_at:new Date().toISOString()
-  }).eq('id',liqId);
+  };
+  if(comprobanteCierreUrl) updateData.comprobante_cierre_url = comprobanteCierreUrl;
+
+  const{error}=await db.from('liquidaciones').update(updateData).eq('id',liqId);
   if(error){toast('Error: '+error.message,'err');return}
   toast('✓ Liquidación registrada','ok');
   closeModal('liquidar');
+  // Limpiar comprobante
+  if($('liq-comprobante-input')) $('liq-comprobante-input').value='';
+  if($('liq-comprobante-nombre')) $('liq-comprobante-nombre').textContent='Sin archivo';
+  if($('liq-comprobante-preview')) $('liq-comprobante-preview').style.display='none';
   loadLiquidacion();
 }
 
