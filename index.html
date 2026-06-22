@@ -1023,6 +1023,14 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
   </div>
 </div>
 
+<!-- MODAL DETALLE USUARIO -->
+<div class="overlay" id="ov-usr-det">
+  <div class="modal modal-sm">
+    <div class="modal-hd"><div class="modal-title">Detalle del usuario</div><button class="modal-close" onclick="closeModal('usr-det')">✕</button></div>
+    <div class="modal-body" id="usr-det-body"></div>
+  </div>
+</div>
+
 <!-- MODAL TIPO VEHÍCULO -->
 <div class="overlay" id="ov-tipo-vehiculo">
   <div class="modal modal-sm">
@@ -4726,20 +4734,57 @@ async function loadUsuarios(){
   const{data,error}=await db.from('profiles').select('*').order('created_at',{ascending:false});
   if(error){el.innerHTML=`<div class="empty">Error: ${error.message}</div>`;return}
   if(!data?.length){el.innerHTML='<div class="empty">Sin usuarios.</div>';return}
-  el.innerHTML=data.map(u=>{
+  USUARIOS_CACHE = data;
+  el.innerHTML=data.map((u,i)=>{
     const ini=(u.nombre||u.email||'?').split(' ').slice(0,2).map(n=>n[0]||'').join('').toUpperCase();
     const esYo=u.id===CU?.id;
+    const rolLabel = u.rol==='super_admin'?'Super Admin':u.rol==='admin'?'Admin':'Operador';
+    const rolBadge = u.rol==='super_admin'?'b-err':u.rol==='admin'?'b-purple':'b-blue';
     return `<div class="tr" style="grid-template-columns:32px 1fr 80px 90px 65px 90px">
       <div class="avatar" style="background:${u.rol==='admin'?'#EEEDFE':'var(--blue-light)'}">
         <span style="font-size:12px;font-weight:700;color:${u.rol==='admin'?'#534AB7':'var(--blue)'}">${ini}</span>
       </div>
-      <div style="font-weight:600">${u.nombre||'—'}<br><span style="font-size:11px;color:var(--text2);font-weight:400">${u.email||''}</span></div>
-      <div><span class="badge ${u.rol==='admin'?'b-purple':'b-blue'}">${u.rol==='admin'?'Admin':'Operador'}</span></div>
+      <div style="font-weight:600;cursor:pointer;color:var(--blue)" onclick="verDetalleUsuario(${i})">${u.nombre||'—'}<br><span style="font-size:11px;color:var(--text2);font-weight:400">${u.email||''}</span></div>
+      <div><span class="badge ${rolBadge}">${rolLabel}</span></div>
       <div style="font-size:12px">${fd((u.created_at||'').split('T')[0])}</div>
       <div><span class="badge ${u.activo!==false?'b-ok':'b-gray'}">${u.activo!==false?'Activo':'Inactivo'}</span></div>
       <div>${esYo?'<span style="font-size:11px;color:var(--text3)">Sos vos</span>':`<button class="btn btn-sm" onclick="toggleRol('${u.id}','${u.rol}')">${u.rol==='admin'?'→ Operador':'→ Admin'}</button>`}</div>
     </div>`;
   }).join('');
+}
+
+let USUARIOS_CACHE = [];
+
+function verDetalleUsuario(i){
+  const u = USUARIOS_CACHE[i];
+  if(!u) return;
+  const ini=(u.nombre||u.email||'?').split(' ').slice(0,2).map(n=>n[0]||'').join('').toUpperCase();
+  const rolLabel = u.rol==='super_admin'?'Super Admin':u.rol==='admin'?'Admin':'Operador';
+  const rolColor = u.rol==='super_admin'?'var(--red)':u.rol==='admin'?'#534AB7':'var(--blue)';
+  const pais = PAISES_CACHE.find(p=>p.id===u.pais_id);
+  $('usr-det-body').innerHTML=`
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px">
+      <div style="width:56px;height:56px;border-radius:50%;background:${u.rol==='admin'?'#EEEDFE':'var(--blue-light)'};display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:${rolColor};flex-shrink:0">${ini}</div>
+      <div>
+        <div style="font-size:17px;font-weight:700">${u.nombre||'Sin nombre'}</div>
+        <div style="font-size:13px;color:var(--text2)">${u.email||''}</div>
+        <div style="margin-top:4px"><span style="background:${rolColor};color:#fff;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:500">${rolLabel}</span> <span class="badge ${u.activo!==false?'b-ok':'b-gray'}">${u.activo!==false?'Activo':'Inactivo'}</span></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:13px">
+      <span style="color:var(--text2)">ID</span><span style="font-size:11px;color:var(--text3);font-family:monospace">${u.id}</span>
+      <span style="color:var(--text2)">País asignado</span><span>${pais?(BANDERAS[pais.codigo]||'🌎')+' '+pais.nombre:'— Sin país asignado'}</span>
+      <span style="color:var(--text2)">Rol</span><span>${rolLabel}</span>
+      <span style="color:var(--text2)">Estado</span><span>${u.activo!==false?'✅ Activo':'❌ Inactivo'}</span>
+      <span style="color:var(--text2)">Registrado</span><span>${fd((u.created_at||'').split('T')[0])}</span>
+      ${u.updated_at?`<span style="color:var(--text2)">Última actualización</span><span>${fd((u.updated_at||'').split('T')[0])}</span>`:''}
+    </div>
+    ${u.id!==CU?.id?`<div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-sm" onclick="closeModal('usr-det');setTimeout(()=>toggleRol('${u.id}','${u.rol}'),100)">${u.rol==='admin'?'→ Cambiar a Operador':'→ Cambiar a Admin'}</button>
+      <button class="btn btn-sm" onclick="closeModal('usr-det');setTimeout(()=>abrirCambiarPass('${u.id}'),100)">🔑 Cambiar contraseña</button>
+    </div>`:'<div style="margin-top:12px;font-size:12px;color:var(--text3)">Esta es tu propia cuenta.</div>'}
+  `;
+  openModal('usr-det');
 }
 
 async function toggleRol(uid,rolActual){
