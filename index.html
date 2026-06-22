@@ -1077,7 +1077,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
     <input type="hidden" id="mv-id">
     <div class="form-section">Datos básicos</div>
     <div class="form-grid">
-      <div class="fg"><label class="fl">País</label><select id="mv-pais"><option value="">Seleccioná país</option></select></div>
+      <div class="fg"><label class="fl">País</label><select id="mv-pais" onchange="recargarTiposPorPais(this.value)"><option value="">Seleccioná país</option></select></div>
       <div class="fg"><label class="fl">Tipo de vehículo</label><select id="mv-tipo"><option value="">— Seleccioná un tipo —</option></select></div>
       <div class="fg"><label class="fl">Patente</label><input type="text" id="mv-patente" placeholder="AB 123 CD"></div>
       <div class="fg"><label class="fl">Marca</label><input type="text" id="mv-marca"></div>
@@ -1821,6 +1821,17 @@ function editarV(v){
     if($('mv-empresa')&&v.empresa_id) $('mv-empresa').value=v.empresa_id;
     if($('mv-pais')&&v.pais_id) $('mv-pais').value=v.pais_id;
   });
+}
+
+async function recargarTiposPorPais(paisId){
+  const mvTipo = $('mv-tipo');
+  if(!mvTipo) return;
+  mvTipo.innerHTML = '<option value="">— Cargando tipos... —</option>';
+  let qTv = db.from('tipos_vehiculo').select('id,nombre,color,capacidad_tn').eq('activo',true).order('orden').order('nombre');
+  if(paisId) qTv = qTv.eq('pais_id', paisId);
+  const {data:tvData} = await qTv;
+  mvTipo.innerHTML = '<option value="">— Seleccioná un tipo —</option>' +
+    (tvData||[]).map(t=>`<option value="${t.id}">${t.nombre}${t.capacidad_tn?' ('+t.capacidad_tn+' tn)':''}</option>`).join('');
 }
 
 async function elimV(id){
@@ -2821,8 +2832,9 @@ async function loadTiposVehiculo(){
   // Construir query filtrada
   let q = db.from('tipos_vehiculo').select('*,paises(nombre,codigo)').eq('activo',true).order('orden').order('nombre');
   if(isSuperAdmin()){
-    const pFilt = filterSel?.value;
+    const pFilt = filterSel?.value || getPaisId();
     if(pFilt) q = q.eq('pais_id', pFilt);
+    // Si no hay filtro activo, mostrar todos
   } else {
     q = q.eq('pais_id', getPaisId());
   }
@@ -4835,12 +4847,13 @@ async function openModal(id){
     const mvTipo = $('mv-tipo');
     if(mvTipo){
       let qTv = db.from('tipos_vehiculo').select('id,nombre,color,capacidad_tn').eq('activo',true).order('orden').order('nombre');
-      const pId = $('mv-pais')?.value || getPaisId();
+      // Prioridad: 1) país seleccionado en el modal, 2) país activo global
+      const pId = $('mv-pais')?.dataset.pendingVal || $('mv-pais')?.value || getPaisId();
       if(pId) qTv = qTv.eq('pais_id', pId);
       const {data:tvData} = await qTv;
       const pendingTipo = mvTipo.dataset.pendingVal || mvTipo.value;
       mvTipo.innerHTML = '<option value="">— Seleccioná un tipo —</option>' +
-        (tvData||[]).map(t=>`<option value="${t.id}" style="color:${t.color||'inherit'}">${t.nombre}${t.capacidad_tn?' ('+t.capacidad_tn+' tn)':''}</option>`).join('');
+        (tvData||[]).map(t=>`<option value="${t.id}">${t.nombre}${t.capacidad_tn?' ('+t.capacidad_tn+' tn)':''}</option>`).join('');
       if(isEdit && pendingTipo) mvTipo.value = pendingTipo;
     }
     // Cargar empresas en select
