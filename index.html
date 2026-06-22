@@ -253,6 +253,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
         <div class="nav-group-body" id="group-admin">
           <button class="nav-btn admin-only" onclick="goTo('paises')">🌎 Países</button>
           <button class="nav-btn admin-only" onclick="goTo('usuarios')">👤 Usuarios</button>
+          <button class="nav-btn admin-only" onclick="goTo('tipos-vehiculo')">🚛 Tipos de vehículo</button>
         </div>
       </div>
     </nav>
@@ -986,6 +987,24 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
         </div>
       </div>
 
+      <!-- TIPOS DE VEHÍCULO -->
+      <div class="section" id="s-tipos-vehiculo">
+        <div class="ph">
+          <div>
+            <div style="font-size:15px;font-weight:600">🚛 Tipos de vehículo</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:2px">Configurá los tipos disponibles para cada país</div>
+          </div>
+          <button class="btn btn-primary admin-only" onclick="nuevoTipoVehiculo()">+ Nuevo tipo</button>
+        </div>
+        <!-- Filtro por país (solo super_admin) -->
+        <div id="tv-pais-filter-wrap" style="display:none;margin-bottom:14px">
+          <select id="tv-pais-filter" style="font-size:13px;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2)" onchange="loadTiposVehiculo()">
+            <option value="">Todos los países</option>
+          </select>
+        </div>
+        <div id="tv-list"><div class="loader"><div class="spin"></div>Cargando...</div></div>
+      </div>
+
       <div class="section" id="s-config">
         <div style="font-size:15px;font-weight:600;margin-bottom:14px">Configuración</div>
         <div class="card mb">
@@ -1006,6 +1025,46 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
         </div>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- MODAL TIPO VEHÍCULO -->
+<div class="overlay" id="ov-tipo-vehiculo">
+  <div class="modal modal-sm">
+    <div class="modal-hd"><div class="modal-title" id="tv-modal-title">Nuevo tipo de vehículo</div><button class="modal-close" onclick="closeModal('tipo-vehiculo')">✕</button></div>
+    <div class="modal-body">
+    <input type="hidden" id="tv-id">
+    <div class="fg" style="margin-bottom:11px">
+      <label class="fl">País *</label>
+      <select id="tv-pais-sel"><option value="">Seleccioná un país</option></select>
+      <div style="font-size:11px;color:var(--text2);margin-top:4px">Cada tipo de vehículo pertenece a un país específico.</div>
+    </div>
+    <div class="fg" style="margin-bottom:11px">
+      <label class="fl">Nombre *</label>
+      <input type="text" id="tv-nombre" placeholder="Ej: Camión 5 tn, Van, Moto..." oninput="actualizarPreviewColor()">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:11px">
+      <div class="fg" style="margin-bottom:0">
+        <label class="fl">Capacidad (tn)</label>
+        <input type="number" id="tv-capacidad" placeholder="Ej: 5, 2.5, 1..." min="0" step="0.5">
+      </div>
+      <div class="fg" style="margin-bottom:0">
+        <label class="fl">Orden</label>
+        <input type="number" id="tv-orden" placeholder="1, 2, 3..." min="1" value="99">
+      </div>
+    </div>
+    <div class="fg" style="margin-bottom:0">
+      <label class="fl">Color del badge</label>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+        <input type="color" id="tv-color" value="#6b7280" style="width:44px;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;padding:2px" oninput="actualizarPreviewColor()">
+        <div id="tv-color-preview" style="padding:4px 12px;border-radius:20px;font-size:13px;font-weight:500;color:#fff;background:#6b7280">Vista previa</div>
+      </div>
+    </div>
+    </div><!-- end modal-body -->
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('tipo-vehiculo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarTipoVehiculo()">✅ Guardar tipo</button>
     </div>
   </div>
 </div>
@@ -1599,7 +1658,7 @@ function goTo(sec){
   if(sec==='paises') a.innerHTML='';
   if(sec==='clientes')a.innerHTML=`<button class="btn btn-primary" onclick="openModal('cliente')">+ Nuevo cliente</button>`;
   if(sec==='empresas')a.innerHTML=`<button class="btn btn-primary" onclick="openModal('empresa')">+ Nueva empresa</button>`;
-  const L={dashboard:loadDashboard,vehiculos:loadVehiculos,historial:loadHistorial,conductores:loadConductores,alertas:loadAlertas,satelital:loadSatelital,usuarios:loadUsuarios,empresas:loadEmpresas,clientes:loadClientes,checklist:initCheckDiario,paises:loadPaises,planificacion:loadPlanificacion,liquidacion:loadLiquidacion};
+  const L={dashboard:loadDashboard,vehiculos:loadVehiculos,historial:loadHistorial,conductores:loadConductores,alertas:loadAlertas,satelital:loadSatelital,usuarios:loadUsuarios,empresas:loadEmpresas,clientes:loadClientes,checklist:initCheckDiario,paises:loadPaises,planificacion:loadPlanificacion,liquidacion:loadLiquidacion,'tipos-vehiculo':loadTiposVehiculo};
   if(L[sec])L[sec]();
 }
 
@@ -2718,6 +2777,160 @@ async function cambiarPais(paisId){
     };
     if(L[sec]) await L[sec]();
   }
+}
+
+// ── TIPOS DE VEHÍCULO ─────────────────────────────────────────────────────
+let TIPOS_VEH_CACHE = [];
+
+async function loadTiposVehiculo(){
+  const el = $('tv-list');
+  if(!el) return;
+  el.innerHTML = '<div class="loader"><div class="spin"></div>Cargando...</div>';
+
+  // Si es super_admin, mostrar filtro de país
+  const filterWrap = $('tv-pais-filter-wrap');
+  const filterSel = $('tv-pais-filter');
+  if(isSuperAdmin() && filterWrap){
+    filterWrap.style.display = 'block';
+    if(filterSel && filterSel.options.length <= 1){
+      const {data:paises} = await db.from('paises').select('id,nombre,codigo').eq('activo',true).order('nombre');
+      filterSel.innerHTML = '<option value="">Todos los países</option>' +
+        (paises||[]).map(p=>`<option value="${p.id}">${p.codigo} ${p.nombre}</option>`).join('');
+    }
+  }
+
+  // Construir query filtrada
+  let q = db.from('tipos_vehiculo').select('*,paises(nombre,codigo)').eq('activo',true).order('orden').order('nombre');
+  if(isSuperAdmin()){
+    const pFilt = filterSel?.value;
+    if(pFilt) q = q.eq('pais_id', pFilt);
+  } else {
+    q = q.eq('pais_id', getPaisId());
+  }
+
+  const {data, error} = await q;
+  if(error){ el.innerHTML='<div style="padding:20px;color:var(--red)">Error al cargar tipos</div>'; return; }
+  TIPOS_VEH_CACHE = data || [];
+
+  if(!TIPOS_VEH_CACHE.length){
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text2)">
+      <div style="font-size:32px;margin-bottom:8px">🚛</div>
+      <div style="font-weight:500">No hay tipos de vehículo cargados</div>
+      <div style="font-size:13px;margin-top:4px">Hacé clic en "+ Nuevo tipo" para agregar el primero</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="data-table">
+      <div class="th" style="grid-template-columns:40px 1fr 100px 80px 70px 90px">
+        <div></div><div>Nombre</div><div>País</div><div>Capacidad</div><div>Orden</div><div>Acciones</div>
+      </div>
+      ${TIPOS_VEH_CACHE.map(t=>`
+        <div class="tr" style="grid-template-columns:40px 1fr 100px 80px 70px 90px;align-items:center">
+          <div><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${t.color||'#6b7280'}"></span></div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="background:${t.color||'#6b7280'};color:#fff;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500">${t.nombre}</span>
+          </div>
+          <div style="font-size:13px">${t.paises?.codigo||''} ${t.paises?.nombre||'—'}</div>
+          <div style="font-size:13px">${t.capacidad_tn!=null?t.capacidad_tn+' tn':'—'}</div>
+          <div style="font-size:13px">${t.orden}</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-sm" onclick="editarTipoVehiculo('${t.id}')">✏</button>
+            <button class="btn btn-sm" style="color:var(--red)" onclick="eliminarTipoVehiculo('${t.id}','${t.nombre.replace(/'/g,"\\'")}')">🗑</button>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+async function abrirModalTipoVehiculo(){
+  // Poblar selector de países
+  const sel = $('tv-pais-sel');
+  if(sel && sel.options.length <= 1){
+    let q = db.from('paises').select('id,nombre,codigo').eq('activo',true).order('nombre');
+    const {data:paises} = await q;
+    sel.innerHTML = '<option value="">Seleccioná un país</option>' +
+      (paises||[]).map(p=>`<option value="${p.id}">${p.codigo} ${p.nombre}</option>`).join('');
+  }
+  // Si no es super_admin, preseleccionar el país del usuario y deshabilitar el select
+  if(!isSuperAdmin()){
+    const sel = $('tv-pais-sel');
+    sel.value = getPaisId()||'';
+    sel.disabled = true;
+  }
+  // Sincronizar preview de color
+  const colorInput = $('tv-color');
+  if(colorInput) colorInput.addEventListener('input', actualizarPreviewColor);
+}
+
+function actualizarPreviewColor(){
+  const color = $('tv-color').value;
+  const prev = $('tv-color-preview');
+  if(prev){ prev.style.background = color; prev.textContent = $('tv-nombre').value || 'Vista previa'; }
+}
+
+function editarTipoVehiculo(id){
+  const t = TIPOS_VEH_CACHE.find(x=>x.id===id);
+  if(!t) return;
+  $('tv-modal-title').textContent = 'Editar tipo de vehículo';
+  $('tv-id').value = t.id;
+  $('tv-nombre').value = t.nombre;
+  $('tv-capacidad').value = t.capacidad_tn??'';
+  $('tv-orden').value = t.orden??99;
+  $('tv-color').value = t.color||'#6b7280';
+  actualizarPreviewColor();
+  abrirModalTipoVehiculo().then(()=>{
+    const sel=$('tv-pais-sel');
+    if(sel) sel.value=t.pais_id||'';
+    openModal('tipo-vehiculo');
+  });
+}
+
+function nuevoTipoVehiculo(){
+  $('tv-modal-title').textContent = 'Nuevo tipo de vehículo';
+  $('tv-id').value = '';
+  $('tv-nombre').value = '';
+  $('tv-capacidad').value = '';
+  $('tv-orden').value = 99;
+  $('tv-color').value = '#6b7280';
+  actualizarPreviewColor();
+  abrirModalTipoVehiculo().then(()=>openModal('tipo-vehiculo'));
+}
+
+async function guardarTipoVehiculo(){
+  const nombre = $('tv-nombre').value.trim();
+  const paisId = $('tv-pais-sel').value;
+  if(!nombre){ toast('El nombre es obligatorio','err'); return; }
+  if(!paisId){ toast('Seleccioná un país','err'); return; }
+
+  const datos = {
+    nombre,
+    pais_id: paisId,
+    color: $('tv-color').value||'#6b7280',
+    capacidad_tn: $('tv-capacidad').value?parseFloat($('tv-capacidad').value):null,
+    orden: parseInt($('tv-orden').value)||99,
+  };
+
+  const id = $('tv-id').value;
+  let error;
+  if(id){
+    ({error} = await db.from('tipos_vehiculo').update(datos).eq('id',id));
+  } else {
+    ({error} = await db.from('tipos_vehiculo').insert(datos));
+  }
+
+  if(error){ toast('Error al guardar: '+error.message,'err'); return; }
+  toast(id?'✅ Tipo actualizado':'✅ Tipo creado','ok');
+  closeModal('tipo-vehiculo');
+  loadTiposVehiculo();
+}
+
+async function eliminarTipoVehiculo(id, nombre){
+  if(!confirm(`¿Desactivar el tipo "${nombre}"?\nLos vehículos que ya lo usan no se verán afectados.`)) return;
+  const {error} = await db.from('tipos_vehiculo').update({activo:false}).eq('id',id);
+  if(error){ toast('Error: '+error.message,'err'); return; }
+  toast('Tipo desactivado','ok');
+  loadTiposVehiculo();
 }
 
 // ── PÁGINAS ───────────────────────────────────────────────────────────────
