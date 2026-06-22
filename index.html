@@ -4780,7 +4780,7 @@ function verDetalleUsuario(i){
       ${u.updated_at?`<span style="color:var(--text2)">Última actualización</span><span>${fd((u.updated_at||'').split('T')[0])}</span>`:''}
     </div>
     ${u.id!==CU?.id?`<div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-sm" onclick="closeModal('usr-det');setTimeout(()=>toggleRol('${u.id}','${u.rol}'),100)">${u.rol==='admin'?'→ Cambiar a Operador':'→ Cambiar a Admin'}</button>
+      <button class="btn btn-sm" onclick="cambiarRol('${u.id}','${u.rol}')">🔄 Cambiar rol</button>
       <button class="btn btn-sm" onclick="closeModal('usr-det');setTimeout(()=>abrirCambiarPass('${u.id}'),100)">🔑 Cambiar contraseña</button>
     </div>`:'<div style="margin-top:12px;font-size:12px;color:var(--text3)">Esta es tu propia cuenta.</div>'}
   `;
@@ -4792,6 +4792,36 @@ async function toggleRol(uid,rolActual){
   const{error}=await db.from('profiles').update({rol:nuevoRol}).eq('id',uid);
   if(error){toast('Error: '+error.message,'err');return}
   toast(`Rol cambiado a ${nuevoRol} ✓`,'ok');loadUsuarios();
+}
+
+async function cambiarRol(uid, rolActual){
+  const roles = [
+    {val:'operador', label:'Operador'},
+    {val:'admin',    label:'Admin'},
+    {val:'super_admin', label:'Super Admin'},
+    {val:'conductor', label:'Conductor'},
+  ];
+  const opts = roles.map(r=>`<option value="${r.val}"${r.val===rolActual?' selected':''}>${r.label}</option>`).join('');
+  $('usr-det-body').insertAdjacentHTML('beforeend',`
+    <div id="cambiar-rol-wrap" style="margin-top:14px;background:var(--bg3);border-radius:var(--radius);padding:12px;border:1px solid var(--border)">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">Cambiar rol</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="nuevo-rol-sel" style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--bg)">${opts}</select>
+        <button class="btn btn-primary btn-sm" onclick="confirmarCambioRol('${uid}')">Confirmar</button>
+        <button class="btn btn-sm" onclick="$('cambiar-rol-wrap').remove()">Cancelar</button>
+      </div>
+    </div>
+  `);
+}
+
+async function confirmarCambioRol(uid){
+  const nuevoRol = $('nuevo-rol-sel')?.value;
+  if(!nuevoRol){toast('Seleccioná un rol','err');return}
+  const{error}=await db.from('profiles').update({rol:nuevoRol}).eq('id',uid);
+  if(error){toast('Error: '+error.message,'err');return}
+  toast(`Rol cambiado a ${nuevoRol} ✓`,'ok');
+  closeModal('usr-det');
+  loadUsuarios();
 }
 
 
