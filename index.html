@@ -987,7 +987,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
         </div>
       </div>
 
-      <!-- TIPOS DE VEHÍCULO -->
+      <!-- Sección Tipos de Vehículo -->
       <div class="section" id="s-tipos-vehiculo">
         <div class="ph">
           <div>
@@ -995,12 +995,6 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
             <div style="font-size:12px;color:var(--text2);margin-top:2px">Configurá los tipos disponibles para cada país</div>
           </div>
           <button class="btn btn-primary admin-only" onclick="nuevoTipoVehiculo()">+ Nuevo tipo</button>
-        </div>
-        <!-- Filtro por país (solo super_admin) -->
-        <div id="tv-pais-filter-wrap" style="display:none;margin-bottom:14px">
-          <select id="tv-pais-filter" style="font-size:13px;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2)" onchange="loadTiposVehiculo()">
-            <option value="">Todos los países</option>
-          </select>
         </div>
         <div id="tv-list"><div class="loader"><div class="spin"></div>Cargando...</div></div>
       </div>
@@ -2804,7 +2798,8 @@ async function cambiarPais(paisId){
       liquidacion:loadLiquidacion,planificacion:loadPlanificacion,
       checklist:initCheckDiario,
       usuarios:loadUsuarios,
-      paises:loadPaises
+      paises:loadPaises,
+      'tipos-vehiculo':loadTiposVehiculo
     };
     if(L[sec]) await L[sec]();
   }
@@ -2818,26 +2813,14 @@ async function loadTiposVehiculo(){
   if(!el) return;
   el.innerHTML = '<div class="loader"><div class="spin"></div>Cargando...</div>';
 
-  // Si es super_admin, mostrar filtro de país
-  const filterWrap = $('tv-pais-filter-wrap');
-  const filterSel = $('tv-pais-filter');
-  if(isSuperAdmin() && filterWrap){
-    filterWrap.style.display = 'block';
-    if(filterSel && filterSel.options.length <= 1){
-      const {data:paises} = await db.from('paises').select('id,nombre,codigo').eq('activo',true).order('nombre');
-      filterSel.innerHTML = '<option value="">Todos los países</option>' +
-        (paises||[]).map(p=>`<option value="${p.id}">${p.codigo} ${p.nombre}</option>`).join('');
-    }
-  }
-
-  // Construir query: siempre incluir globales (pais_id null) + los del país activo
-  const paisActivo = isSuperAdmin() ? (filterSel?.value || getPaisId()) : getPaisId();
+  // Usar el país activo del selector global (arriba a la derecha)
+  const paisActivo = getPaisId();
   let q = db.from('tipos_vehiculo').select('*,paises(nombre,codigo)').eq('activo',true).order('orden').order('nombre');
   if(paisActivo){
-    // Tipos del país activo + globales
+    // Tipos del país activo + globales (pais_id null)
     q = q.or(`pais_id.eq.${paisActivo},pais_id.is.null`);
   }
-  // Si no hay país activo (super_admin vista global) → trae todos
+  // Si no hay país activo → trae todos (super_admin sin filtro)
 
   const {data, error} = await q;
   if(error){ el.innerHTML='<div style="padding:20px;color:var(--red)">Error al cargar tipos</div>'; return; }
