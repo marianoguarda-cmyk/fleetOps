@@ -18,9 +18,10 @@ const GDRIVE_SA = {
 };
 
 const GDRIVE_FOLDERS = {
-  conductores: '1HbWvm2uahei85ySU0P3a_c3T0EHCyXa_',
-  vehiculos:   '1XP45p-iv3yWFfm8UCEbbd6IEU7IoBidJ',
-  checks:      '1ima6LbI3AjrYNcsXcr-jhVsNNq1fqhW7'
+  conductores:   '1HbWvm2uahei85ySU0P3a_c3T0EHCyXa_',
+  vehiculos:     '1XP45p-iv3yWFfm8UCEbbd6IEU7IoBidJ',
+  checks:        '1ima6LbI3AjrYNcsXcr-jhVsNNq1fqhW7',
+  liquidaciones: '1rcawVxbOszv6yFOsI2ln2pmAMCFg3VmY'
 };
 
 // Cache token
@@ -66,7 +67,7 @@ app.post('/api/drive/upload', async (req, res) => {
     if (!folderId) return res.status(400).json({ error: 'Tipo inválido' });
 
     const token = await getGoogleToken();
-    const base64Data = base64.replace(/^data:image\/\w+;base64,/, '');
+    const base64Data = base64.replace(/^data:[^;]+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
     const mimeType = base64.match(/data:([^;]+);/)?.[1] || 'image/jpeg';
 

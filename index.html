@@ -4161,15 +4161,23 @@ function previewComprobanteLiq(event){
 
 async function subirComprobanteStorage(file, tipo){
   try{
-    const pais = PAISES_CACHE.find(p=>p.id===getPaisId());
-    const paisNombre = pais?.nombre?.replace(/\s+/g,'-') || 'sin-pais';
-    const ext = file.name.split('.').pop();
-    const ts = Date.now();
-    const path = `${paisNombre}/Liquidaciones/${tipo}_${ts}.${ext}`;
-    const{data, error} = await db.storage.from('liquidaciones').upload(path, file, {upsert:true});
-    if(error){ console.error('Storage error:', error); return null; }
-    const{data:{publicUrl}} = db.storage.from('liquidaciones').getPublicUrl(path);
-    return publicUrl;
+    // Convertir archivo a base64
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    const fecha = new Date().toISOString().split('T')[0];
+    const filename = `comprobante_${tipo}_${fecha}_${Date.now()}.${file.name.split('.').pop()}`;
+    const res = await fetch('/api/drive/upload', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ base64, filename, tipo: 'liquidaciones' })
+    });
+    const data = await res.json();
+    if(!data.success){ console.error('Drive error:', data.error); return null; }
+    return data.url;
   } catch(e){
     console.error('subirComprobanteStorage error:', e);
     return null;
