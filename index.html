@@ -2801,6 +2801,7 @@ async function cambiarPais(paisId){
   EMPRESAS_CACHE = [];
   CLIENTES_CACHE = [];
   VEH_CACHE_CHECK = {};
+  DASH_FILTROS_CARGADOS = false; // forzar recarga de filtros del dashboard
 
   // Actualizar indicador visual en topbar
   const pi=$('pais-indicator');
@@ -4479,7 +4480,7 @@ function fdCorto(fechaStr){
 let DASH_FILTROS_CARGADOS = false;
 
 async function initDashboardFiltros(){
-  if(DASH_FILTROS_CARGADOS) return;
+  // Siempre recargar para reflejar el país activo correctamente
   const[{data:emps},{data:clis},{data:vehs},{data:conds}]=await Promise.all([
     withPais(db.from('empresas').select('id,nombre').eq('activo',true)).order('nombre'),
     withPais(db.from('clientes').select('id,nombre').eq('activo',true)).order('nombre'),
