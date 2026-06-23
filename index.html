@@ -846,6 +846,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
           <div style="font-size:15px;font-weight:600">Historial de checks</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <select id="hist-filtro-pais" style="font-size:12px;width:auto;display:none" onchange="loadHistorial()"><option value="">🌎 Todos los países</option></select>
+            <select id="hist-filtro-cliente" style="font-size:12px;width:auto" onchange="loadHistorial()"><option value="">Todos los clientes</option></select>
             <select id="hist-filtro-v" style="font-size:12px;width:auto" onchange="loadHistorial()"><option value="">Todos los vehículos</option></select>
             <select id="hist-filtro-fecha" style="font-size:12px;width:auto" onchange="loadHistorial()">
               <option value="hoy">Hoy</option>
@@ -2163,8 +2164,18 @@ let HIST_RAST_ACTUAL_CACHE = {};
 async function loadHistorial(){
   const el=$('historial-list');
   el.innerHTML='<div class="loader"><div class="spin"></div>Cargando...</div>';
-  // País seleccionado en el filtro del historial (solo super_admin)
   const paisFiltroId=$('hist-filtro-pais')?.value||null;
+
+  // Poblar selector de clientes preservando selección
+  const selC=$('hist-filtro-cliente');
+  if(selC && selC.options.length<=1){
+    const{data:clis}=await withPais(db.from('clientes').select('id,nombre').eq('activo',true)).order('nombre');
+    const cliActual=selC.value;
+    selC.innerHTML='<option value="">Todos los clientes</option>'+(clis||[]).map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+    if(cliActual&&(clis||[]).find(c=>c.id===cliActual)) selC.value=cliActual;
+  }
+  const clienteId=$('hist-filtro-cliente')?.value||null;
+
   // Recargar selector de vehículos según el país filtrado
   const selV=$('hist-filtro-v');
   if(selV){
@@ -2174,7 +2185,6 @@ async function loadHistorial(){
     const{data:vehs}=await qv.order('patente');
     const vidActual=selV.value;
     selV.innerHTML='<option value="">Todos los vehículos</option>'+(vehs||[]).map(v=>`<option value="${v.id}">${v.patente}</option>`).join('');
-    // Restaurar selección si sigue siendo válida
     if(vidActual&&(vehs||[]).find(v=>v.id===vidActual)) selV.value=vidActual;
   }
   const vid=$('hist-filtro-v')?.value;
@@ -2185,7 +2195,6 @@ async function loadHistorial(){
   else if(fechaFiltro==='mes'){const d=new Date();d.setDate(d.getDate()-30);desde=d.toISOString().split('T')[0];}
   else if(fechaFiltro==='todo'){desde='2020-01-01';}
 
-  // Aplicar filtro de país: usa el filtro del historial si es super_admin, sino usa withPais normal
   let q=db.from('checks_diarios')
     .select('*, vehiculos(patente,marca,modelo,empresa_id,nombre_empresa_gps,link_gps,empresas(nombre)), clientes(nombre), tipo_check, tipo_vehiculo_check, doc_soat, doc_revision_tecnica, doc_permiso_circulacion, mec_combustible, mec_aceite, mec_liquido_frenos, mec_luces, mec_bocina, mec_frenos, mec_neumaticos, mec_llanta_repuesto, mec_kit_herramientas, cond_limpieza, cond_area_carga, cond_candados, cond_carretilla, cond_film, pers_completo, pers_credencial, pers_pantalon, pers_epp, comentarios_check');
   if(isSuperAdmin()){
@@ -2196,6 +2205,7 @@ async function loadHistorial(){
   q=q.order('fecha',{ascending:false}).order('created_at',{ascending:false})
     .gte('fecha',desde).limit(200);
   if(vid) q=q.eq('vehiculo_id',vid);
+  if(clienteId) q=q.eq('cliente_id',clienteId);
   const{data,error}=await q;
   if(error){el.innerHTML=`<div class="empty">Error: ${error.message}</div>`;return;}
   if(!data?.length){el.innerHTML='<div class="empty">Sin checks en este período.</div>';return;}
