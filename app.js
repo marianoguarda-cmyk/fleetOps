@@ -130,9 +130,10 @@ app.get('/api/gps/transmissions', async (req, res) => {
 // ── CAMBIAR CONTRASEÑA (admin cambia la de otro usuario) ──────────────────
 app.post('/api/cambiar-password', async (req, res) => {
   const { uid, password } = req.body;
-  console.log('cambiar-password called, uid:', uid, 'password length:', password?.length);
+  console.log('cambiar-password called, uid:', uid, 'password length:', password?.length, 'has service key:', !!SB_SERVICE_KEY);
   if (!uid || !password) return res.status(400).json({ error: `Faltan campos: uid=${!!uid} password=${!!password}` });
   if (password.length < 6) return res.status(400).json({ error: 'Mínimo 6 caracteres' });
+  if (!SB_SERVICE_KEY) return res.status(500).json({ error: 'Service key no configurada en el servidor' });
   try {
     const updateRes = await fetch(`${SB_URL}/auth/v1/admin/users/${uid}`, {
       method: 'PUT',
@@ -144,9 +145,11 @@ app.post('/api/cambiar-password', async (req, res) => {
       body: JSON.stringify({ password })
     });
     const data = await updateRes.json();
-    if (!updateRes.ok) return res.status(400).json({ error: data.message || 'Error al cambiar contraseña' });
+    console.log('Supabase response:', updateRes.status, JSON.stringify(data).slice(0,200));
+    if (!updateRes.ok) return res.status(400).json({ error: data.message || data.msg || JSON.stringify(data) });
     res.json({ success: true });
   } catch (err) {
+    console.error('cambiar-password error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
