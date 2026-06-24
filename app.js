@@ -139,11 +139,17 @@ app.post('/api/crear-usuario', async (req, res) => {
     });
     const userData = await createRes.json();
     if (!createRes.ok) return res.status(400).json({ error: userData.message || 'Error al crear usuario' });
-    await fetch(`${SB_URL}/rest/v1/profiles`, {
+    const profileRes = await fetch(`${SB_URL}/rest/v1/profiles`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': SB_SERVICE_KEY, 'Authorization': `Bearer ${SB_SERVICE_KEY}`, 'Prefer': 'resolution=merge-duplicates' },
       body: JSON.stringify({ id: userData.id, email, nombre, rol: rol || 'operador', pais_id: pais_id || null, activo: true })
     });
+    const profileData = await profileRes.json();
+    console.log('Profile insert status:', profileRes.status, JSON.stringify(profileData));
+    if (!profileRes.ok) {
+      console.error('Profile insert error:', profileData);
+      return res.status(500).json({ error: 'Usuario creado en Auth pero error al crear perfil: ' + JSON.stringify(profileData) });
+    }
     res.json({ success: true, id: userData.id });
   } catch (err) {
     res.status(500).json({ error: err.message });
