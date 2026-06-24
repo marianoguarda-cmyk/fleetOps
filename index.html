@@ -854,6 +854,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
             <button id="liq-tab-pendientes" onclick="liqTab('pendientes')" style="padding:5px 14px;font-size:12px;border:none;background:var(--bg2);color:var(--text2);cursor:pointer;font-family:inherit">Pendientes</button>
             <button id="liq-tab-liquidadas" onclick="liqTab('liquidadas')" style="padding:5px 14px;font-size:12px;border:none;background:var(--bg2);color:var(--text2);cursor:pointer;font-family:inherit">Liquidadas</button>
             <button id="liq-tab-diferencia" onclick="liqTab('diferencia')" style="padding:5px 14px;font-size:12px;border:none;background:var(--bg2);color:var(--text2);cursor:pointer;font-family:inherit">Con diferencia</button>
+            <button id="liq-tab-devolucion" onclick="liqTab('devolucion')" style="padding:5px 14px;font-size:12px;border:none;background:var(--bg2);color:var(--text2);cursor:pointer;font-family:inherit">Con devolución</button>
           </div>
           <select id="liq-filtro-fecha" style="font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:20px;background:var(--bg2)" onchange="loadLiquidacion()">
             <option value="hoy">Hoy</option>
@@ -4101,7 +4102,7 @@ async function loadLiquidacion(){
   const total=LIQ_DATA_CACHE.length;
   const ok=LIQ_DATA_CACHE.filter(l=>l.estado==='liquidado').length;
   const pend=LIQ_DATA_CACHE.filter(l=>l.estado==='pendiente').length;
-  const diff=LIQ_DATA_CACHE.filter(l=>l.estado==='con_diferencia').length;
+  const diff=LIQ_DATA_CACHE.filter(l=>l.estado==='con_diferencia'||l.estado==='con_devolucion').length;
   // Alertas +28hs
   const ahora=new Date();
   const alertas=LIQ_DATA_CACHE.filter(l=>{
@@ -4138,8 +4139,7 @@ async function loadLiquidacion(){
 
 function liqTab(tab){
   LIQ_TAB_ACTIVO=tab;
-  // Update tab buttons
-  ['todos','pendientes','liquidadas','diferencia'].forEach(t=>{
+  ['todos','pendientes','liquidadas','diferencia','devolucion'].forEach(t=>{
     const btn=$(`liq-tab-${t}`);
     if(btn){
       btn.style.background=t===tab?'var(--blue)':'var(--bg2)';
@@ -4156,6 +4156,7 @@ function renderLiquidaciones(){
   if(LIQ_TAB_ACTIVO==='pendientes') data=data.filter(l=>l.estado==='pendiente'||l.estado==='en_proceso');
   else if(LIQ_TAB_ACTIVO==='liquidadas') data=data.filter(l=>l.estado==='liquidado');
   else if(LIQ_TAB_ACTIVO==='diferencia') data=data.filter(l=>l.estado==='con_diferencia');
+  else if(LIQ_TAB_ACTIVO==='devolucion') data=data.filter(l=>l.estado==='con_devolucion');
   else if(LIQ_TAB_ACTIVO==='alerta'){
     const ahora=new Date();
     data=data.filter(l=>{
@@ -4166,8 +4167,8 @@ function renderLiquidaciones(){
   }
   if(!data.length){el.innerHTML='<div class="empty">Sin resultados.</div>';return;}
 
-  const estadoColor={pendiente:'var(--amber)',en_proceso:'var(--blue)',liquidado:'var(--green)',con_diferencia:'var(--red)'};
-  const estadoLabel={pendiente:'⏳ Pendiente',en_proceso:'📋 En proceso',liquidado:'✓ Liquidado',con_diferencia:'⚠ Con diferencia'};
+  const estadoColor={pendiente:'var(--amber)',en_proceso:'var(--blue)',liquidado:'var(--green)',con_diferencia:'var(--red)',con_devolucion:'#7C3AED'};
+  const estadoLabel={pendiente:'⏳ Pendiente',en_proceso:'📋 En proceso',liquidado:'✓ Liquidado',con_diferencia:'⚠ Con diferencia',con_devolucion:'↩ Con devolución'};
   const ahora=new Date();
 
   el.innerHTML=data.map(l=>{
@@ -4416,8 +4417,8 @@ async function verDetalleLiquidacion(liqId){
     const{data:det}=await db.from('liquidaciones_detalle').select('*').eq('liquidacion_id',liqId);
     l.detalle=det||[];
   }
-  const estadoColor={pendiente:'var(--amber)',en_proceso:'var(--blue)',liquidado:'var(--green)',con_diferencia:'var(--red)'};
-  const estadoLabel={pendiente:'⏳ Pendiente',en_proceso:'📋 En proceso',liquidado:'✓ Liquidado',con_diferencia:'⚠ Con diferencia'};
+  const estadoColor={pendiente:'var(--amber)',en_proceso:'var(--blue)',liquidado:'var(--green)',con_diferencia:'var(--red)',con_devolucion:'#7C3AED'};
+  const estadoLabel={pendiente:'⏳ Pendiente',en_proceso:'📋 En proceso',liquidado:'✓ Liquidado',con_diferencia:'⚠ Con diferencia',con_devolucion:'↩ Con devolución'};
   const color = estadoColor[l.estado]||'var(--text2)';
   const fecha = l.fecha?new Date(l.fecha+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):'—';
 
@@ -4669,7 +4670,8 @@ async function guardarLiquidacion(){
   const cobrado=parseFloat($('liq-cobrado').value)||0;
   const esperado=parseFloat($('liq-entregados').dataset.montoEsp)||0;
   const diff=cobrado-esperado;
-  const estado=diff===0?'liquidado':'con_diferencia';
+  // Estado final: con_devolucion si hay bultos sin entregar, con_diferencia si cobro no cierra, liquidado si todo OK
+  const estado = noEntregados > 0 ? 'con_devolucion' : diff !== 0 ? 'con_diferencia' : 'liquidado';
 
   // Subir comprobantes de cierre si hay archivos
   let comprobanteCierreUrls = null;
