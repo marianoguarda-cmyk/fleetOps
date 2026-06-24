@@ -818,7 +818,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
         </div>
 
         <!-- Stats dashboard -->
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px">
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px">
           <div class="stat" style="cursor:pointer" onclick="liqTab('hoy')">
             <div class="stat-label">Planillas hoy</div>
             <div class="stat-val" id="liq-stat-total" style="color:var(--blue)">—</div>
@@ -834,6 +834,10 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
           <div class="stat" style="cursor:pointer" onclick="liqTab('diferencia')">
             <div class="stat-label">⚠ Con diferencia</div>
             <div class="stat-val" id="liq-stat-diff" style="color:var(--red)">—</div>
+          </div>
+          <div class="stat" style="cursor:pointer" onclick="liqTab('devolucion')">
+            <div class="stat-label">↩ Con devolución</div>
+            <div class="stat-val" id="liq-stat-dev" style="color:#7C3AED">—</div>
           </div>
           <div class="stat" style="cursor:pointer;border:2px solid var(--red-light)" onclick="liqTab('alerta')">
             <div class="stat-label" style="color:var(--red)">🚨 Alertas +28hs</div>
@@ -4102,7 +4106,8 @@ async function loadLiquidacion(){
   const total=LIQ_DATA_CACHE.length;
   const ok=LIQ_DATA_CACHE.filter(l=>l.estado==='liquidado').length;
   const pend=LIQ_DATA_CACHE.filter(l=>l.estado==='pendiente').length;
-  const diff=LIQ_DATA_CACHE.filter(l=>l.estado==='con_diferencia'||l.estado==='con_devolucion').length;
+  const diff=LIQ_DATA_CACHE.filter(l=>l.estado==='con_diferencia').length;
+  const dev=LIQ_DATA_CACHE.filter(l=>l.estado==='con_devolucion').length;
   // Alertas +28hs
   const ahora=new Date();
   const alertas=LIQ_DATA_CACHE.filter(l=>{
@@ -4115,6 +4120,7 @@ async function loadLiquidacion(){
   const sok=$('liq-stat-ok');if(sok)sok.textContent=ok;
   const sp=$('liq-stat-pend');if(sp)sp.textContent=pend;
   const sd=$('liq-stat-diff');if(sd)sd.textContent=diff;
+  const sdv=$('liq-stat-dev');if(sdv)sdv.textContent=dev;
 
   // Mostrar alertas box
   const ab=$('liq-alertas-box');
