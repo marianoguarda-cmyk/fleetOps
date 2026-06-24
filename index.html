@@ -1439,23 +1439,26 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
         </div>
       </div>
       <!-- Cobro y diferencial unificado -->
-      <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:12px;margin-top:10px">
-        <div style="font-size:12px;font-weight:600;margin-bottom:10px">💰 Detalle del cobro</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-          <div class="fg" style="margin-bottom:0">
-            <label class="fl">Efectivo ($)</label>
-            <input type="number" id="liq-efectivo-entregado" min="0" step="0.01" placeholder="0.00" oninput="calcularDiferencialUnificado()" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit">
+      <div style="margin-top:10px">
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px">💰 Detalle del cobro</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <!-- Efectivo -->
+          <div style="background:#FEF9EC;border:1.5px solid #F59E0B;border-radius:var(--radius-sm);padding:10px">
+            <div style="font-size:11px;font-weight:600;color:#B45309;margin-bottom:6px">💵 Efectivo</div>
+            <input type="number" id="liq-efectivo-entregado" min="0" step="0.01" placeholder="0.00" oninput="calcularDiferencialUnificado()" style="width:100%;padding:7px 9px;border:1.5px solid #F59E0B;border-radius:var(--radius-sm);font-size:14px;font-family:inherit;background:#fffdf5">
           </div>
-          <div class="fg" style="margin-bottom:0">
-            <label class="fl">Transferencia ($)</label>
-            <input type="number" id="liq-transferencia-entregada" min="0" step="0.01" placeholder="0.00" oninput="calcularDiferencialUnificado()" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit">
+          <!-- Transferencia -->
+          <div style="background:#EFF6FF;border:1.5px solid #3B82F6;border-radius:var(--radius-sm);padding:10px">
+            <div style="font-size:11px;font-weight:600;color:#1D4ED8;margin-bottom:6px">🏦 Transferencia</div>
+            <input type="number" id="liq-transferencia-entregada" min="0" step="0.01" placeholder="0.00" oninput="calcularDiferencialUnificado()" style="width:100%;padding:7px 9px;border:1.5px solid #3B82F6;border-radius:var(--radius-sm);font-size:14px;font-family:inherit;background:#f8fbff">
           </div>
-          <div class="fg" style="margin-bottom:0">
-            <label class="fl">Diferencial total</label>
-            <input type="text" id="liq-diferencial-total" readonly placeholder="Automático" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg);font-family:inherit;font-weight:600">
+          <!-- Diferencial -->
+          <div style="background:var(--bg3);border:1.5px solid var(--border2);border-radius:var(--radius-sm);padding:10px">
+            <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px">📊 Diferencial total</div>
+            <input type="text" id="liq-diferencial-total" readonly placeholder="Automático" style="width:100%;padding:7px 9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;font-weight:700;background:var(--bg)">
           </div>
         </div>
-        <div style="font-size:11px;color:var(--text2);margin-top:8px">Monto cobrado = Efectivo + Transferencia. Diferencial = Cobrado − Esperado.</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:6px">Cobrado = Efectivo + Transferencia. Diferencial = Cobrado − Monto esperado.</div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
         <div class="fg">
