@@ -1056,6 +1056,21 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
   </div>
 </div>
 
+<!-- MODAL DETALLE LIQUIDACION -->
+<div class="overlay" id="ov-liq-det">
+  <div class="modal" style="width:640px">
+    <div class="modal-hd">
+      <div>
+        <div class="modal-title" id="liq-det-title">Detalle de liquidación</div>
+        <div id="liq-det-subtitle" style="font-size:12px;color:var(--text2);margin-top:2px"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('liq-det')">✕</button>
+    </div>
+    <div class="modal-body" id="liq-det-body"></div>
+    <div class="modal-footer" id="liq-det-footer"></div>
+  </div>
+</div>
+
 <!-- MODAL PRE-CIERRE -->
 <div class="overlay" id="ov-pre-cierre">
   <div class="modal modal-sm">
@@ -4149,7 +4164,7 @@ function renderLiquidaciones(){
     const horas=Math.floor((ahora-salida)/3600000);
     const esAlerta=l.estado==='pendiente'&&horas>28;
     const diferencial = l.monto_diferencia;
-    return `<div class="tr" style="grid-template-columns:80px 1fr 130px 90px 90px 90px 90px 110px 130px;border-left:4px solid ${esAlerta?'var(--red)':color}">
+    return `<div class="tr" onclick="verDetalleLiquidacion('${l.id}')" style="grid-template-columns:80px 1fr 130px 90px 90px 90px 90px 110px 130px;border-left:4px solid ${esAlerta?'var(--red)':color};cursor:pointer">
       <div style="font-size:12px">
         <div>${l.fecha?new Date(l.fecha+'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'—'}</div>
         ${l.hora_salida?`<div style="color:var(--text2)">${l.hora_salida.slice(0,5)}</div>`:''}
@@ -4182,9 +4197,9 @@ function renderLiquidaciones(){
       <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
         <span style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;background:${color}20;color:${color}">${estadoLabel[l.estado]||l.estado}</span>
         ${l.comprobantes_parciales?.length?`<span style="font-size:10px;color:var(--blue)">📎 ${l.comprobantes_parciales.length} doc${l.comprobantes_parciales.length>1?'s':''}</span>`:''}
-        ${puedeEditar&&(l.estado==='pendiente'||l.estado==='en_proceso')?`<button class="btn btn-sm btn-primary" onclick="abrirLiquidar('${l.id}')" style="font-size:11px" title="Liquidar">💰</button>`:''}
+        ${puedeEditar&&(l.estado==='pendiente'||l.estado==='en_proceso')?`<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();abrirLiquidar('${l.id}')" style="font-size:11px" title="Liquidar">💰</button>`:''}
         ${puedeEditar&&l.estado!=='pendiente'&&l.estado!=='en_proceso'?'<span style="font-size:10px;color:var(--text3)">🔒</span>':''}
-        ${puedeEditar?`<button class="btn btn-sm" onclick="editarPlanilla('${l.id}')" style="font-size:11px">✏️</button>`:''}
+        ${puedeEditar?`<button class="btn btn-sm" onclick="event.stopPropagation();editarPlanilla('${l.id}')" style="font-size:11px">✏️</button>`:''}
       </div>
     </div>`;
   }).join('');
@@ -4379,6 +4394,105 @@ async function guardarParcialesDesdeModal(){
 
 // ── PRE-CIERRE (modal separado — ya no se usa, se mantiene por compatibilidad) ──
 async function abrirPreCierre(liqId){ abrirLiquidar(liqId); }
+
+async function verDetalleLiquidacion(liqId){
+  const l = LIQ_DATA_CACHE.find(x=>x.id===liqId);
+  if(!l) return;
+  // Cargar detalle de no entregados si no está en cache
+  if(l.detalle===undefined){
+    const{data:det}=await db.from('liquidaciones_detalle').select('*').eq('liquidacion_id',liqId);
+    l.detalle=det||[];
+  }
+  const estadoColor={pendiente:'var(--amber)',en_proceso:'var(--blue)',liquidado:'var(--green)',con_diferencia:'var(--red)'};
+  const estadoLabel={pendiente:'⏳ Pendiente',en_proceso:'📋 En proceso',liquidado:'✓ Liquidado',con_diferencia:'⚠ Con diferencia'};
+  const color = estadoColor[l.estado]||'var(--text2)';
+  const fecha = l.fecha?new Date(l.fecha+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):'—';
+
+  $('liq-det-title').textContent = `${l.conductores?.nombre||'Sin conductor'} — ${l.vehiculos?.patente||''}`;
+  $('liq-det-subtitle').innerHTML = `${fecha}${l.hora_salida?' · Salida '+l.hora_salida.slice(0,5):''}${l.hora_regreso?' · Regreso '+l.hora_regreso.slice(0,5):''}`;
+
+  const fmtM = v => v!=null?`$ ${Number(v).toLocaleString('es-AR',{minimumFractionDigits:2})}`:'—';
+  const diff = l.monto_diferencia;
+
+  let html = `
+  <!-- Estado y header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <span style="background:${color}20;color:${color};padding:5px 14px;border-radius:20px;font-size:13px;font-weight:600">${estadoLabel[l.estado]||l.estado}</span>
+    ${l.clientes?.nombre?`<span style="font-size:13px;color:var(--text2)">👤 ${l.clientes.nombre}</span>`:''}
+  </div>
+
+  <!-- Grid de datos principales -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+    <div style="background:var(--bg);border-radius:var(--radius);padding:12px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">📦 Bultos</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
+        <div><div style="font-size:20px;font-weight:700">${l.bultos_salida||0}</div><div style="font-size:11px;color:var(--text2)">Salida</div></div>
+        <div><div style="font-size:20px;font-weight:700;color:var(--green)">${l.bultos_entregados??'—'}</div><div style="font-size:11px;color:var(--text2)">Entregados</div></div>
+        <div><div style="font-size:20px;font-weight:700;color:${(l.bultos_no_entregados||0)>0?'var(--red)':'var(--text)'}">${l.bultos_no_entregados??'—'}</div><div style="font-size:11px;color:var(--text2)">No entregados</div></div>
+      </div>
+    </div>
+    <div style="background:var(--bg);border-radius:var(--radius);padding:12px 14px">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">💰 Montos</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px">
+        <div><div style="color:var(--text2);font-size:11px">Esperado</div><div style="font-weight:600">${fmtM(l.monto_esperado)}</div></div>
+        <div><div style="color:var(--text2);font-size:11px">Cobrado</div><div style="font-weight:600">${fmtM(l.monto_cobrado)}</div></div>
+        <div><div style="color:#B45309;font-size:11px">💵 Efectivo</div><div style="font-weight:600;color:#B45309">${fmtM(l.efectivo_entregado)}</div></div>
+        <div><div style="color:#1D4ED8;font-size:11px">🏦 Transferencia</div><div style="font-weight:600;color:#1D4ED8">${fmtM(l.transferencia_entregada)}</div></div>
+      </div>
+      ${diff!=null?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:11px;color:var(--text2)">Diferencial</span>
+        <span style="font-weight:700;font-size:14px;color:${diff<0?'var(--red)':diff>0?'var(--amber)':'var(--green)'}">${diff>=0?'+':''}${fmtM(diff)}</span>
+      </div>`:''}
+    </div>
+  </div>
+
+  <!-- Detalle no entregados -->
+  ${l.bultos_no_entregados>0&&l.detalle?.length?`
+  <div style="background:var(--red-light);border:1px solid #F09595;border-radius:var(--radius);padding:12px;margin-bottom:14px">
+    <div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">📦 Detalle no entregados</div>
+    ${l.detalle.map(d=>`<div style="font-size:13px;display:flex;justify-content:space-between;padding:3px 0"><span style="color:var(--text2)">${d.motivo}</span><span>${d.cantidad} bulto${d.cantidad>1?'s':''} ${d.descripcion?'· '+d.descripcion:''}</span></div>`).join('')}
+  </div>`:''}
+
+  <!-- Observaciones -->
+  ${l.observaciones_salida?`<div style="background:var(--bg3);border-left:3px solid var(--border2);border-radius:0 var(--radius) var(--radius) 0;padding:9px 12px;margin-bottom:10px;font-size:13px"><span style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:3px">Obs. de salida</span>${l.observaciones_salida}</div>`:''}
+  ${l.observaciones_liquidacion?`<div style="background:var(--bg3);border-left:3px solid var(--border2);border-radius:0 var(--radius) var(--radius) 0;padding:9px 12px;margin-bottom:10px;font-size:13px"><span style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:3px">Obs. de liquidación</span>${l.observaciones_liquidacion}</div>`:''}
+
+  <!-- Comprobantes -->
+  ${(l.comprobante_salida_url?.length||l.comprobantes_parciales?.length||l.comprobante_cierre_url?.length)?`
+  <div style="margin-bottom:14px">
+    <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">📎 Comprobantes</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${(Array.isArray(l.comprobante_salida_url)?l.comprobante_salida_url:l.comprobante_salida_url?[l.comprobante_salida_url]:[]).map((u,i)=>`<a href="${u}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--blue);background:var(--blue-light);padding:4px 10px;border-radius:20px;text-decoration:none;font-weight:500">📄 Salida ${i+1}</a>`).join('')}
+      ${(l.comprobantes_parciales||[]).map((u,i)=>`<a href="${u}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#1D4ED8;background:#EEF1FD;padding:4px 10px;border-radius:20px;text-decoration:none;font-weight:500">📋 Parcial ${i+1}</a>`).join('')}
+      ${(Array.isArray(l.comprobante_cierre_url)?l.comprobante_cierre_url:l.comprobante_cierre_url?[l.comprobante_cierre_url]:[]).map((u,i)=>`<a href="${u}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--green);background:var(--green-light);padding:4px 10px;border-radius:20px;text-decoration:none;font-weight:500">✅ Cierre ${i+1}</a>`).join('')}
+    </div>
+  </div>`:''}
+
+  <!-- Metadatos -->
+  <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--text2);border-top:1px solid var(--border);padding-top:12px">
+    ${l.creado_por?`<span>📝 Creado por <strong style="color:var(--text)">${l.creado_por}</strong></span>`:''}
+    ${l.liquidado_por?`<span>✅ Liquidado por <strong style="color:var(--text)">${l.liquidado_por}</strong></span>`:''}
+  </div>`;
+
+  $('liq-det-body').innerHTML = html;
+
+  // Footer con acciones según estado
+  const footer = $('liq-det-footer');
+  footer.innerHTML = '';
+  const btnClose = document.createElement('button');
+  btnClose.className = 'btn'; btnClose.textContent = 'Cerrar';
+  btnClose.onclick = ()=>closeModal('liq-det');
+  footer.appendChild(btnClose);
+  if(isAdmin()&&(l.estado==='pendiente'||l.estado==='en_proceso')){
+    const btnLiq = document.createElement('button');
+    btnLiq.className = 'btn btn-primary';
+    btnLiq.textContent = '💰 Liquidar';
+    btnLiq.onclick = ()=>{ closeModal('liq-det'); setTimeout(()=>abrirLiquidar(liqId),100); };
+    footer.appendChild(btnLiq);
+  }
+
+  openModal('liq-det');
+}
 
 async function guardarPlanillaSalida(){
   const conductor=$('nliq-conductor').value;
