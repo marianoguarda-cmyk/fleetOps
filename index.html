@@ -1437,6 +1437,22 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
       <!-- Info de salida (readonly) -->
       <div id="liq-info-salida" style="background:var(--bg3);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:14px;font-size:13px"></div>
 
+      <!-- COMPROBANTES PARCIALES -->
+      <div style="border:1.5px solid var(--blue);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:8px">📋 Comprobantes parciales <span id="pc-count-badge" style="font-size:11px;background:var(--blue);color:#fff;padding:1px 7px;border-radius:20px;margin-left:4px"></span></div>
+        <div id="liq-parciales-actuales" style="margin-bottom:8px"></div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="file" id="liq-parciales-input" accept="image/*,application/pdf" multiple style="display:none" onchange="previewParcialesEnLiquidar(event)">
+          <button class="btn btn-sm" type="button" onclick="$('liq-parciales-input').click()">📎 Agregar comprobantes parciales</button>
+          <span id="liq-parciales-nombre" style="font-size:12px;color:var(--text2)"></span>
+        </div>
+        <div id="liq-parciales-preview" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div>
+        <button class="btn btn-sm" id="liq-parciales-guardar-btn" style="display:none;margin-top:8px" onclick="guardarParcialesDesdeModal()">💾 Guardar comprobantes parciales</button>
+        <div style="font-size:11px;color:var(--text2);margin-top:6px">Guardá comprobantes sin cerrar la liquidación. La planilla queda en estado <strong>En proceso</strong>.</div>
+      </div>
+
+      <div class="form-section">Cierre definitivo</div>
+
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="fg">
           <label class="fl">Bultos entregados *</label>
@@ -1457,7 +1473,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
         <div class="fg">
-          <label class="fl">Monto cobrado ($) *</label>
+          <label class="fl">Monto cobrado ($)</label>
           <input type="number" id="liq-cobrado" min="0" step="0.01" placeholder="Se calcula automático" readonly style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;background:var(--bg3);font-weight:600">
         </div>
         <div class="fg">
@@ -1469,17 +1485,14 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
       <div style="margin-top:10px">
         <div style="font-size:12px;font-weight:600;margin-bottom:8px">💰 Detalle del cobro</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-          <!-- Efectivo -->
           <div style="background:#FEF9EC;border:1.5px solid #F59E0B;border-radius:var(--radius-sm);padding:10px">
             <div style="font-size:11px;font-weight:600;color:#B45309;margin-bottom:6px">💵 Efectivo</div>
             <input type="number" id="liq-efectivo-entregado" min="0" step="0.01" placeholder="0.00" oninput="calcularDiferencialUnificado()" style="width:100%;padding:7px 9px;border:1.5px solid #F59E0B;border-radius:var(--radius-sm);font-size:14px;font-family:inherit;background:#fffdf5">
           </div>
-          <!-- Transferencia -->
           <div style="background:#EFF6FF;border:1.5px solid #3B82F6;border-radius:var(--radius-sm);padding:10px">
             <div style="font-size:11px;font-weight:600;color:#1D4ED8;margin-bottom:6px">🏦 Transferencia</div>
             <input type="number" id="liq-transferencia-entregada" min="0" step="0.01" placeholder="0.00" oninput="calcularDiferencialUnificado()" style="width:100%;padding:7px 9px;border:1.5px solid #3B82F6;border-radius:var(--radius-sm);font-size:14px;font-family:inherit;background:#f8fbff">
           </div>
-          <!-- Diferencial -->
           <div style="background:var(--bg3);border:1.5px solid var(--border2);border-radius:var(--radius-sm);padding:10px">
             <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px">📊 Diferencial total</div>
             <input type="text" id="liq-diferencial-total" readonly placeholder="Automático" style="width:100%;padding:7px 9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;font-weight:700;background:var(--bg)">
@@ -4279,38 +4292,11 @@ async function subirMultiplesComprobantes(files, tipo){
   return urls.length > 0 ? urls : null;
 }
 
-// ── PRE-CIERRE ────────────────────────────────────────────────────────────
-async function abrirPreCierre(liqId){
-  $('pc-liq-id').value = liqId;
-  $('pc-input').value = '';
-  $('pc-nombre').textContent = 'Sin archivos';
-  $('pc-preview').innerHTML = '';
-  // Mostrar comprobantes ya cargados
-  const liq = LIQ_DATA_CACHE.find(l=>l.id===liqId);
-  const el = $('pc-comprobantes-actuales');
-  if(liq?.comprobantes_parciales?.length){
-    el.innerHTML = `<div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text2)">Comprobantes ya cargados (${liq.comprobantes_parciales.length}):</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        ${liq.comprobantes_parciales.map((u,i)=>`
-          <div style="position:relative">
-            <a href="${u}" target="_blank">
-              <img src="${u}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
-                style="height:70px;width:70px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">
-              <div style="display:none;height:70px;width:70px;border-radius:6px;border:1px solid var(--border);align-items:center;justify-content:center;font-size:11px;color:var(--blue);background:var(--bg3);text-align:center">📄 Doc ${i+1}</div>
-            </a>
-          </div>`).join('')}
-      </div>`;
-  } else {
-    el.innerHTML = '<div style="font-size:12px;color:var(--text2);margin-bottom:8px">Sin comprobantes cargados aún.</div>';
-  }
-  openModal('pre-cierre');
-}
-
-function previewPreCierre(event){
+function previewParcialesEnLiquidar(event){
   const files = Array.from(event.target.files);
   if(!files.length) return;
-  $('pc-nombre').textContent = `${files.length} archivo${files.length>1?'s':''} seleccionado${files.length>1?'s':''}`;
-  const prev = $('pc-preview');
+  $('liq-parciales-nombre').textContent = `${files.length} archivo${files.length>1?'s':''} seleccionado${files.length>1?'s':''}`;
+  const prev = $('liq-parciales-preview');
   prev.innerHTML = '';
   files.forEach(file=>{
     if(file.type.startsWith('image/')){
@@ -4318,44 +4304,58 @@ function previewPreCierre(event){
       reader.onload = e => {
         const img = document.createElement('img');
         img.src = e.target.result;
-        img.style.cssText = 'height:70px;width:70px;object-fit:cover;border-radius:6px;border:1px solid var(--border)';
+        img.style.cssText = 'height:60px;width:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)';
         prev.appendChild(img);
       };
       reader.readAsDataURL(file);
     } else {
       const d = document.createElement('div');
-      d.style.cssText = 'height:70px;width:70px;border-radius:6px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text2);background:var(--bg3);text-align:center;padding:4px';
-      d.textContent = '📄 '+file.name.slice(0,15);
+      d.style.cssText = 'height:60px;width:60px;border-radius:6px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text2);background:var(--bg3);text-align:center;padding:4px';
+      d.textContent = '📄 '+file.name.slice(0,12);
       prev.appendChild(d);
     }
   });
+  if($('liq-parciales-guardar-btn')) $('liq-parciales-guardar-btn').style.display='inline-flex';
 }
 
-async function guardarPreCierre(){
-  const liqId = $('pc-liq-id').value;
+async function guardarParcialesDesdeModal(){
+  const liqId = $('liq-id-actual').value;
   if(!liqId) return;
-  const files = Array.from($('pc-input')?.files||[]);
+  const files = Array.from($('liq-parciales-input')?.files||[]);
   if(!files.length){ toast('Seleccioná al menos un archivo','err'); return; }
-  toast(`⬆ Subiendo ${files.length} archivo${files.length>1?'s':''}...`,'ok');
+  const btn = $('liq-parciales-guardar-btn');
+  if(btn){ btn.disabled=true; btn.textContent='Subiendo...'; }
   const nuevasUrls = [];
   for(const file of files){
     const url = await subirComprobanteStorage(file, 'parcial');
     if(url) nuevasUrls.push(url);
   }
-  if(!nuevasUrls.length){ toast('Error al subir los archivos','err'); return; }
-  // Combinar con los ya existentes
+  if(!nuevasUrls.length){ toast('Error al subir los archivos','err'); if(btn){btn.disabled=false;btn.textContent='💾 Guardar comprobantes parciales';} return; }
   const liq = LIQ_DATA_CACHE.find(l=>l.id===liqId);
   const existentes = liq?.comprobantes_parciales||[];
   const todas = [...existentes, ...nuevasUrls];
   const{error} = await db.from('liquidaciones').update({
     comprobantes_parciales: todas,
-    estado: 'en_proceso'
+    estado: liq?.estado==='pendiente'?'en_proceso':liq?.estado
   }).eq('id', liqId);
-  if(error){ toast('Error: '+error.message,'err'); return; }
+  if(error){ toast('Error: '+error.message,'err'); if(btn){btn.disabled=false;btn.textContent='💾 Guardar comprobantes parciales';} return; }
   toast(`✅ ${nuevasUrls.length} comprobante${nuevasUrls.length>1?'s':''} guardado${nuevasUrls.length>1?'s':''}`,'ok');
-  closeModal('pre-cierre');
-  loadLiquidacion();
+  // Actualizar cache local y refrescar la sección de parciales en el modal
+  if(liq) liq.comprobantes_parciales = todas;
+  const parcialesEl = $('liq-parciales-actuales');
+  if(parcialesEl) parcialesEl.innerHTML = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+    ${todas.map((u,i)=>`<a href="${u}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--blue);background:var(--blue-light);padding:3px 8px;border-radius:20px;text-decoration:none">📋 Parcial ${i+1}</a>`).join('')}
+  </div>`;
+  const badge = $('pc-count-badge');
+  if(badge) badge.textContent = todas.length;
+  if($('liq-parciales-input')) $('liq-parciales-input').value='';
+  if($('liq-parciales-nombre')) $('liq-parciales-nombre').textContent='';
+  if($('liq-parciales-preview')) $('liq-parciales-preview').innerHTML='';
+  if(btn){ btn.disabled=false; btn.style.display='none'; btn.textContent='💾 Guardar comprobantes parciales'; }
 }
+
+// ── PRE-CIERRE (modal separado — ya no se usa, se mantiene por compatibilidad) ──
+async function abrirPreCierre(liqId){ abrirLiquidar(liqId); }
 
 async function guardarPlanillaSalida(){
   const conductor=$('nliq-conductor').value;
@@ -4415,8 +4415,26 @@ async function abrirLiquidar(liqId){
       <div><span style="color:var(--text2)">Monto esperado:</span> <strong>$ ${(liq.monto_esperado||0).toLocaleString('es-AR')}</strong></div>
       ${liq.hora_salida?`<div><span style="color:var(--text2)">Hora salida:</span> <strong>${liq.hora_salida.slice(0,5)}</strong></div>`:''}
       ${liq.comprobante_salida_url?.length?`<div>${(Array.isArray(liq.comprobante_salida_url)?liq.comprobante_salida_url:[liq.comprobante_salida_url]).map((u,i)=>`<a href="${u}" target="_blank" style="font-size:12px;color:var(--blue);margin-right:8px">📎 Comprobante salida ${i+1}</a>`).join('')}</div>`:''}
-      ${liq.comprobantes_parciales?.length?`<div style="margin-top:4px">${liq.comprobantes_parciales.map((u,i)=>`<a href="${u}" target="_blank" style="font-size:12px;color:var(--blue);margin-right:8px">📋 Parcial ${i+1}</a>`).join('')}</div>`:''}
     </div>`;
+  // Poblar comprobantes parciales
+  const parciales = liq.comprobantes_parciales||[];
+  const badge = $('pc-count-badge');
+  if(badge) badge.textContent = parciales.length > 0 ? parciales.length : '';
+  const parcialesEl = $('liq-parciales-actuales');
+  if(parcialesEl){
+    if(parciales.length){
+      parcialesEl.innerHTML = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+        ${parciales.map((u,i)=>`<a href="${u}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--blue);background:var(--blue-light);padding:3px 8px;border-radius:20px;text-decoration:none">📋 Parcial ${i+1}</a>`).join('')}
+      </div>`;
+    } else {
+      parcialesEl.innerHTML = '';
+    }
+  }
+  // Limpiar inputs de parciales nuevos
+  if($('liq-parciales-input')) $('liq-parciales-input').value='';
+  if($('liq-parciales-nombre')) $('liq-parciales-nombre').textContent='';
+  if($('liq-parciales-preview')) $('liq-parciales-preview').innerHTML='';
+  if($('liq-parciales-guardar-btn')) $('liq-parciales-guardar-btn').style.display='none';
   $('liq-entregados').value=liq.bultos_entregados||'';
   $('liq-cobrado').value=liq.monto_cobrado||'';
   $('liq-efectivo-entregado').value=liq.efectivo_entregado||'';
