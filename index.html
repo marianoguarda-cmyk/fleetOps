@@ -860,12 +860,18 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
             <button id="liq-tab-diferencia" onclick="liqTab('diferencia')" style="padding:5px 14px;font-size:12px;border:none;background:var(--bg2);color:var(--text2);cursor:pointer;font-family:inherit">Con diferencia</button>
             <button id="liq-tab-devolucion" onclick="liqTab('devolucion')" style="padding:5px 14px;font-size:12px;border:none;background:var(--bg2);color:var(--text2);cursor:pointer;font-family:inherit">Con devolución</button>
           </div>
-          <select id="liq-filtro-fecha" style="font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:20px;background:var(--bg2)" onchange="loadLiquidacion()">
+          <select id="liq-filtro-fecha" style="font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:20px;background:var(--bg2)" onchange="onLiqFechaPreset()">
             <option value="hoy">Hoy</option>
             <option value="semana">Esta semana</option>
             <option value="mes">Este mes</option>
             <option value="todo">Todo</option>
+            <option value="rango">Rango personalizado</option>
           </select>
+          <div id="liq-rango-wrap" style="display:none;display:none;gap:6px;align-items:center">
+            <input type="date" id="liq-desde" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:20px" onchange="loadLiquidacion()">
+            <span style="font-size:12px;color:var(--text2)">→</span>
+            <input type="date" id="liq-hasta" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:20px" onchange="loadLiquidacion()">
+          </div>
           <button class="btn btn-sm" onclick="exportarLiquidacionCSV()">⬇ CSV</button>
         </div>
 
@@ -885,12 +891,18 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
             <select id="hist-filtro-pais" style="font-size:12px;width:auto;display:none" onchange="loadHistorial()"><option value="">🌎 Todos los países</option></select>
             <select id="hist-filtro-cliente" style="font-size:12px;width:auto" onchange="loadHistorial()"><option value="">Todos los clientes</option></select>
             <select id="hist-filtro-v" style="font-size:12px;width:auto" onchange="loadHistorial()"><option value="">Todos los vehículos</option></select>
-            <select id="hist-filtro-fecha" style="font-size:12px;width:auto" onchange="loadHistorial()">
+            <select id="hist-filtro-fecha" style="font-size:12px;width:auto" onchange="onHistFechaPreset()">
               <option value="hoy">Hoy</option>
               <option value="semana">Esta semana</option>
               <option value="mes">Este mes</option>
               <option value="todo">Todo</option>
+              <option value="rango">Rango personalizado</option>
             </select>
+            <div id="hist-rango-wrap" style="display:none;gap:6px;align-items:center">
+              <input type="date" id="hist-desde" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:20px" onchange="loadHistorial()">
+              <span style="font-size:12px;color:var(--text2)">→</span>
+              <input type="date" id="hist-hasta" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:20px" onchange="loadHistorial()">
+            </div>
             <button class="btn btn-sm" onclick="loadHistorial()">↻ Actualizar</button>
             <button class="btn btn-sm btn-primary" onclick="exportarHistorial()">⬇ Descargar CSV</button>
           </div>
@@ -2035,6 +2047,34 @@ function updateVehiculosByEmpresa(empresaId){
 }
 
 // Cargar selects del check cuando se entra a la sección
+function onLiqFechaPreset(){
+  const val=$('liq-filtro-fecha').value;
+  const wrap=$('liq-rango-wrap');
+  if(wrap){
+    wrap.style.display = val==='rango'?'flex':'none';
+    if(val==='rango'){
+      const today=new Date().toISOString().split('T')[0];
+      if(!$('liq-desde').value) $('liq-desde').value=today;
+      if(!$('liq-hasta').value) $('liq-hasta').value=today;
+    }
+  }
+  loadLiquidacion();
+}
+
+function onHistFechaPreset(){
+  const val=$('hist-filtro-fecha').value;
+  const wrap=$('hist-rango-wrap');
+  if(wrap){
+    wrap.style.display = val==='rango'?'flex':'none';
+    if(val==='rango'){
+      const today=new Date().toISOString().split('T')[0];
+      if(!$('hist-desde').value) $('hist-desde').value=today;
+      if(!$('hist-hasta').value) $('hist-hasta').value=today;
+    }
+  }
+  loadHistorial();
+}
+
 function autoSeleccionarConductor(vehiculoId){
   const sel=$('check-conductor-sel');
   if(!sel) return;
@@ -2321,10 +2361,14 @@ async function loadHistorial(){
   const vid=$('hist-filtro-v')?.value;
   const fechaFiltro=$('hist-filtro-fecha')?.value||'hoy';
   const today=new Date().toISOString().split('T')[0];
-  let desde=today;
+  let desde=today, hasta=null;
   if(fechaFiltro==='semana'){const d=new Date();d.setDate(d.getDate()-7);desde=d.toISOString().split('T')[0];}
   else if(fechaFiltro==='mes'){const d=new Date();d.setDate(d.getDate()-30);desde=d.toISOString().split('T')[0];}
   else if(fechaFiltro==='todo'){desde='2020-01-01';}
+  else if(fechaFiltro==='rango'){
+    desde=$('hist-desde')?.value||today;
+    hasta=$('hist-hasta')?.value||today;
+  }
 
   let q=db.from('checks_diarios')
     .select('*, vehiculos(patente,marca,modelo,empresa_id,nombre_empresa_gps,link_gps,empresas(nombre)), clientes(nombre), tipo_check, tipo_vehiculo_check, doc_soat, doc_revision_tecnica, doc_permiso_circulacion, mec_combustible, mec_aceite, mec_liquido_frenos, mec_luces, mec_bocina, mec_frenos, mec_neumaticos, mec_llanta_repuesto, mec_kit_herramientas, cond_limpieza, cond_area_carga, cond_candados, cond_carretilla, cond_film, pers_completo, pers_credencial, pers_pantalon, pers_epp, comentarios_check');
@@ -2334,7 +2378,9 @@ async function loadHistorial(){
     q=q.eq('pais_id',CP?.pais_id||'');
   }
   q=q.order('fecha',{ascending:false}).order('created_at',{ascending:false})
-    .gte('fecha',desde).limit(200);
+    .gte('fecha',desde);
+  if(hasta) q=q.lte('fecha',hasta);
+  q=q.limit(200);
   if(vid) q=q.eq('vehiculo_id',vid);
   if(clienteId) q=q.eq('cliente_id',clienteId);
   const{data,error}=await q;
@@ -4088,14 +4134,19 @@ async function loadLiquidacion(){
 
   const fechaFiltro=$('liq-filtro-fecha')?.value||'hoy';
   const today=new Date().toISOString().split('T')[0];
-  let desde=today;
+  let desde=today, hasta=null;
   if(fechaFiltro==='semana'){const d=new Date();d.setDate(d.getDate()-7);desde=d.toISOString().split('T')[0];}
-  if(fechaFiltro==='mes'){const d=new Date();d.setDate(d.getDate()-30);desde=d.toISOString().split('T')[0];}
-  if(fechaFiltro==='todo') desde='2020-01-01';
+  else if(fechaFiltro==='mes'){const d=new Date();d.setDate(d.getDate()-30);desde=d.toISOString().split('T')[0];}
+  else if(fechaFiltro==='todo') desde='2020-01-01';
+  else if(fechaFiltro==='rango'){
+    desde=$('liq-desde')?.value||today;
+    hasta=$('liq-hasta')?.value||today;
+  }
 
   let q=withPais(db.from('liquidaciones')
     .select('*, conductores(nombre), vehiculos(patente,marca), clientes(nombre)')
     .gte('fecha',desde));
+  if(hasta) q=q.lte('fecha',hasta);
   q=q.order('fecha',{ascending:false}).order('created_at',{ascending:false});
 
   const{data,error}=await q;
