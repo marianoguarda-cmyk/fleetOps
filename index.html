@@ -1653,11 +1653,13 @@ async function doLogout(){
 }
 
 function abrirCambiarPass(uid){
-  const u = uid ? USUARIOS_CACHE.find(x=>x.id===uid) : null;
-  $('cp-uid').value = uid || '';
+  const targetUid = uid && uid !== CU?.id ? uid : '';
+  const u = targetUid ? USUARIOS_CACHE.find(x=>x.id===targetUid) : null;
+  // Setear uid PRIMERO antes de abrir el modal
+  $('cp-uid').value = targetUid;
   $('cp-new').value = '';
   $('cp-rep').value = '';
-  if(u && uid !== CU?.id){
+  if(u){
     $('cp-title').textContent = 'Cambiar contraseña';
     $('cp-usuario-info').style.display = 'block';
     $('cp-usuario-info').textContent = `Cambiando contraseña de: ${u.nombre||u.email}`;
@@ -4938,7 +4940,7 @@ function verDetalleUsuario(i){
     </div>
     ${u.id!==CU?.id?`<div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-sm" onclick="cambiarRol('${u.id}','${u.rol}')">🔄 Cambiar rol</button>
-      <button class="btn btn-sm" onclick="closeModal('usr-det');setTimeout(()=>abrirCambiarPass('${u.id}'),100)">🔑 Cambiar contraseña</button>
+      <button class="btn btn-sm" onclick="closeModal('usr-det');abrirCambiarPass('${u.id}')">🔑 Cambiar contraseña</button>
     </div>`:'<div style="margin-top:12px;font-size:12px;color:var(--text3)">Esta es tu propia cuenta.</div>'}
   `;
   openModal('usr-det');

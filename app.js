@@ -130,7 +130,8 @@ app.get('/api/gps/transmissions', async (req, res) => {
 // ── CAMBIAR CONTRASEÑA (admin cambia la de otro usuario) ──────────────────
 app.post('/api/cambiar-password', async (req, res) => {
   const { uid, password } = req.body;
-  if (!uid || !password) return res.status(400).json({ error: 'Faltan campos' });
+  console.log('cambiar-password called, uid:', uid, 'password length:', password?.length);
+  if (!uid || !password) return res.status(400).json({ error: `Faltan campos: uid=${!!uid} password=${!!password}` });
   if (password.length < 6) return res.status(400).json({ error: 'Mínimo 6 caracteres' });
   try {
     const updateRes = await fetch(`${SB_URL}/auth/v1/admin/users/${uid}`, {
