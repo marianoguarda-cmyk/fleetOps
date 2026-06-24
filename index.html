@@ -607,7 +607,8 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
               <button class="btn btn-sm admin-only" onclick="abrirVincularDesdeCheck()" style="font-size:11px;padding:3px 8px">🔗 Vincular</button>
             </div>
           </div>
-          <div id="check-gps-info" style="font-size:13px;color:var(--text2)">Seleccioná un vehículo para ver la info GPS.</div>
+          <div id="check-gps-info" style="font-size:13px;color:var(--text2);margin-bottom:10px">Seleccioná un vehículo para ver la info GPS.</div>
+          <textarea id="check-gps-obs" placeholder="Observaciones del GPS (opcional)..." style="width:100%;padding:8px 10px;border:1px solid rgba(24,95,165,.3);border-radius:var(--radius);background:rgba(255,255,255,.7);color:var(--text);font-size:13px;font-family:inherit;resize:none;height:56px"></textarea>
         </div>
         <div style="display:flex;justify-content:flex-end"><button class="btn btn-primary" onclick="guardarCheck()">✅ Confirmar check del día</button></div>
       </div>
@@ -667,10 +668,11 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
             </div>
           </div>
           <div id="pe-gps-info" style="font-size:12px;color:var(--text2);margin-bottom:10px">Seleccioná un vehículo para ver la info GPS.</div>
-          <div style="display:flex;gap:8px">
+          <div style="display:flex;gap:8px;margin-bottom:10px">
             <button class="chip" id="pe-chip-gps-ok" onclick="setPEChipGPS('ok')" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg);font-size:12px;cursor:pointer">✓ Verificado</button>
             <button class="chip" id="pe-chip-gps-err" onclick="setPEChipGPS('err')" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg);font-size:12px;cursor:pointer">✕ Sin señal</button>
           </div>
+          <textarea id="pe-gps-obs" placeholder="Observaciones del GPS (opcional)..." style="width:100%;padding:8px 10px;border:1px solid rgba(24,95,165,.3);border-radius:var(--radius);background:rgba(255,255,255,.7);color:var(--text);font-size:13px;font-family:inherit;resize:none;height:56px"></textarea>
         </div>
 
         <!-- DOCUMENTACIÓN -->
@@ -2083,6 +2085,7 @@ function resetCheckForm(){
   // Limpiar selects
   const vs=$('check-vehiculo-sel');if(vs)vs.value='';
   const condSel=$('check-conductor-sel');if(condSel)condSel.value='';
+  if($('check-gps-obs')) $('check-gps-obs').value='';
   const cs=$('check-cliente-sel');if(cs)cs.value='';
   const es=$('check-empresa-sel');if(es)es.value='';
   // Ocultar advertencia vehículo nuevo
@@ -2224,6 +2227,7 @@ async function guardarCheck(){
     rastreador_gid:(()=>{const r=RASTREADORES_DB.find(x=>x.vehiculo_id===vid);return r?.gps_gid||null;})(),
     rastreador_nombre:(()=>{const r=RASTREADORES_DB.find(x=>x.vehiculo_id===vid);return r?.nombre||r?.gps_id_dispositivo||null;})(),
     gps_estado:getChip('chips-gps')||null,
+    gps_observaciones:$('check-gps-obs')?.value.trim()||null,
     cliente_id:$('check-cliente-sel')?.value||null,
     conductor_id:$('check-conductor-sel')?.value||null,
     pais_id:getPaisId()||null,
@@ -2425,6 +2429,7 @@ function verCheckDet(h){
     ${(h.rastreador_nombre||h.rastreador_gid)?`<span style="color:var(--text2)">GPS al momento del check</span><span>🛰 ${h.rastreador_nombre||'GPS #'+h.rastreador_gid}</span>`:''}
     ${raActual?`<span style="color:var(--text2)">GPS actual de la unidad</span><span>📡 ${raActual.nombre||raActual.gps_id_dispositivo||'GPS #'+raActual.gps_gid}</span>`:''}
     ${h.gps_estado?`<span style="color:var(--text2)">Estado GPS</span><span>${h.gps_estado==='ok'?'✓ Verificado':'✕ Sin señal'}</span>`:''}
+    ${h.gps_observaciones?`<span style="color:var(--text2)">Obs. GPS</span><span>${h.gps_observaciones}</span>`:''}
     ${h.precinto_numero?`<span style="color:var(--text2)">Precinto N°</span><span>${h.precinto_numero}</span>`:''}
     <span style="color:var(--text2)">${esPeCheck?'¿Sale con auxiliar?':'Sale con peón'}</span><span>${h.sale_con_peon?'Sí'+(h.nombre_peon?' · '+h.nombre_peon:''):'No'}</span>
     ${h.registrado_por?`<span style="color:var(--text2)">Registrado por</span><span>${h.registrado_por}</span>`:''}
@@ -4020,6 +4025,7 @@ async function guardarCheckPE(){
     nombre_peon:(document.querySelector('input[name="pe-peon"]:checked')?.value==='si')?($('pe-peon-nombre')?.value.trim()||null):null,
     cliente_id:$('pe-cliente-sel')?.value||null,
     gps_estado:PE_GPS_ESTADO||null,
+    gps_observaciones:$('pe-gps-obs')?.value.trim()||null,
     registrado_por:CP?.nombre||CU?.email,
     observaciones:$('pe-obs')?.value.trim()||null,
     fotos:fotosUrls.length?fotosUrls:null,
@@ -4044,6 +4050,7 @@ async function guardarCheckPE(){
   document.querySelectorAll('#s-checklist-pe input[type=text]').forEach(r=>r.value='');
   $('pe-vehiculo-sel').value='';
   if($('pe-conductor-sel')) $('pe-conductor-sel').value='';
+  if($('pe-gps-obs')) $('pe-gps-obs').value='';
   if($('pe-obs')) $('pe-obs').value='';
   if($('pe-cliente-sel')) $('pe-cliente-sel').value='';
   if($('pe-warn-nuevo')) $('pe-warn-nuevo').style.display='none';
