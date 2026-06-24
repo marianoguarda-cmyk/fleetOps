@@ -1453,6 +1453,21 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
         </div>
         <div style="font-size:11px;color:var(--amber);margin-top:6px">Diferencia = Efectivo entregado − Monto cobrado. Negativo indica faltante.</div>
       </div>
+      <!-- Diferencial de transferencia -->
+      <div style="background:var(--blue-light);border:1px solid var(--blue);border-radius:var(--radius-sm);padding:12px;margin-top:10px">
+        <div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:8px">🏦 Diferencial de transferencia</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="fg">
+            <label class="fl">Transferencia recibida ($)</label>
+            <input type="number" id="liq-transferencia-entregada" min="0" step="0.01" placeholder="0.00" oninput="calcularDiferenciaTransferencia()" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit">
+          </div>
+          <div class="fg">
+            <label class="fl">Diferencial transferencia</label>
+            <input type="text" id="liq-diferencia-transferencia" readonly placeholder="Se calcula automático" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg3);font-family:inherit;font-weight:600">
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--blue);margin-top:6px">Diferencia = Transferencia recibida − Monto cobrado. Negativo indica faltante.</div>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
         <div class="fg">
           <label class="fl">Hora de regreso</label>
@@ -4298,7 +4313,9 @@ async function abrirLiquidar(liqId){
   $('liq-entregados').value=liq.bultos_entregados||'';
   $('liq-cobrado').value=liq.monto_cobrado||'';
   $('liq-efectivo-entregado').value=liq.efectivo_entregado||'';
+  $('liq-transferencia-entregada').value=liq.transferencia_entregada||'';
   $('liq-diferencia-efectivo').value='';
+  $('liq-diferencia-transferencia').value='';
   $('liq-obs-liq').value=liq.observaciones_liquidacion||'';
   $('liq-hora-reg').value=new Date().toTimeString().slice(0,5);
   // Store salida data for calculations
@@ -4329,6 +4346,7 @@ function calcularDiferencia(){
     el.style.color=diff<0?'var(--red)':diff>0?'var(--amber)':'var(--green)';
   }
   calcularDiferenciaEfectivo();
+  calcularDiferenciaTransferencia();
 }
 
 function calcularDiferenciaEfectivo(){
@@ -4339,6 +4357,19 @@ function calcularDiferenciaEfectivo(){
   if(el&&(efectivo>0||cobrado>0)){
     el.value=(diffEf>0?'+':'')+'$ '+diffEf.toLocaleString('es-AR',{minimumFractionDigits:2});
     el.style.color=diffEf<0?'var(--red)':diffEf>0?'var(--amber)':'var(--green)';
+  } else if(el){
+    el.value='';
+  }
+}
+
+function calcularDiferenciaTransferencia(){
+  const transf=parseFloat($('liq-transferencia-entregada')?.value)||0;
+  const cobrado=parseFloat($('liq-cobrado')?.value)||0;
+  const diffTr=transf-cobrado;
+  const el=$('liq-diferencia-transferencia');
+  if(el&&(transf>0||cobrado>0)){
+    el.value=(diffTr>0?'+':'')+'$ '+diffTr.toLocaleString('es-AR',{minimumFractionDigits:2});
+    el.style.color=diffTr<0?'var(--red)':diffTr>0?'var(--amber)':'var(--green)';
   } else if(el){
     el.value='';
   }
@@ -4395,6 +4426,8 @@ async function guardarLiquidacion(){
   if(detalles.length) await db.from('liquidaciones_detalle').insert(detalles);
   const efectivoEntregado=parseFloat($('liq-efectivo-entregado').value)||null;
   const diffEfectivo=efectivoEntregado!==null?efectivoEntregado-cobrado:null;
+  const transferenciaEntregada=parseFloat($('liq-transferencia-entregada').value)||null;
+  const diffTransferencia=transferenciaEntregada!==null?transferenciaEntregada-cobrado:null;
   const updateData={
     bultos_entregados:entregados,
     bultos_no_entregados:noEntregados,
@@ -4402,6 +4435,8 @@ async function guardarLiquidacion(){
     monto_diferencia:diff,
     efectivo_entregado:efectivoEntregado,
     diferencia_efectivo:diffEfectivo,
+    transferencia_entregada:transferenciaEntregada,
+    diferencia_transferencia:diffTransferencia,
     hora_regreso:$('liq-hora-reg').value||null,
     observaciones_liquidacion:$('liq-obs-liq').value.trim()||null,
     liquidado_por:CP?.nombre||CU?.email,
