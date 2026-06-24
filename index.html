@@ -268,7 +268,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
         </div>
         <span style="font-size:10px;color:var(--text3)">▾</span>
         <div class="u-menu" id="u-menu">
-          <div class="um-item" onclick="openModal('cambiar-pass')">🔑 Cambiar contraseña</div>
+          <div class="um-item" onclick="abrirCambiarPass()">🔑 Cambiar contraseña</div>
           <div class="um-sep"></div>
           <div class="um-item" style="color:var(--red)" onclick="doLogout()">↩ Cerrar sesión</div>
         </div>
@@ -1263,8 +1263,10 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 
 <div class="overlay" id="ov-cambiar-pass">
   <div class="modal modal-sm">
-    <div class="modal-hd"><div class="modal-title">Cambiar contraseña</div><button class="modal-close" onclick="closeModal('cambiar-pass')">✕</button></div>
+    <div class="modal-hd"><div class="modal-title" id="cp-title">Cambiar contraseña</div><button class="modal-close" onclick="closeModal('cambiar-pass')">✕</button></div>
     <div class="modal-body">
+    <input type="hidden" id="cp-uid">
+    <div id="cp-usuario-info" style="background:var(--bg3);border-radius:var(--radius);padding:8px 12px;font-size:13px;color:var(--text2);margin-bottom:12px;display:none"></div>
     <div class="fg" style="margin-bottom:11px"><label class="fl">Nueva contraseña</label><input type="password" id="cp-new" placeholder="Mínimo 6 caracteres"></div>
     <div class="fg" style="margin-bottom:0"><label class="fl">Repetir contraseña</label><input type="password" id="cp-rep" placeholder="Repetí la contraseña"></div>
     </div><!-- end modal-body -->
@@ -1650,13 +1652,43 @@ async function doLogout(){
   $('li-email').value='';$('li-pass').value='';$('li-err').classList.remove('show');
 }
 
+function abrirCambiarPass(uid){
+  const u = uid ? USUARIOS_CACHE.find(x=>x.id===uid) : null;
+  $('cp-uid').value = uid || '';
+  $('cp-new').value = '';
+  $('cp-rep').value = '';
+  if(u && uid !== CU?.id){
+    $('cp-title').textContent = 'Cambiar contraseña';
+    $('cp-usuario-info').style.display = 'block';
+    $('cp-usuario-info').textContent = `Cambiando contraseña de: ${u.nombre||u.email}`;
+  } else {
+    $('cp-title').textContent = 'Cambiar mi contraseña';
+    $('cp-usuario-info').style.display = 'none';
+  }
+  openModal('cambiar-pass');
+}
+
 async function cambiarPassword(){
-  const np=$('cp-new').value,rp=$('cp-rep').value;
+  const np=$('cp-new').value, rp=$('cp-rep').value;
   if(!np||np.length<6){toast('Mínimo 6 caracteres','err');return}
   if(np!==rp){toast('Las contraseñas no coinciden','err');return}
-  const{error}=await db.auth.updateUser({password:np});
-  if(error){toast('Error: '+error.message,'err');return}
-  toast('Contraseña actualizada ✓','ok');closeModal('cambiar-pass');
+  const uid = $('cp-uid').value;
+  // Si es la contraseña propia o no hay uid → usar Supabase directo
+  if(!uid || uid===CU?.id){
+    const{error}=await db.auth.updateUser({password:np});
+    if(error){toast('Error: '+error.message,'err');return}
+  } else {
+    // Cambiar contraseña de otro usuario → necesita service key via backend
+    const res = await fetch('/api/cambiar-password', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({uid, password:np})
+    });
+    const data = await res.json();
+    if(!res.ok||data.error){toast('Error: '+(data.error||'No se pudo cambiar'),'err');return}
+  }
+  toast('Contraseña actualizada ✓','ok');
+  closeModal('cambiar-pass');
   $('cp-new').value='';$('cp-rep').value='';
 }
 

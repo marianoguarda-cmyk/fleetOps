@@ -127,6 +127,29 @@ app.get('/api/gps/transmissions', async (req, res) => {
   }
 });
 
+// ── CAMBIAR CONTRASEÑA (admin cambia la de otro usuario) ──────────────────
+app.post('/api/cambiar-password', async (req, res) => {
+  const { uid, password } = req.body;
+  if (!uid || !password) return res.status(400).json({ error: 'Faltan campos' });
+  if (password.length < 6) return res.status(400).json({ error: 'Mínimo 6 caracteres' });
+  try {
+    const updateRes = await fetch(`${SB_URL}/auth/v1/admin/users/${uid}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SB_SERVICE_KEY,
+        'Authorization': `Bearer ${SB_SERVICE_KEY}`
+      },
+      body: JSON.stringify({ password })
+    });
+    const data = await updateRes.json();
+    if (!updateRes.ok) return res.status(400).json({ error: data.message || 'Error al cambiar contraseña' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── CREAR USUARIO ─────────────────────────────────────────────────────────
 app.post('/api/crear-usuario', async (req, res) => {
   const { email, password, nombre, rol, pais_id } = req.body;
