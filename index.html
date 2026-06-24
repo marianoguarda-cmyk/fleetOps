@@ -608,7 +608,10 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
             </div>
           </div>
           <div id="check-gps-info" style="font-size:13px;color:var(--text2);margin-bottom:10px">Seleccioná un vehículo para ver la info GPS.</div>
-          <textarea id="check-gps-obs" placeholder="Observaciones del GPS (opcional)..." style="width:100%;padding:8px 10px;border:1px solid rgba(24,95,165,.3);border-radius:var(--radius);background:rgba(255,255,255,.7);color:var(--text);font-size:13px;font-family:inherit;resize:none;height:56px"></textarea>
+          <div style="margin-top:8px">
+            <label style="font-size:11px;font-weight:600;color:var(--blue);display:block;margin-bottom:4px">Observaciones GPS</label>
+            <textarea id="check-gps-obs" placeholder="Novedades, alertas, comentarios sobre el GPS..." rows="2" style="width:100%;padding:8px 10px;border:1.5px solid rgba(24,95,165,.4);border-radius:var(--radius);background:#fff;color:var(--text);font-size:13px;font-family:inherit;resize:none"></textarea>
+          </div>
         </div>
         <div style="display:flex;justify-content:flex-end"><button class="btn btn-primary" onclick="guardarCheck()">✅ Confirmar check del día</button></div>
       </div>
@@ -672,7 +675,10 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
             <button class="chip" id="pe-chip-gps-ok" onclick="setPEChipGPS('ok')" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg);font-size:12px;cursor:pointer">✓ Verificado</button>
             <button class="chip" id="pe-chip-gps-err" onclick="setPEChipGPS('err')" style="padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg);font-size:12px;cursor:pointer">✕ Sin señal</button>
           </div>
-          <textarea id="pe-gps-obs" placeholder="Observaciones del GPS (opcional)..." style="width:100%;padding:8px 10px;border:1px solid rgba(24,95,165,.3);border-radius:var(--radius);background:rgba(255,255,255,.7);color:var(--text);font-size:13px;font-family:inherit;resize:none;height:56px"></textarea>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--blue);display:block;margin-bottom:4px">Observaciones GPS</label>
+            <textarea id="pe-gps-obs" placeholder="Novedades, alertas, comentarios sobre el GPS..." rows="2" style="width:100%;padding:8px 10px;border:1.5px solid rgba(24,95,165,.4);border-radius:var(--radius);background:#fff;color:var(--text);font-size:13px;font-family:inherit;resize:none"></textarea>
+          </div>
         </div>
 
         <!-- DOCUMENTACIÓN -->
