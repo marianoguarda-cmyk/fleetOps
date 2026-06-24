@@ -4127,7 +4127,7 @@ function renderLiquidaciones(){
 
 function exportarLiquidacionCSV(){
   if(!LIQ_DATA_CACHE.length){toast('Sin datos para exportar','err');return;}
-  const headers=['Fecha','Hora salida','Conductor','Vehículo','Cliente','Bultos salida','Monto esperado','Bultos entregados','Bultos no entregados','Efectivo entregado','Transferencia entregada','Monto cobrado','Diferencial total','Hora regreso','Observaciones salida','Observaciones liquidación','Estado','Creado por','Liquidado por'];
+  const headers=['Fecha','Hora salida','Conductor','Vehículo','Cliente','Bultos salida','Monto esperado','Bultos entregados','Bultos no entregados','Efectivo entregado','Transferencia entregada','Monto cobrado','Diferencial total','Hora regreso','Observaciones salida','Observaciones liquidación','Estado','Creado por','Liquidado por','Comprobantes salida','Comprobantes cierre'];
   const rows=LIQ_DATA_CACHE.map(l=>[
     l.fecha||'',
     l.hora_salida?.slice(0,5)||'',
@@ -4147,7 +4147,9 @@ function exportarLiquidacionCSV(){
     (l.observaciones_liquidacion||'').replace(/,/g,';'),
     l.estado||'',
     l.creado_por||'',
-    l.liquidado_por||''
+    l.liquidado_por||'',
+    (Array.isArray(l.comprobante_salida_url)?l.comprobante_salida_url:l.comprobante_salida_url?[l.comprobante_salida_url]:[]).join(' | '),
+    (Array.isArray(l.comprobante_cierre_url)?l.comprobante_cierre_url:l.comprobante_cierre_url?[l.comprobante_cierre_url]:[]).join(' | ')
   ]);
   const csv=[headers,...rows].map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
