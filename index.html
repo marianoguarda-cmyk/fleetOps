@@ -1466,7 +1466,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
             <input type="text" id="liq-diferencia-transferencia" readonly placeholder="Se calcula automático" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg3);font-family:inherit;font-weight:600">
           </div>
         </div>
-        <div style="font-size:11px;color:var(--blue);margin-top:6px">Diferencia = Transferencia recibida − Monto cobrado. Negativo indica faltante.</div>
+        <div style="font-size:11px;color:var(--blue);margin-top:6px" id="liq-transf-hint">Diferencia = Transferencia recibida − Saldo pendiente tras efectivo. Negativo indica faltante.</div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
         <div class="fg">
@@ -4360,16 +4360,24 @@ function calcularDiferenciaEfectivo(){
   } else if(el){
     el.value='';
   }
+  // Recalcular transferencia porque el efectivo afecta el saldo pendiente
+  calcularDiferenciaTransferencia();
 }
 
 function calcularDiferenciaTransferencia(){
   const transf=parseFloat($('liq-transferencia-entregada')?.value)||0;
   const cobrado=parseFloat($('liq-cobrado')?.value)||0;
-  const diffTr=transf-cobrado;
+  const efectivo=parseFloat($('liq-efectivo-entregado')?.value)||0;
+  // Saldo pendiente después de descontar el efectivo
+  const pendiente=Math.max(0, cobrado-efectivo);
+  const diffTr=transf-pendiente;
   const el=$('liq-diferencia-transferencia');
-  if(el&&(transf>0||cobrado>0)){
+  if(el&&(transf>0||pendiente>0)){
     el.value=(diffTr>0?'+':'')+'$ '+diffTr.toLocaleString('es-AR',{minimumFractionDigits:2});
     el.style.color=diffTr<0?'var(--red)':diffTr>0?'var(--amber)':'var(--green)';
+    // Mostrar cuánto queda pendiente
+    const hint = el.nextElementSibling;
+    if(hint) hint.textContent = pendiente>0?`Saldo a cubrir por transferencia: $ ${pendiente.toLocaleString('es-AR',{minimumFractionDigits:2})}`:'';
   } else if(el){
     el.value='';
   }
@@ -4427,7 +4435,8 @@ async function guardarLiquidacion(){
   const efectivoEntregado=parseFloat($('liq-efectivo-entregado').value)||null;
   const diffEfectivo=efectivoEntregado!==null?efectivoEntregado-cobrado:null;
   const transferenciaEntregada=parseFloat($('liq-transferencia-entregada').value)||null;
-  const diffTransferencia=transferenciaEntregada!==null?transferenciaEntregada-cobrado:null;
+  const pendienteTransf=Math.max(0, cobrado-(efectivoEntregado||0));
+  const diffTransferencia=transferenciaEntregada!==null?transferenciaEntregada-pendienteTransf:null;
   const updateData={
     bultos_entregados:entregados,
     bultos_no_entregados:noEntregados,
