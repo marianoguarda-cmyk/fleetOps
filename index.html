@@ -1032,6 +1032,33 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
   </div>
 </div>
 
+<!-- MODAL PRE-CIERRE -->
+<div class="overlay" id="ov-pre-cierre">
+  <div class="modal modal-sm">
+    <div class="modal-hd"><div class="modal-title">📋 Pre-cierre — Comprobantes parciales</div><button class="modal-close" onclick="closeModal('pre-cierre')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="pc-liq-id">
+      <div style="background:var(--blue-light);border-radius:var(--radius);padding:9px 12px;font-size:12px;color:var(--blue);margin-bottom:14px">
+        Podés cargar comprobantes parciales sin cerrar la liquidación. La planilla quedará en estado <strong>En proceso</strong> hasta que un admin la liquide definitivamente.
+      </div>
+      <div id="pc-comprobantes-actuales" style="margin-bottom:12px"></div>
+      <div class="fg">
+        <label class="fl">📎 Agregar comprobantes <span style="font-size:11px;color:var(--text2)">(imágenes o PDF, múltiples)</span></label>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+          <input type="file" id="pc-input" accept="image/*,application/pdf" multiple style="display:none" onchange="previewPreCierre(event)">
+          <button class="btn btn-sm" type="button" onclick="$('pc-input').click()">📎 Seleccionar archivos</button>
+          <span id="pc-nombre" style="font-size:12px;color:var(--text2)">Sin archivos</span>
+        </div>
+        <div id="pc-preview" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('pre-cierre')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarPreCierre()">💾 Guardar comprobantes</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL TIPO VEHÍCULO -->
 <div class="overlay" id="ov-tipo-vehiculo">
   <div class="modal modal-sm">
@@ -4061,7 +4088,7 @@ function renderLiquidaciones(){
   const el=$('liq-list');
   if(!el) return;
   let data=LIQ_DATA_CACHE;
-  if(LIQ_TAB_ACTIVO==='pendientes') data=data.filter(l=>l.estado==='pendiente');
+  if(LIQ_TAB_ACTIVO==='pendientes') data=data.filter(l=>l.estado==='pendiente'||l.estado==='en_proceso');
   else if(LIQ_TAB_ACTIVO==='liquidadas') data=data.filter(l=>l.estado==='liquidado');
   else if(LIQ_TAB_ACTIVO==='diferencia') data=data.filter(l=>l.estado==='con_diferencia');
   else if(LIQ_TAB_ACTIVO==='alerta'){
@@ -4074,8 +4101,8 @@ function renderLiquidaciones(){
   }
   if(!data.length){el.innerHTML='<div class="empty">Sin resultados.</div>';return;}
 
-  const estadoColor={pendiente:'var(--amber)',liquidado:'var(--green)',con_diferencia:'var(--red)'};
-  const estadoLabel={pendiente:'⏳ Pendiente',liquidado:'✓ Liquidado',con_diferencia:'⚠ Con diferencia'};
+  const estadoColor={pendiente:'var(--amber)',en_proceso:'var(--blue)',liquidado:'var(--green)',con_diferencia:'var(--red)'};
+  const estadoLabel={pendiente:'⏳ Pendiente',en_proceso:'📋 En proceso',liquidado:'✓ Liquidado',con_diferencia:'⚠ Con diferencia'};
   const ahora=new Date();
 
   el.innerHTML=data.map(l=>{
@@ -4117,8 +4144,10 @@ function renderLiquidaciones(){
       </div>
       <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
         <span style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;background:${color}20;color:${color}">${estadoLabel[l.estado]||l.estado}</span>
-        ${puedeEditar&&l.estado==='pendiente'?`<button class="btn btn-sm btn-primary" onclick="abrirLiquidar('${l.id}')" style="font-size:11px">💰</button>`:''}
-        ${puedeEditar&&l.estado!=='pendiente'?'<span style="font-size:10px;color:var(--text3)">🔒</span>':''}
+        ${l.comprobantes_parciales?.length?`<span style="font-size:10px;color:var(--blue)">📎 ${l.comprobantes_parciales.length} doc${l.comprobantes_parciales.length>1?'s':''}</span>`:''}
+        ${(l.estado==='pendiente'||l.estado==='en_proceso')?`<button class="btn btn-sm" onclick="abrirPreCierre('${l.id}')" style="font-size:11px" title="Cargar comprobantes parciales">📋</button>`:''}
+        ${puedeEditar&&(l.estado==='pendiente'||l.estado==='en_proceso')?`<button class="btn btn-sm btn-primary" onclick="abrirLiquidar('${l.id}')" style="font-size:11px" title="Liquidar">💰</button>`:''}
+        ${puedeEditar&&l.estado!=='pendiente'&&l.estado!=='en_proceso'?'<span style="font-size:10px;color:var(--text3)">🔒</span>':''}
         ${puedeEditar?`<button class="btn btn-sm" onclick="editarPlanilla('${l.id}')" style="font-size:11px">✏️</button>`:''}
       </div>
     </div>`;
@@ -4127,7 +4156,7 @@ function renderLiquidaciones(){
 
 function exportarLiquidacionCSV(){
   if(!LIQ_DATA_CACHE.length){toast('Sin datos para exportar','err');return;}
-  const headers=['Fecha','Hora salida','Conductor','Vehículo','Cliente','Bultos salida','Monto esperado','Bultos entregados','Bultos no entregados','Efectivo entregado','Transferencia entregada','Monto cobrado','Diferencial total','Hora regreso','Observaciones salida','Observaciones liquidación','Estado','Creado por','Liquidado por','Comprobantes salida','Comprobantes cierre'];
+  const headers=['Fecha','Hora salida','Conductor','Vehículo','Cliente','Bultos salida','Monto esperado','Bultos entregados','Bultos no entregados','Efectivo entregado','Transferencia entregada','Monto cobrado','Diferencial total','Hora regreso','Observaciones salida','Observaciones liquidación','Estado','Creado por','Liquidado por','Comprobantes salida','Comprobantes parciales','Comprobantes cierre'];
   const rows=LIQ_DATA_CACHE.map(l=>[
     l.fecha||'',
     l.hora_salida?.slice(0,5)||'',
@@ -4149,6 +4178,7 @@ function exportarLiquidacionCSV(){
     l.creado_por||'',
     l.liquidado_por||'',
     (Array.isArray(l.comprobante_salida_url)?l.comprobante_salida_url:l.comprobante_salida_url?[l.comprobante_salida_url]:[]).join(' | '),
+    (Array.isArray(l.comprobantes_parciales)?l.comprobantes_parciales:[]).join(' | '),
     (Array.isArray(l.comprobante_cierre_url)?l.comprobante_cierre_url:l.comprobante_cierre_url?[l.comprobante_cierre_url]:[]).join(' | ')
   ]);
   const csv=[headers,...rows].map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
@@ -4249,6 +4279,84 @@ async function subirMultiplesComprobantes(files, tipo){
   return urls.length > 0 ? urls : null;
 }
 
+// ── PRE-CIERRE ────────────────────────────────────────────────────────────
+async function abrirPreCierre(liqId){
+  $('pc-liq-id').value = liqId;
+  $('pc-input').value = '';
+  $('pc-nombre').textContent = 'Sin archivos';
+  $('pc-preview').innerHTML = '';
+  // Mostrar comprobantes ya cargados
+  const liq = LIQ_DATA_CACHE.find(l=>l.id===liqId);
+  const el = $('pc-comprobantes-actuales');
+  if(liq?.comprobantes_parciales?.length){
+    el.innerHTML = `<div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text2)">Comprobantes ya cargados (${liq.comprobantes_parciales.length}):</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${liq.comprobantes_parciales.map((u,i)=>`
+          <div style="position:relative">
+            <a href="${u}" target="_blank">
+              <img src="${u}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+                style="height:70px;width:70px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">
+              <div style="display:none;height:70px;width:70px;border-radius:6px;border:1px solid var(--border);align-items:center;justify-content:center;font-size:11px;color:var(--blue);background:var(--bg3);text-align:center">📄 Doc ${i+1}</div>
+            </a>
+          </div>`).join('')}
+      </div>`;
+  } else {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text2);margin-bottom:8px">Sin comprobantes cargados aún.</div>';
+  }
+  openModal('pre-cierre');
+}
+
+function previewPreCierre(event){
+  const files = Array.from(event.target.files);
+  if(!files.length) return;
+  $('pc-nombre').textContent = `${files.length} archivo${files.length>1?'s':''} seleccionado${files.length>1?'s':''}`;
+  const prev = $('pc-preview');
+  prev.innerHTML = '';
+  files.forEach(file=>{
+    if(file.type.startsWith('image/')){
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.style.cssText = 'height:70px;width:70px;object-fit:cover;border-radius:6px;border:1px solid var(--border)';
+        prev.appendChild(img);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      const d = document.createElement('div');
+      d.style.cssText = 'height:70px;width:70px;border-radius:6px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text2);background:var(--bg3);text-align:center;padding:4px';
+      d.textContent = '📄 '+file.name.slice(0,15);
+      prev.appendChild(d);
+    }
+  });
+}
+
+async function guardarPreCierre(){
+  const liqId = $('pc-liq-id').value;
+  if(!liqId) return;
+  const files = Array.from($('pc-input')?.files||[]);
+  if(!files.length){ toast('Seleccioná al menos un archivo','err'); return; }
+  toast(`⬆ Subiendo ${files.length} archivo${files.length>1?'s':''}...`,'ok');
+  const nuevasUrls = [];
+  for(const file of files){
+    const url = await subirComprobanteStorage(file, 'parcial');
+    if(url) nuevasUrls.push(url);
+  }
+  if(!nuevasUrls.length){ toast('Error al subir los archivos','err'); return; }
+  // Combinar con los ya existentes
+  const liq = LIQ_DATA_CACHE.find(l=>l.id===liqId);
+  const existentes = liq?.comprobantes_parciales||[];
+  const todas = [...existentes, ...nuevasUrls];
+  const{error} = await db.from('liquidaciones').update({
+    comprobantes_parciales: todas,
+    estado: 'en_proceso'
+  }).eq('id', liqId);
+  if(error){ toast('Error: '+error.message,'err'); return; }
+  toast(`✅ ${nuevasUrls.length} comprobante${nuevasUrls.length>1?'s':''} guardado${nuevasUrls.length>1?'s':''}`,'ok');
+  closeModal('pre-cierre');
+  loadLiquidacion();
+}
+
 async function guardarPlanillaSalida(){
   const conductor=$('nliq-conductor').value;
   const vehiculo=$('nliq-vehiculo').value;
@@ -4307,6 +4415,7 @@ async function abrirLiquidar(liqId){
       <div><span style="color:var(--text2)">Monto esperado:</span> <strong>$ ${(liq.monto_esperado||0).toLocaleString('es-AR')}</strong></div>
       ${liq.hora_salida?`<div><span style="color:var(--text2)">Hora salida:</span> <strong>${liq.hora_salida.slice(0,5)}</strong></div>`:''}
       ${liq.comprobante_salida_url?.length?`<div>${(Array.isArray(liq.comprobante_salida_url)?liq.comprobante_salida_url:[liq.comprobante_salida_url]).map((u,i)=>`<a href="${u}" target="_blank" style="font-size:12px;color:var(--blue);margin-right:8px">📎 Comprobante salida ${i+1}</a>`).join('')}</div>`:''}
+      ${liq.comprobantes_parciales?.length?`<div style="margin-top:4px">${liq.comprobantes_parciales.map((u,i)=>`<a href="${u}" target="_blank" style="font-size:12px;color:var(--blue);margin-right:8px">📋 Parcial ${i+1}</a>`).join('')}</div>`:''}
     </div>`;
   $('liq-entregados').value=liq.bultos_entregados||'';
   $('liq-cobrado').value=liq.monto_cobrado||'';
