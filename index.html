@@ -1438,34 +1438,24 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
           <input type="text" id="liq-diferencia" readonly style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg3);font-family:inherit;font-weight:600">
         </div>
       </div>
-      <!-- Diferencial de efectivo -->
-      <div style="background:var(--amber-light);border:1px solid #EF9F27;border-radius:var(--radius-sm);padding:12px;margin-top:10px">
-        <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:8px">💵 Diferencial de efectivo</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div class="fg">
-            <label class="fl">Efectivo entregado por conductor ($)</label>
-            <input type="number" id="liq-efectivo-entregado" min="0" step="0.01" placeholder="0.00" oninput="calcularDiferenciaEfectivo()" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit">
+      <!-- Cobro y diferencial unificado -->
+      <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:12px;margin-top:10px">
+        <div style="font-size:12px;font-weight:600;margin-bottom:10px">💰 Detalle del cobro</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+          <div class="fg" style="margin-bottom:0">
+            <label class="fl">Efectivo ($)</label>
+            <input type="number" id="liq-efectivo-entregado" min="0" step="0.01" placeholder="0.00" oninput="calcularDiferencialUnificado()" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit">
           </div>
-          <div class="fg">
-            <label class="fl">Diferencial efectivo</label>
-            <input type="text" id="liq-diferencia-efectivo" readonly placeholder="Se calcula automático" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg3);font-family:inherit;font-weight:600">
+          <div class="fg" style="margin-bottom:0">
+            <label class="fl">Transferencia ($)</label>
+            <input type="number" id="liq-transferencia-entregada" min="0" step="0.01" placeholder="0.00" oninput="calcularDiferencialUnificado()" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit">
           </div>
-        </div>
-        <div style="font-size:11px;color:var(--amber);margin-top:6px">Diferencia = Efectivo entregado − Monto cobrado. Negativo indica faltante.</div>
-      </div>
-      <!-- Diferencial de transferencia -->
-      <div style="background:var(--blue-light);border:1px solid var(--blue);border-radius:var(--radius-sm);padding:12px;margin-top:10px">
-        <div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:8px">🏦 Diferencial de transferencia</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div class="fg">
-            <label class="fl">Transferencia recibida ($)</label>
-            <input type="number" id="liq-transferencia-entregada" min="0" step="0.01" placeholder="0.00" oninput="calcularDiferenciaTransferencia()" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit">          </div>
-          <div class="fg">
-            <label class="fl">Diferencial transferencia</label>
-            <input type="text" id="liq-diferencia-transferencia" readonly placeholder="Se calcula automático" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg3);font-family:inherit;font-weight:600">
+          <div class="fg" style="margin-bottom:0">
+            <label class="fl">Diferencial total</label>
+            <input type="text" id="liq-diferencial-total" readonly placeholder="Automático" style="width:100%;padding:9px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg);font-family:inherit;font-weight:600">
           </div>
         </div>
-        <div style="font-size:11px;color:var(--blue);margin-top:6px" id="liq-transf-hint">Diferencia = Transferencia recibida − Saldo pendiente tras efectivo. Negativo indica faltante.</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:8px">Monto cobrado = Efectivo + Transferencia. Diferencial = Cobrado − Esperado.</div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
         <div class="fg">
@@ -4313,8 +4303,9 @@ async function abrirLiquidar(liqId){
   $('liq-cobrado').value=liq.monto_cobrado||'';
   $('liq-efectivo-entregado').value=liq.efectivo_entregado||'';
   $('liq-transferencia-entregada').value=liq.transferencia_entregada||'';
-  $('liq-diferencia-efectivo').value='';
-  $('liq-diferencia-transferencia').value='';
+  $('liq-diferencia-efectivo') && ($('liq-diferencia-efectivo').value='');
+  $('liq-diferencia-transferencia') && ($('liq-diferencia-transferencia').value='');
+  if($('liq-diferencial-total')) $('liq-diferencial-total').value='';
   $('liq-obs-liq').value=liq.observaciones_liquidacion||'';
   $('liq-hora-reg').value=new Date().toTimeString().slice(0,5);
   // Store salida data for calculations
@@ -4329,61 +4320,43 @@ async function abrirLiquidar(liqId){
   openModal('liquidar');
 }
 
-function calcularDiferencia(){
-  _calcularDiferenciaBase();
-}
-
-function calcularDiferenciaEfectivo(){
-  const efectivo=parseFloat($('liq-efectivo-entregado')?.value)||0;
-  const transf=parseFloat($('liq-transferencia-entregada')?.value)||0;
-  // Monto cobrado = suma de efectivo + transferencia
+function calcularDiferencialUnificado(){
+  const efectivo = parseFloat($('liq-efectivo-entregado')?.value)||0;
+  const transf   = parseFloat($('liq-transferencia-entregada')?.value)||0;
   const totalCobrado = efectivo + transf;
+  // Actualizar monto cobrado
   const cobradoEl = $('liq-cobrado');
   if(cobradoEl) cobradoEl.value = totalCobrado > 0 ? totalCobrado.toFixed(2) : '';
-  // Recalcular diferencia general SIN llamar de vuelta a calcularDiferenciaEfectivo
-  _calcularDiferenciaBase();
-  calcularDiferenciaTransferencia();
-}
-
-function calcularDiferenciaTransferencia(){
-  const transf=parseFloat($('liq-transferencia-entregada')?.value)||0;
-  const efectivo=parseFloat($('liq-efectivo-entregado')?.value)||0;
-  const cobrado=parseFloat($('liq-cobrado')?.value)||0;
-  const pendiente=Math.max(0, cobrado-efectivo);
-  const diffTr=transf-pendiente;
-  const el=$('liq-diferencia-transferencia');
-  if(el&&(transf>0||pendiente>0)){
-    el.value=(diffTr>0?'+':'')+'$ '+diffTr.toLocaleString('es-AR',{minimumFractionDigits:2});
-    el.style.color=diffTr<0?'var(--red)':diffTr>0?'var(--amber)':'var(--green)';
-    const hint=$('liq-transf-hint');
-    if(hint) hint.textContent=pendiente>0?`Saldo a cubrir por transferencia: $ ${pendiente.toLocaleString('es-AR',{minimumFractionDigits:2})}`:'';
+  // Diferencial total vs esperado
+  const esperado = parseFloat($('liq-entregados')?.dataset.montoEsp)||0;
+  const diff = totalCobrado - esperado;
+  const el = $('liq-diferencial-total');
+  if(el && (totalCobrado > 0 || esperado > 0)){
+    el.value = (diff >= 0 ? '+' : '') + '$ ' + diff.toLocaleString('es-AR',{minimumFractionDigits:2});
+    el.style.color = diff < 0 ? 'var(--red)' : diff > 0 ? 'var(--amber)' : 'var(--green)';
   } else if(el){
-    el.value='';
+    el.value = '';
+    el.style.color = '';
   }
-  // Actualizar cobrado y diferencia base
-  const totalCobrado=efectivo+transf;
-  const cobradoEl=$('liq-cobrado');
-  if(cobradoEl) cobradoEl.value=totalCobrado>0?totalCobrado.toFixed(2):'';
-  _calcularDiferenciaBase();
-}
-
-// Calcula la diferencia monto cobrado vs esperado SIN recursion
-function _calcularDiferenciaBase(){
+  // Actualizar diferencia de bultos
   const entregados=parseInt($('liq-entregados')?.value)||0;
   const total=parseInt($('liq-entregados')?.dataset.bultosTotal)||0;
   const noEntregados=Math.max(0,total-entregados);
   if($('liq-no-entregados')) $('liq-no-entregados').value=noEntregados;
   const noWrap=$('liq-no-entregados-wrap');
   if(noWrap) noWrap.style.display=noEntregados>0?'block':'none';
-  const cobrado=parseFloat($('liq-cobrado')?.value)||0;
-  const esperado=parseFloat($('liq-entregados')?.dataset.montoEsp)||0;
-  const diff=cobrado-esperado;
-  const el=$('liq-diferencia');
-  if(el){
-    el.value=(diff>0?'+':'')+'$ '+diff.toLocaleString('es-AR',{minimumFractionDigits:2});
-    el.style.color=diff<0?'var(--red)':diff>0?'var(--amber)':'var(--green)';
+  // Actualizar liq-diferencia (vs esperado)
+  const elD=$('liq-diferencia');
+  if(elD){
+    elD.value=(diff>=0?'+':'')+'$ '+diff.toLocaleString('es-AR',{minimumFractionDigits:2});
+    elD.style.color=diff<0?'var(--red)':diff>0?'var(--amber)':'var(--green)';
   }
 }
+
+function calcularDiferenciaEfectivo(){ calcularDiferencialUnificado(); }
+function calcularDiferenciaTransferencia(){ calcularDiferencialUnificado(); }
+function calcularDiferencia(){ calcularDiferencialUnificado(); }
+function _calcularDiferenciaBase(){ calcularDiferencialUnificado(); }
 
 function agregarDetalle(data=null){
   LIQ_DETALLE_COUNT++;
