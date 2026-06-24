@@ -834,8 +834,8 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:poin
 
         <!-- Lista de liquidaciones -->
         <div class="data-table">
-          <div class="th" style="grid-template-columns:80px 1fr 120px 100px 100px 100px 100px 130px">
-            <div>Fecha</div><div>Conductor / Vehículo</div><div>Salida</div><div>Entregado</div><div>Cobrado</div><div>Dif. monto</div><div>Dif. efectivo</div><div>Estado</div>
+          <div class="th" style="grid-template-columns:80px 1fr 130px 90px 90px 90px 90px 110px 130px">
+            <div>Fecha</div><div>Conductor / Vehículo</div><div>Salida</div><div>Entregado</div><div>💵 Efectivo</div><div>🏦 Transf.</div><div>Total cobrado</div><div>Diferencial</div><div>Estado</div>
           </div>
           <div id="liq-list"><div class="loader"><div class="spin"></div>Cargando...</div></div>
         </div>
@@ -4084,7 +4084,8 @@ function renderLiquidaciones(){
     const salida=new Date(l.fecha+'T'+(l.hora_salida||'00:00:00'));
     const horas=Math.floor((ahora-salida)/3600000);
     const esAlerta=l.estado==='pendiente'&&horas>28;
-    return `<div class="tr" style="grid-template-columns:80px 1fr 120px 100px 100px 100px 100px 130px;border-left:4px solid ${esAlerta?'var(--red)':color}">
+    const diferencial = l.monto_diferencia;
+    return `<div class="tr" style="grid-template-columns:80px 1fr 130px 90px 90px 90px 90px 110px 130px;border-left:4px solid ${esAlerta?'var(--red)':color}">
       <div style="font-size:12px">
         <div>${l.fecha?new Date(l.fecha+'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'—'}</div>
         ${l.hora_salida?`<div style="color:var(--text2)">${l.hora_salida.slice(0,5)}</div>`:''}
@@ -4097,19 +4098,22 @@ function renderLiquidaciones(){
       </div>
       <div style="font-size:12px">
         <div>${l.bultos_salida||0} bultos</div>
-        <div style="color:var(--text2)">$ ${(l.monto_esperado||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</div>
+        <div style="color:var(--text2)">Esperado: $ ${(l.monto_esperado||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</div>
       </div>
       <div style="font-size:12px">
         ${l.bultos_entregados!==null?`<div style="color:var(--green)">✓ ${l.bultos_entregados}</div><div style="color:var(--red)">✗ ${l.bultos_no_entregados||0}</div>`:'<div style="color:var(--text3)">—</div>'}
       </div>
       <div style="font-size:12px">
-        ${l.monto_cobrado!==null?`<div style="font-weight:600">$ ${(l.monto_cobrado||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</div>`:'<div style="color:var(--text3)">—</div>'}
+        ${l.efectivo_entregado!=null?`<div style="color:#B45309;font-weight:600">$ ${(l.efectivo_entregado||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</div>`:'<div style="color:var(--text3)">—</div>'}
+      </div>
+      <div style="font-size:12px">
+        ${l.transferencia_entregada!=null?`<div style="color:#1D4ED8;font-weight:600">$ ${(l.transferencia_entregada||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</div>`:'<div style="color:var(--text3)">—</div>'}
+      </div>
+      <div style="font-size:12px">
+        ${l.monto_cobrado!=null?`<div style="font-weight:600">$ ${(l.monto_cobrado||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</div>`:'<div style="color:var(--text3)">—</div>'}
       </div>
       <div style="font-size:12px;font-weight:600">
-        ${l.monto_diferencia!==null?`<div style="color:${l.monto_diferencia<0?'var(--red)':l.monto_diferencia>0?'var(--amber)':'var(--green)'}">${l.monto_diferencia>=0?'+':''}$${(l.monto_diferencia||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</div>`:'<div style="color:var(--text3)">—</div>'}
-      </div>
-      <div style="font-size:12px;font-weight:600">
-        ${l.diferencia_efectivo!==null?`<div style="color:${l.diferencia_efectivo<0?'var(--red)':l.diferencia_efectivo>0?'var(--amber)':'var(--green)'}">${l.diferencia_efectivo>=0?'+':''}$${(l.diferencia_efectivo||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</div>`:'<div style="color:var(--text3)">—</div>'}
+        ${diferencial!==null&&diferencial!==undefined?`<div style="color:${diferencial<0?'var(--red)':diferencial>0?'var(--amber)':'var(--green)'}">${diferencial>=0?'+':''}$${(diferencial||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</div>`:'<div style="color:var(--text3)">—</div>'}
       </div>
       <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
         <span style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;background:${color}20;color:${color}">${estadoLabel[l.estado]||l.estado}</span>
@@ -4123,7 +4127,7 @@ function renderLiquidaciones(){
 
 function exportarLiquidacionCSV(){
   if(!LIQ_DATA_CACHE.length){toast('Sin datos para exportar','err');return;}
-  const headers=['Fecha','Hora salida','Conductor','Vehículo','Cliente','Bultos salida','Monto esperado','Bultos entregados','Bultos no entregados','Monto cobrado','Diferencia monto','Efectivo entregado','Diferencia efectivo','Hora regreso','Observaciones salida','Observaciones liquidación','Estado','Creado por','Liquidado por'];
+  const headers=['Fecha','Hora salida','Conductor','Vehículo','Cliente','Bultos salida','Monto esperado','Bultos entregados','Bultos no entregados','Efectivo entregado','Transferencia entregada','Monto cobrado','Diferencial total','Hora regreso','Observaciones salida','Observaciones liquidación','Estado','Creado por','Liquidado por'];
   const rows=LIQ_DATA_CACHE.map(l=>[
     l.fecha||'',
     l.hora_salida?.slice(0,5)||'',
@@ -4134,10 +4138,10 @@ function exportarLiquidacionCSV(){
     l.monto_esperado||0,
     l.bultos_entregados??'',
     l.bultos_no_entregados??'',
+    l.efectivo_entregado??'',
+    l.transferencia_entregada??'',
     l.monto_cobrado??'',
     l.monto_diferencia??'',
-    l.efectivo_entregado??'',
-    l.diferencia_efectivo??'',
     l.hora_regreso?.slice(0,5)||'',
     (l.observaciones_salida||'').replace(/,/g,';'),
     (l.observaciones_liquidacion||'').replace(/,/g,';'),
