@@ -4330,22 +4330,7 @@ async function abrirLiquidar(liqId){
 }
 
 function calcularDiferencia(){
-  const entregados=parseInt($('liq-entregados')?.value)||0;
-  const total=parseInt($('liq-entregados')?.dataset.bultosTotal)||0;
-  const noEntregados=Math.max(0,total-entregados);
-  const noWrap=$('liq-no-entregados-wrap');
-  if($('liq-no-entregados')) $('liq-no-entregados').value=noEntregados;
-  if(noWrap) noWrap.style.display=noEntregados>0?'block':'none';
-  const cobrado=parseFloat($('liq-cobrado')?.value)||0;
-  const esperado=parseFloat($('liq-entregados')?.dataset.montoEsp)||0;
-  const diff=cobrado-esperado;
-  const el=$('liq-diferencia');
-  if(el){
-    el.value=(diff>0?'+':'')+'$ '+diff.toLocaleString('es-AR',{minimumFractionDigits:2});
-    el.style.color=diff<0?'var(--red)':diff>0?'var(--amber)':'var(--green)';
-  }
-  calcularDiferenciaEfectivo();
-  calcularDiferenciaTransferencia();
+  _calcularDiferenciaBase();
 }
 
 function calcularDiferenciaEfectivo(){
@@ -4355,17 +4340,8 @@ function calcularDiferenciaEfectivo(){
   const totalCobrado = efectivo + transf;
   const cobradoEl = $('liq-cobrado');
   if(cobradoEl) cobradoEl.value = totalCobrado > 0 ? totalCobrado.toFixed(2) : '';
-  const cobrado=totalCobrado;
-  const diffEf=efectivo-cobrado;
-  const el=$('liq-diferencia-efectivo');
-  if(el&&efectivo>0){
-    el.value=(diffEf>0?'+':'')+'$ '+diffEf.toLocaleString('es-AR',{minimumFractionDigits:2});
-    el.style.color=diffEf<0?'var(--red)':diffEf>0?'var(--amber)':'var(--green)';
-  } else if(el){
-    el.value='';
-  }
-  // Recalcular diferencia general y transferencia
-  calcularDiferencia();
+  // Recalcular diferencia general SIN llamar de vuelta a calcularDiferenciaEfectivo
+  _calcularDiferenciaBase();
   calcularDiferenciaTransferencia();
 }
 
@@ -4373,23 +4349,40 @@ function calcularDiferenciaTransferencia(){
   const transf=parseFloat($('liq-transferencia-entregada')?.value)||0;
   const efectivo=parseFloat($('liq-efectivo-entregado')?.value)||0;
   const cobrado=parseFloat($('liq-cobrado')?.value)||0;
-  // Saldo pendiente después de descontar el efectivo
   const pendiente=Math.max(0, cobrado-efectivo);
   const diffTr=transf-pendiente;
   const el=$('liq-diferencia-transferencia');
   if(el&&(transf>0||pendiente>0)){
     el.value=(diffTr>0?'+':'')+'$ '+diffTr.toLocaleString('es-AR',{minimumFractionDigits:2});
     el.style.color=diffTr<0?'var(--red)':diffTr>0?'var(--amber)':'var(--green)';
-    const hint = $('liq-transf-hint');
-    if(hint) hint.textContent = pendiente>0?`Saldo a cubrir por transferencia: $ ${pendiente.toLocaleString('es-AR',{minimumFractionDigits:2})}`:'';
+    const hint=$('liq-transf-hint');
+    if(hint) hint.textContent=pendiente>0?`Saldo a cubrir por transferencia: $ ${pendiente.toLocaleString('es-AR',{minimumFractionDigits:2})}`:'';
   } else if(el){
     el.value='';
   }
-  // Actualizar monto cobrado también cuando cambia transferencia
-  const totalCobrado=(efectivo+transf);
+  // Actualizar cobrado y diferencia base
+  const totalCobrado=efectivo+transf;
   const cobradoEl=$('liq-cobrado');
-  if(cobradoEl&&totalCobrado>0) cobradoEl.value=totalCobrado.toFixed(2);
-  calcularDiferencia();
+  if(cobradoEl) cobradoEl.value=totalCobrado>0?totalCobrado.toFixed(2):'';
+  _calcularDiferenciaBase();
+}
+
+// Calcula la diferencia monto cobrado vs esperado SIN recursion
+function _calcularDiferenciaBase(){
+  const entregados=parseInt($('liq-entregados')?.value)||0;
+  const total=parseInt($('liq-entregados')?.dataset.bultosTotal)||0;
+  const noEntregados=Math.max(0,total-entregados);
+  if($('liq-no-entregados')) $('liq-no-entregados').value=noEntregados;
+  const noWrap=$('liq-no-entregados-wrap');
+  if(noWrap) noWrap.style.display=noEntregados>0?'block':'none';
+  const cobrado=parseFloat($('liq-cobrado')?.value)||0;
+  const esperado=parseFloat($('liq-entregados')?.dataset.montoEsp)||0;
+  const diff=cobrado-esperado;
+  const el=$('liq-diferencia');
+  if(el){
+    el.value=(diff>0?'+':'')+'$ '+diff.toLocaleString('es-AR',{minimumFractionDigits:2});
+    el.style.color=diff<0?'var(--red)':diff>0?'var(--amber)':'var(--green)';
+  }
 }
 
 function agregarDetalle(data=null){
