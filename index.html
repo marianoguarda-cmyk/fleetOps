@@ -2265,7 +2265,7 @@ async function elimV(id){
 }
 
 // CHECKLIST
-function selChip(gid,el,t){document.querySelectorAll(`#${gid} .chip`).forEach(c=>c.className='chip');el.classList.add('s-'+t);el.dataset.val=t}
+function selChip(gid,el,t){document.querySelectorAll(`#${gid} .chip`).forEach(c=>c.className='chip');el.classList.add('sel-'+t);el.dataset.val=t}
 function getChip(gid){return document.querySelector(`#${gid} .chip[data-val]`)?.dataset.val||null}
 
 
