@@ -218,6 +218,23 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);bo
 .toast.t-ok{border-left:3px solid var(--green);color:var(--green)}
 .toast.t-err{border-left:3px solid var(--red);color:var(--red)}
 
+/* NOTIFICACIONES REALTIME */
+#notif-stack{position:fixed;top:20px;right:20px;z-index:1000;display:flex;flex-direction:column;gap:10px;pointer-events:none;max-width:360px}
+.notif-card{background:var(--bg4);border:1px solid var(--border);border-radius:14px;padding:14px 16px;box-shadow:0 8px 32px rgba(0,0,0,.14);display:flex;gap:12px;align-items:flex-start;pointer-events:auto;opacity:0;transform:translateX(20px);transition:all .3s cubic-bezier(.16,1,.3,1);cursor:pointer}
+.notif-card.show{opacity:1;transform:translateX(0)}
+.notif-card.hide{opacity:0;transform:translateX(20px);max-height:0;padding:0;margin:0;overflow:hidden}
+.notif-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.notif-icon.check{background:var(--green-light)}
+.notif-icon.liq{background:var(--blue-light)}
+.notif-icon.alerta{background:var(--red-light)}
+.notif-icon.venc{background:var(--amber-light)}
+.notif-body{flex:1;min-width:0}
+.notif-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px}
+.notif-desc{font-size:12px;color:var(--text2);line-height:1.4}
+.notif-time{font-size:10px;color:var(--text3);margin-top:4px}
+.notif-close{width:20px;height:20px;border:none;background:none;cursor:pointer;color:var(--text3);font-size:16px;padding:0;flex-shrink:0;line-height:1}
+.notif-close:hover{color:var(--text)}
+
 /* INFO BOX */
 .info-box{background:var(--blue-light);border-radius:var(--radius);border-left:3px solid var(--blue);padding:10px 13px;font-size:12px;color:var(--blue);margin-bottom:14px}
 
@@ -1715,6 +1732,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);bo
   </div>
 </div>
 
+<!-- STACK DE NOTIFICACIONES REALTIME -->
+<div id="notif-stack"></div>
+
 <div class="toast" id="the-toast"><span id="toast-ic"></span><span id="toast-msg"></span></div>
 
 <script>
@@ -1733,6 +1753,144 @@ const ev=d=>{const n=dh(d);return n<0?'err':n<=30?'warn':'ok'};
 const isAdmin=()=>CP?.rol==='admin'||CP?.rol==='super_admin';
 let ttm;
 function toast(msg,type='info'){const t=$('the-toast');$('toast-msg').textContent=msg;$('toast-ic').textContent=type==='ok'?'✓ ':type==='err'?'✕ ':'ℹ ';t.className=`toast show toast-${type}`;clearTimeout(ttm);ttm=setTimeout(()=>t.classList.remove('show'),3500)}
+
+// ── NOTIFICACIONES REALTIME ───────────────────────────────────────────────
+let _realtimeChannels = [];
+
+function mostrarNotif({tipo, titulo, descripcion, onClick}){
+  const stack = $('notif-stack');
+  if(!stack) return;
+  const iconos = {check:'✅', liq:'💰', alerta:'🚨', venc:'⚠️'};
+  const hora = new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+  const card = document.createElement('div');
+  card.className = 'notif-card';
+  card.innerHTML = `
+    <div class="notif-icon ${tipo}">${iconos[tipo]||'🔔'}</div>
+    <div class="notif-body">
+      <div class="notif-title">${titulo}</div>
+      <div class="notif-desc">${descripcion}</div>
+      <div class="notif-time">${hora}</div>
+    </div>
+    <button class="notif-close" onclick="event.stopPropagation();cerrarNotif(this.closest('.notif-card'))">×</button>`;
+  if(onClick) card.addEventListener('click', onClick);
+  stack.appendChild(card);
+  // Animar entrada
+  requestAnimationFrame(()=>requestAnimationFrame(()=>card.classList.add('show')));
+  // Auto-cerrar en 8 segundos
+  setTimeout(()=>cerrarNotif(card), 8000);
+}
+
+function cerrarNotif(card){
+  if(!card) return;
+  card.classList.remove('show');
+  card.classList.add('hide');
+  setTimeout(()=>card.remove(), 400);
+}
+
+function iniciarRealtime(){
+  // Desuscribir canales anteriores
+  _realtimeChannels.forEach(ch=>db.removeChannel(ch));
+  _realtimeChannels = [];
+
+  const paisId = getPaisId();
+
+  // ── Canal: checks_diarios ──────────────────────────────────────────────
+  const chChecks = db.channel('realtime-checks')
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'checks_diarios',
+      filter: paisId ? `pais_id=eq.${paisId}` : undefined
+    }, payload => {
+      const r = payload.new;
+      // No notificar el propio check que uno mismo acaba de hacer
+      if(r.registrado_por === (CP?.nombre||CU?.email)) return;
+      const estado = r.estado_final==='ok'?'OK ✓':r.estado_final==='warn'?'Con observación ⚠':'Crítico ✕';
+      mostrarNotif({
+        tipo: 'check',
+        titulo: `Nuevo check registrado`,
+        descripcion: `${r.registrado_por||'Un operador'} registró un check · ${estado}`,
+        onClick: ()=>goTo('historial')
+      });
+    })
+    .subscribe();
+  _realtimeChannels.push(chChecks);
+
+  // ── Canal: liquidaciones INSERT ────────────────────────────────────────
+  const chLiqIns = db.channel('realtime-liq-insert')
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'liquidaciones',
+      filter: paisId ? `pais_id=eq.${paisId}` : undefined
+    }, payload => {
+      const r = payload.new;
+      if(r.creado_por === (CP?.nombre||CU?.email)) return;
+      mostrarNotif({
+        tipo: 'liq',
+        titulo: `Nueva planilla de salida`,
+        descripcion: `${r.creado_por||'Un operador'} creó una nueva planilla · ${r.bultos_salida||0} bultos`,
+        onClick: ()=>goTo('liquidacion')
+      });
+    })
+    .subscribe();
+  _realtimeChannels.push(chLiqIns);
+
+  // ── Canal: liquidaciones UPDATE (cierre) ───────────────────────────────
+  const chLiqUpd = db.channel('realtime-liq-update')
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'liquidaciones',
+      filter: paisId ? `pais_id=eq.${paisId}` : undefined
+    }, payload => {
+      const r = payload.new;
+      const old = payload.old;
+      // Solo notificar cuando cambia a estado cerrado
+      if(old.estado===r.estado) return;
+      if(r.liquidado_por === (CP?.nombre||CU?.email)) return;
+      const estadoLabels = {liquidado:'✓ Liquidado', con_diferencia:'⚠ Con diferencia', con_devolucion:'↩ Con devolución'};
+      if(!estadoLabels[r.estado]) return;
+      const diff = r.monto_diferencia;
+      const diffStr = diff!==null ? ` · Diferencial: ${diff>=0?'+':''}$${Number(diff).toLocaleString('es-AR',{minimumFractionDigits:2})}` : '';
+      mostrarNotif({
+        tipo: r.estado==='liquidado'?'liq':'alerta',
+        titulo: `Liquidación ${estadoLabels[r.estado]}`,
+        descripcion: `${r.liquidado_por||'Un admin'} cerró una planilla${diffStr}`,
+        onClick: ()=>goTo('liquidacion')
+      });
+    })
+    .subscribe();
+  _realtimeChannels.push(chLiqUpd);
+
+  // ── Alerta periódica: liquidaciones +28hs ─────────────────────────────
+  verificarAlertasLiquidacion();
+  setInterval(verificarAlertasLiquidacion, 10 * 60 * 1000); // cada 10 min
+}
+
+let _ultimaAlertaLiq = 0;
+async function verificarAlertasLiquidacion(){
+  // No alertar más de una vez cada 30 min
+  if(Date.now() - _ultimaAlertaLiq < 30 * 60 * 1000) return;
+  if(!isAdmin()) return;
+  const{data} = await withPais(
+    db.from('liquidaciones').select('id,fecha,hora_salida,conductores(nombre)').eq('estado','pendiente')
+  );
+  if(!data?.length) return;
+  const ahora = new Date();
+  const vencidas = data.filter(l=>{
+    const salida = new Date(l.fecha+'T'+(l.hora_salida||'00:00:00'));
+    return (ahora-salida)/3600000 > 28;
+  });
+  if(!vencidas.length) return;
+  _ultimaAlertaLiq = Date.now();
+  mostrarNotif({
+    tipo: 'alerta',
+    titulo: `🚨 ${vencidas.length} planilla${vencidas.length>1?'s':''} con +28hs sin liquidar`,
+    descripcion: vencidas.slice(0,3).map(l=>l.conductores?.nombre||'Sin nombre').join(', ') + (vencidas.length>3?` y ${vencidas.length-3} más`:''),
+    onClick: ()=>{ goTo('liquidacion'); }
+  });
+}
 
 // AUTH
 async function doLogin(){
@@ -1776,6 +1934,8 @@ async function afterLogin(user){
     const sec = e.state?.sec || location.pathname.replace(/^\//, '').replace(/\/$/, '') || 'dashboard';
     if(validSecs.includes(sec)) goTo(sec, false);
   });
+  // Iniciar notificaciones en tiempo real
+  iniciarRealtime();
 }
 
 // Banderas por código de país
@@ -3070,7 +3230,9 @@ async function cambiarPais(paisId){
   EMPRESAS_CACHE = [];
   CLIENTES_CACHE = [];
   VEH_CACHE_CHECK = {};
-  DASH_FILTROS_CARGADOS = false; // forzar recarga de filtros del dashboard
+  DASH_FILTROS_CARGADOS = false;
+  // Reiniciar suscripciones realtime con el nuevo país
+  iniciarRealtime(); // forzar recarga de filtros del dashboard
 
   // Actualizar indicador visual en topbar
   const pi=$('pais-indicator');
