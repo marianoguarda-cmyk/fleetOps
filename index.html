@@ -38,6 +38,7 @@
   --purple:#7C3AED;
   --purple-light:#F5F3FF;
   --radius:8px;
+  --radius-sm:6px;
   --radius-lg:12px;
   --radius-xl:16px;
   --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.06);
@@ -220,6 +221,14 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);bo
 /* INFO BOX */
 .info-box{background:var(--blue-light);border-radius:var(--radius);border-left:3px solid var(--blue);padding:10px 13px;font-size:12px;color:var(--blue);margin-bottom:14px}
 
+.check-item{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px}
+.check-item input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);flex-shrink:0;cursor:pointer}
+.vi-c{background:var(--blue-light);color:var(--blue)}
+.vi-u{background:var(--green-light);color:var(--green)}
+.peon-opt{padding:5px 14px;border-radius:20px;border:1.5px solid var(--border2);background:var(--bg);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--text2)}
+.peon-opt.active{background:var(--blue-light);border-color:var(--blue);color:var(--blue)}
+.foto-preview-wrap{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.foto-thumb{width:72px;height:72px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid var(--border)}
 /* MISC */
 .admin-only{display:none}
 .nav-section.admin-only{display:none}
