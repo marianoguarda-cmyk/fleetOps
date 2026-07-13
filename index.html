@@ -5473,7 +5473,8 @@ async function loadDashboardGraficos(){
       </tr>`;
     }).join('');
   }
-}
+} // cierre if(tbLiq)
+} // cierre loadDashboardGraficos
 
 // ── CONDUCTORES ───────────────────────────────────────────────────────────
 async function loadConductores(){
@@ -5889,7 +5890,6 @@ function closeModal(id){
     if(RAST_MINI_MAP){RAST_MINI_MAP.remove();RAST_MINI_MAP=null;RAST_MINI_MARKER=null;}
   }
 }
-} // cierre loadDashboardGraficos (tabla desglose diario)
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open')}));
 
 // INIT
