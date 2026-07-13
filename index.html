@@ -537,6 +537,51 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);bo
               <div style="position:relative;height:260px"><canvas id="chart-top-conductores"></canvas></div>
             </div>
           </div>
+
+          <!-- TABLAS DESGLOSE DIARIO -->
+          <div class="g2" style="margin-top:20px">
+            <!-- Checks x día -->
+            <div class="card" style="padding:0;overflow:hidden">
+              <div style="padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700">📅 Checks por día</div>
+              <div style="overflow-x:auto">
+                <table id="dash-tabla-checks" style="width:100%;border-collapse:collapse;font-size:12px">
+                  <thead>
+                    <tr style="background:var(--bg);border-bottom:1px solid var(--border)">
+                      <th style="padding:8px 12px;text-align:left;font-weight:700;color:var(--text2);text-transform:uppercase;font-size:10px;letter-spacing:.06em">Fecha</th>
+                      <th style="padding:8px 12px;text-align:center;font-weight:700;color:var(--text2);text-transform:uppercase;font-size:10px;letter-spacing:.06em">Checks</th>
+                      <th style="padding:8px 12px;text-align:center;font-weight:700;color:var(--green);text-transform:uppercase;font-size:10px;letter-spacing:.06em">OK</th>
+                      <th style="padding:8px 12px;text-align:center;font-weight:700;color:var(--amber);text-transform:uppercase;font-size:10px;letter-spacing:.06em">Alerta</th>
+                      <th style="padding:8px 12px;text-align:center;font-weight:700;color:var(--red);text-transform:uppercase;font-size:10px;letter-spacing:.06em">Crítico</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dash-tabla-checks-body">
+                    <tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text3)">Cargando...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <!-- Liquidaciones x día -->
+            <div class="card" style="padding:0;overflow:hidden">
+              <div style="padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700">💰 Liquidaciones por día</div>
+              <div style="overflow-x:auto">
+                <table id="dash-tabla-liq" style="width:100%;border-collapse:collapse;font-size:12px">
+                  <thead>
+                    <tr style="background:var(--bg);border-bottom:1px solid var(--border)">
+                      <th style="padding:8px 12px;text-align:left;font-weight:700;color:var(--text2);text-transform:uppercase;font-size:10px;letter-spacing:.06em">Fecha</th>
+                      <th style="padding:8px 12px;text-align:center;font-weight:700;color:var(--text2);text-transform:uppercase;font-size:10px;letter-spacing:.06em">Total</th>
+                      <th style="padding:8px 12px;text-align:center;font-weight:700;color:var(--green);text-transform:uppercase;font-size:10px;letter-spacing:.06em">Liquidadas</th>
+                      <th style="padding:8px 12px;text-align:center;font-weight:700;color:var(--purple);text-transform:uppercase;font-size:10px;letter-spacing:.06em">Devolución</th>
+                      <th style="padding:8px 12px;text-align:center;font-weight:700;color:var(--red);text-transform:uppercase;font-size:10px;letter-spacing:.06em">Diferencia</th>
+                      <th style="padding:8px 12px;text-align:center;font-weight:700;color:var(--amber);text-transform:uppercase;font-size:10px;letter-spacing:.06em">Pendientes</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dash-tabla-liq-body">
+                    <tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text3)">Cargando...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </div>
 
                 <div class="g2 mb">
@@ -2058,7 +2103,7 @@ $('li-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
 $('li-email').addEventListener('keydown',e=>{if(e.key==='Enter')$('li-pass').focus()});
 
 // NAV
-const PAGES={dashboard:{title:'Dashboard',sub:'Vista general de la flota'},vehiculos:{title:'Vehículos',sub:'Toda la flota registrada'},liquidacion:{title:'Liquidación de ruta',sub:'Seguimiento de entregas y cobros'},planificacion:{title:'Planificación de flota',sub:'Vehículos planificados por semana'},checklist:{title:'Check diario',sub:'Revisión antes de la salida'},historial:{title:'Historial de checks',sub:'Registro completo de revisiones'},satelital:{title:'Satelital en vivo',sub:'Rastreadores GPS en tiempo real'},conductores:{title:'Conductores',sub:'Gestión de choferes'},alertas:{title:'Alertas',sub:'Vencimientos y novedades'},empresas:{title:'Empresas de transporte',sub:'Gestión de empresas y flotas'},clientes:{title:'Clientes',sub:'Gestión de clientes'},paises:{title:'Países',sub:'Operaciones por país'},usuarios:{title:'Usuarios',sub:'Gestión de accesos al sistema'},config:{title:'Configuración',sub:'Ajustes de la aplicación'}};
+const PAGES={dashboard:{title:'Dashboard',sub:'Vista general de la flota'},vehiculos:{title:'Vehículos',sub:'Toda la flota registrada'},liquidacion:{title:'Liquidación de ruta',sub:'Seguimiento de entregas y cobros'},planificacion:{title:'Planificación de flota',sub:'Vehículos planificados por semana'},checklist:{title:'Check diario',sub:'Revisión antes de la salida'},historial:{title:'Historial de checks',sub:'Registro completo de revisiones'},satelital:{title:'Satelital en vivo',sub:'Rastreadores GPS en tiempo real'},conductores:{title:'Conductores',sub:'Gestión de choferes'},alertas:{title:'Alertas',sub:'Vencimientos y novedades'},empresas:{title:'Empresas de transporte',sub:'Gestión de empresas y flotas'},clientes:{title:'Clientes',sub:'Gestión de clientes'},paises:{title:'Países',sub:'Operaciones por país'},usuarios:{title:'Usuarios',sub:'Gestión de accesos al sistema'},config:{title:'Configuración',sub:'Ajustes de la aplicación'},'tipos-vehiculo':{title:'Tipos de vehículo',sub:'Configuración de tipos por país'}};
 
 function goTo(sec, pushState=true){
   if(sec==='usuarios'&&!isAdmin()){toast('Solo los administradores pueden ver esta sección','err');return}
@@ -5153,6 +5198,7 @@ async function loadDashboardGraficos(){
 
   const desde=new Date();desde.setDate(desde.getDate()-dias);
   const desdeStr=desde.toISOString().split('T')[0];
+  const hastaStr=new Date().toISOString().split('T')[0];
 
   // ── CHECKS ──────────────────────────────────────────────────────────────
   let qChecks=withPais(db.from('checks_diarios').select('fecha,estado_final,vehiculo_id,vehiculos(patente,empresa_id),cliente_id').gte('fecha',desdeStr));
@@ -5341,6 +5387,91 @@ async function loadDashboardGraficos(){
         scales:{x:{beginAtZero:true,ticks:{stepSize:1}}},
         plugins:{legend:{display:false}}}
     });
+  // ── TABLAS DESGLOSE DIARIO ──────────────────────────────────────────────
+  // Checks por día
+  const checksPorDia = {};
+  (checksData||[]).forEach(c=>{
+    if(!checksPorDia[c.fecha]) checksPorDia[c.fecha]={total:0,ok:0,warn:0,err:0};
+    checksPorDia[c.fecha].total++;
+    if(c.estado_final==='ok')   checksPorDia[c.fecha].ok++;
+    if(c.estado_final==='warn') checksPorDia[c.fecha].warn++;
+    if(c.estado_final==='err')  checksPorDia[c.fecha].err++;
+  });
+  const diasChecks = Object.keys(checksPorDia).sort().reverse();
+  const tbChecks = $('dash-tabla-checks-body');
+  if(tbChecks){
+    if(!diasChecks.length){
+      tbChecks.innerHTML='<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text3)">Sin datos en el período</td></tr>';
+    } else {
+      const diasOrden = [...new Set([...diasChecks])].sort().reverse();
+      // Generar todos los días del rango para mostrar días sin actividad
+      const fechaInicio = new Date(desdeStr);
+      const fechaFin    = new Date(hastaStr||new Date().toISOString().split('T')[0]);
+      const todosDias   = [];
+      for(let d=new Date(fechaFin);d>=fechaInicio;d.setDate(d.getDate()-1)){
+        todosDias.push(d.toISOString().split('T')[0]);
+      }
+      tbChecks.innerHTML = todosDias.map((fecha,i)=>{
+        const d = checksPorDia[fecha];
+        const alt = i%2===1;
+        const bg  = alt?'background:var(--bg)':'';
+        const fmtF= fecha.slice(8)+'/'+fecha.slice(5,7);
+        const dt  = new Date(fecha+'T12:00:00');
+        const dn  = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][dt.getDay()];
+        if(!d) return `<tr style="${bg}">
+          <td style="padding:7px 12px;color:var(--text3);font-style:italic">${dn} ${fmtF}</td>
+          <td colspan="4" style="padding:7px 12px;text-align:center;color:var(--text3);font-style:italic">Sin actividad</td>
+        </tr>`;
+        return `<tr style="${bg}">
+          <td style="padding:7px 12px;font-weight:500">${dn} ${fmtF}</td>
+          <td style="padding:7px 12px;text-align:center;font-weight:700">${d.total}</td>
+          <td style="padding:7px 12px;text-align:center;color:var(--green);font-weight:600">${d.ok||0}</td>
+          <td style="padding:7px 12px;text-align:center;color:var(--amber);font-weight:600">${d.warn||0}</td>
+          <td style="padding:7px 12px;text-align:center;color:var(--red);font-weight:600">${d.err||0}</td>
+        </tr>`;
+      }).join('');
+    }
+  }
+
+  // Liquidaciones por día
+  const{data:liqData}=await withPais(db.from('liquidaciones').select('fecha,estado').gte('fecha',desdeStr).lte('fecha',hastaStr||new Date().toISOString().split('T')[0]));
+  const liqPorDia={};
+  (liqData||[]).forEach(l=>{
+    if(!liqPorDia[l.fecha]) liqPorDia[l.fecha]={total:0,liquidado:0,con_devolucion:0,con_diferencia:0,pendiente:0};
+    liqPorDia[l.fecha].total++;
+    if(l.estado==='liquidado')      liqPorDia[l.fecha].liquidado++;
+    if(l.estado==='con_devolucion') liqPorDia[l.fecha].con_devolucion++;
+    if(l.estado==='con_diferencia') liqPorDia[l.fecha].con_diferencia++;
+    if(l.estado==='pendiente'||l.estado==='en_proceso') liqPorDia[l.fecha].pendiente++;
+  });
+  const tbLiq = $('dash-tabla-liq-body');
+  if(tbLiq){
+    const fechaInicio2 = new Date(desdeStr);
+    const fechaFin2    = new Date(hastaStr||new Date().toISOString().split('T')[0]);
+    const todosDias2   = [];
+    for(let d=new Date(fechaFin2);d>=fechaInicio2;d.setDate(d.getDate()-1)){
+      todosDias2.push(d.toISOString().split('T')[0]);
+    }
+    tbLiq.innerHTML = todosDias2.map((fecha,i)=>{
+      const d   = liqPorDia[fecha];
+      const alt = i%2===1;
+      const bg  = alt?'background:var(--bg)':'';
+      const fmtF= fecha.slice(8)+'/'+fecha.slice(5,7);
+      const dt  = new Date(fecha+'T12:00:00');
+      const dn  = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][dt.getDay()];
+      if(!d) return `<tr style="${bg}">
+        <td style="padding:7px 12px;color:var(--text3);font-style:italic">${dn} ${fmtF}</td>
+        <td colspan="5" style="padding:7px 12px;text-align:center;color:var(--text3);font-style:italic">Sin actividad</td>
+      </tr>`;
+      return `<tr style="${bg}">
+        <td style="padding:7px 12px;font-weight:500">${dn} ${fmtF}</td>
+        <td style="padding:7px 12px;text-align:center;font-weight:700">${d.total}</td>
+        <td style="padding:7px 12px;text-align:center;color:var(--green);font-weight:600">${d.liquidado||0}</td>
+        <td style="padding:7px 12px;text-align:center;color:var(--purple);font-weight:600">${d.con_devolucion||0}</td>
+        <td style="padding:7px 12px;text-align:center;color:var(--red);font-weight:600">${d.con_diferencia||0}</td>
+        <td style="padding:7px 12px;text-align:center;color:var(--amber);font-weight:600">${d.pendiente||0}</td>
+      </tr>`;
+    }).join('');
   }
 }
 
@@ -5758,6 +5889,7 @@ function closeModal(id){
     if(RAST_MINI_MAP){RAST_MINI_MAP.remove();RAST_MINI_MAP=null;RAST_MINI_MARKER=null;}
   }
 }
+} // cierre loadDashboardGraficos (tabla desglose diario)
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open')}));
 
 // INIT
