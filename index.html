@@ -3773,6 +3773,7 @@ let SAT_TAB = 'mapa';
 let SAT_INTERVAL = null;
 let RASTREADORES_DB = []; // rastreadores guardados en Supabase
 let GPS_DATA_LIVE = [];   // data en vivo de la API
+let CONDUCTORES_UBICACIONES = []; // últimas ubicaciones desde celular
 
 function satTab(tab){
   SAT_TAB = tab;
@@ -3808,6 +3809,21 @@ async function loadSatelital(){
   const{data:rasts}=await withPais(db.from('rastreadores').select('*, vehiculos(patente,marca,modelo)').eq('activo',true));
   RASTREADORES_DB = rasts||[];
 
+  // Cargar últimas ubicaciones de conductores (última por cada perfil)
+  const hace2h = new Date(Date.now() - 2*60*60*1000).toISOString();
+  const{data:ubicaciones}=await withPais(
+    db.from('ubicaciones_conductores')
+      .select('perfil_id, latitud, longitud, precision_m, created_at, profiles(nombre,email,rol)')
+      .gte('created_at', hace2h)
+      .order('created_at', {ascending:false})
+  );
+  // Quedarse con la última ubicación por conductor
+  const ultimasUbic = {};
+  (ubicaciones||[]).forEach(u=>{
+    if(!ultimasUbic[u.perfil_id]) ultimasUbic[u.perfil_id] = u;
+  });
+  CONDUCTORES_UBICACIONES = Object.values(ultimasUbic);
+
   // La API GPS es exclusiva de Chile — solo obtener datos en vivo si el país activo es CL o es super_admin sin filtro
   const paisActual = getPaisId();
   const paisCL = PAISES_CACHE.find(p=>p.codigo==='CL');
@@ -3824,12 +3840,13 @@ async function loadSatelital(){
   }
 
   if(status){
-    if(GPS_DATA_LIVE.length){
+    const totalPuntos = GPS_DATA_LIVE.length + CONDUCTORES_UBICACIONES.length;
+    if(totalPuntos){
       const hora = new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-      status.textContent = `✓ ${GPS_DATA_LIVE.length} rastreadores activos · Última actualización: ${hora}`;
+      status.textContent = `✓ ${GPS_DATA_LIVE.length} rastreadores · ${CONDUCTORES_UBICACIONES.length} conductores · ${hora}`;
       status.style.color = 'var(--green)';
     } else {
-      status.textContent = '⚠ Sin datos de la API GPS';
+      status.textContent = '⚠ Sin datos GPS disponibles';
       status.style.color = 'var(--amber)';
     }
   }
@@ -3843,11 +3860,21 @@ async function loadSatelital(){
   if(SAT_INTERVAL) clearInterval(SAT_INTERVAL);
   SAT_INTERVAL = setInterval(async()=>{
     GPS_DATA_LIVE = await fetchGPSData();
+    // Recargar ubicaciones conductores
+    const{data:ub2}=await withPais(
+      db.from('ubicaciones_conductores')
+        .select('perfil_id, latitud, longitud, precision_m, created_at, profiles(nombre,email,rol)')
+        .gte('created_at', new Date(Date.now()-2*60*60*1000).toISOString())
+        .order('created_at',{ascending:false})
+    );
+    const ult2={};
+    (ub2||[]).forEach(u=>{if(!ult2[u.perfil_id])ult2[u.perfil_id]=u;});
+    CONDUCTORES_UBICACIONES = Object.values(ult2);
     renderSatMarcadores();
     if(SAT_TAB==='lista') renderSatLista();
     if(status){
       const hora=new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-      status.textContent=`✓ ${GPS_DATA_LIVE.length} rastreadores · Actualizado: ${hora}`;
+      status.textContent=`✓ ${GPS_DATA_LIVE.length} rastreadores · ${CONDUCTORES_UBICACIONES.length} conductores · ${hora}`;
     }
   }, 30000);
 }
@@ -3870,6 +3897,7 @@ function renderSatMarcadores(){
   if(!SAT_MAP) return;
   const bounds = [];
 
+  // Marcadores de rastreadores GPS
   GPS_DATA_LIVE.forEach(gps=>{
     if(!gps.gps_latitud||!gps.gps_longitud) return;
     const lat=parseFloat(gps.gps_latitud);
@@ -3880,7 +3908,6 @@ function renderSatMarcadores(){
     const patente = rast?.vehiculos?.patente||gps.gps_vehiculo||gps.gps_id_dispositivo||'Sin asignar';
     const velocidad = gps.gps_speed||0;
     const estado = gps.gps_status||'';
-    // Semáforo: verde=en movimiento, amarillo=detenido, rojo=sin reporte
     const ahora = new Date();
     const ultimaActualizacion = gps.gps_tstamp ? new Date(gps.gps_tstamp) : null;
     const minutosSinReporte = ultimaActualizacion ? (ahora - ultimaActualizacion) / 60000 : 999;
@@ -3908,6 +3935,50 @@ function renderSatMarcadores(){
             ${rast?.vehiculos?`<div style="font-size:12px;margin-top:4px">🚛 ${rast.vehiculos.marca||''} ${rast.vehiculos.modelo||''}</div>`:''}
             ${!rast?.vehiculo_id?'<div style="font-size:11px;color:#999;margin-top:4px">Sin vehículo asignado</div>':''}
           </div>`)
+        .addTo(SAT_MAP);
+    }
+    bounds.push([lat,lng]);
+  });
+
+  // ── Marcadores de conductores con ubicación reportada desde el celular ──
+  const condMarkerKey = id => `cond_${id}`;
+  (CONDUCTORES_UBICACIONES||[]).forEach(u=>{
+    const lat = parseFloat(u.latitud);
+    const lng = parseFloat(u.longitud);
+    if(isNaN(lat)||isNaN(lng)) return;
+
+    const nombre = u.profiles?.nombre || u.profiles?.email || 'Conductor';
+    const ahora = new Date();
+    const hace = Math.round((ahora - new Date(u.created_at)) / 60000);
+    const haceStr = hace < 60 ? `hace ${hace} min` : `hace ${Math.round(hace/60)}h`;
+    const key = condMarkerKey(u.perfil_id);
+
+    const icon = L.divIcon({
+      html:`<div style="background:#EEF1FD;color:#2563EB;border:2px solid #2563EB;padding:4px 8px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.2);display:flex;align-items:center;gap:5px">
+        <span>👤</span><span>${nombre.split(' ')[0]}</span>
+      </div>`,
+      className:'', iconAnchor:[40,14]
+    });
+
+    const popup = `
+      <div style="min-width:180px">
+        <div style="font-weight:700;font-size:14px;margin-bottom:6px">👤 ${nombre}</div>
+        <div style="font-size:12px;color:#666">Rol: ${u.profiles?.rol||'—'}</div>
+        <div style="font-size:12px">📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}</div>
+        <div style="font-size:12px">🎯 Precisión: ±${Math.round(u.precision_m||0)}m</div>
+        <div style="font-size:12px;color:#666">🕐 Reportado ${haceStr}</div>
+        <div style="margin-top:8px">
+          <a href="https://maps.google.com/?q=${lat},${lng}" target="_blank" style="color:#2563EB;font-size:12px">Abrir en Google Maps →</a>
+        </div>
+      </div>`;
+
+    if(SAT_MARKERS[key]){
+      SAT_MARKERS[key].setLatLng([lat,lng]);
+      SAT_MARKERS[key].setIcon(icon);
+      SAT_MARKERS[key].setPopupContent(popup);
+    } else {
+      SAT_MARKERS[key] = L.marker([lat,lng],{icon})
+        .bindPopup(popup)
         .addTo(SAT_MAP);
     }
     bounds.push([lat,lng]);
