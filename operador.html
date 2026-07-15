@@ -297,6 +297,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
           <button class="echip" id="chip-gps-ok" onclick="setChipGPS('ok')">✓ Verificado</button>
           <button class="echip" id="chip-gps-err" onclick="setChipGPS('err')">✕ Sin señal</button>
         </div>
+        <div style="margin-top:10px">
+          <div class="ew-title">Observaciones GPS</div>
+          <textarea id="op-gps-obs" class="obs-input" placeholder="Novedades, alertas o comentarios sobre el GPS..."></textarea>
+        </div>
       </div>
 
       <!-- DOC CHOFER -->
@@ -434,6 +438,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
         <div class="gps-chips">
           <button class="echip" id="pe-chip-gps-ok" onclick="setPEChipGPS('ok')">✓ Verificado</button>
           <button class="echip" id="pe-chip-gps-err" onclick="setPEChipGPS('err')">✕ Sin señal</button>
+        </div>
+        <div style="margin-top:10px">
+          <div class="ew-title">Observaciones GPS</div>
+          <textarea id="op-pe-gps-obs" class="obs-input" placeholder="Novedades, alertas o comentarios sobre el GPS..."></textarea>
         </div>
       </div>
 
@@ -968,6 +976,7 @@ function onVehChange(vid){
   // Reset chips GPS
   GPS_ESTADO=null;
   ['chip-gps-ok','chip-gps-err'].forEach(id=>{const el=$(id);if(el)el.className='echip';});
+  if($('op-gps-obs')) $('op-gps-obs').value='';
 }
 
 // ── CHECK ────────────────────────────────────────────────────────────────────
@@ -1052,6 +1061,7 @@ async function guardarCheck(){
     vehiculo_estado:CHIPS.vehiculo,
     estado_final:ef,
     gps_estado:GPS_ESTADO||null,
+    gps_observaciones:$('op-gps-obs')?.value.trim()||null,
     sale_con_peon:PEON_ACTIVO,
     nombre_peon:PEON_ACTIVO?($('peon-nombre').value.trim()||null):null,
     cliente_id:$('sel-cliente').value||null,
@@ -1484,6 +1494,7 @@ async function guardarCheckPEOp(){
     carga_estado: 'ok',
     doc_chofer_ok: PE_RADIOS.lic === 'si',
     gps_estado: PE_GPS_ESTADO_OP || null,
+    gps_observaciones: $('op-pe-gps-obs')?.value.trim()||null,
     rastreador_gid: rast?.gps_gid || null,
     rastreador_nombre: rast?.nombre || rast?.gps_id_dispositivo || null,
     link_gps_check: v?.link_gps || null,
@@ -1509,6 +1520,7 @@ async function guardarCheckPEOp(){
   document.querySelectorAll('#p-check-pe .peon-opt').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('#p-check-pe input[type=text]').forEach(i=>i.value='');
   $('pe-obs').value = '';
+  if($('op-pe-gps-obs')) $('op-pe-gps-obs').value = '';
   renderPEFotosOp();
   setPEPeon(false);
   $('pe-sel-vehiculo').value = '';
