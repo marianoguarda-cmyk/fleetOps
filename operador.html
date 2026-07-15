@@ -1639,8 +1639,8 @@ async function loadLiquidacionOp(){
     alertaBox.style.display = 'none';
   }
 
-  const estadoColor = {pendiente:'var(--amber)',liquidado:'var(--green)',con_diferencia:'var(--red)'};
-  const estadoLabel = {pendiente:'⏳ Pendiente',liquidado:'✓ Liquidado',con_diferencia:'⚠ Con diferencia'};
+  const estadoColor = {pendiente:'var(--amber)',en_proceso:'var(--blue)',liquidado:'var(--green)',con_diferencia:'var(--red)',con_devolucion:'#7C3AED'};
+  const estadoLabel = {pendiente:'⏳ Pendiente',en_proceso:'📋 En proceso',liquidado:'✓ Liquidado',con_diferencia:'⚠ Con diferencia',con_devolucion:'↩ Con devolución'};
 
   el.innerHTML = LIQ_CACHE_OP.map(l => {
     const color = estadoColor[l.estado] || 'var(--text2)';
@@ -1652,7 +1652,7 @@ async function loadLiquidacionOp(){
           <div class="hi-meta">${new Date(l.fecha+'T12:00:00').toLocaleDateString('es-AR',{weekday:'short',day:'2-digit',month:'2-digit'})}${l.hora_salida?' · Salida '+l.hora_salida.slice(0,5):''}</div>
           ${l.clientes?.nombre ? `<div style="font-size:11px;color:var(--blue);margin-top:2px">👤 ${l.clientes.nombre}</div>` : ''}
         </div>
-        <span class="badge ${l.estado==='liquidado'?'b-ok':l.estado==='con_diferencia'?'b-err':'b-warn'}">${estadoLabel[l.estado]||l.estado}</span>
+        <span style="font-size:12px;font-weight:600;padding:3px 9px;border-radius:20px;background:${(estadoColor[l.estado]||'var(--amber)') + '22'};color:${estadoColor[l.estado]||'var(--amber)'}">${estadoLabel[l.estado]||l.estado}</span>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:12px;margin-top:6px">
         <span>📦 ${l.bultos_salida||0} bultos</span>
