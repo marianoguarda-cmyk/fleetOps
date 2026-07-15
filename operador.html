@@ -833,9 +833,65 @@ async function afterLogin(user){
   hideSplash();
   $('login').classList.remove('show');
   $('app').classList.add('show');
+  // Iniciar tracking de ubicación
+  iniciarUbicacion();
+}
+
+// ── GEOLOCALIZACIÓN PERIÓDICA ────────────────────────────────────────────
+let _ubicacionInterval = null;
+const UBICACION_INTERVALO = 15 * 60 * 1000; // 15 minutos
+
+function iniciarUbicacion(){
+  if(!navigator.geolocation){ console.log('Geolocalización no soportada'); return; }
+  // Primera ubicación inmediata
+  reportarUbicacion();
+  // Luego cada 15 minutos
+  _ubicacionInterval = setInterval(reportarUbicacion, UBICACION_INTERVALO);
+}
+
+function detenerUbicacion(){
+  if(_ubicacionInterval){ clearInterval(_ubicacionInterval); _ubicacionInterval=null; }
+}
+
+async function reportarUbicacion(){
+  if(!estaOnline || !CU || !CP) return;
+  try{
+    const pos = await new Promise((resolve, reject) =>
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000
+      })
+    );
+    const { latitude, longitude, accuracy } = pos.coords;
+
+    // Buscar conductor_id asociado al perfil
+    let condId = null;
+    if(CP.rol === 'conductor'){
+      const { data: cond } = await db.from('conductores')
+        .select('id')
+        .eq('email', CP.email)
+        .maybeSingle();
+      condId = cond?.id || null;
+    }
+
+    await db.from('ubicaciones_conductores').insert({
+      perfil_id:  CU.id,
+      conductor_id: condId,
+      pais_id:    CP.pais_id || null,
+      latitud:    latitude,
+      longitud:   longitude,
+      precision_m: accuracy
+    });
+    console.log(`📍 Ubicación reportada: ${latitude.toFixed(5)}, ${longitude.toFixed(5)} (±${Math.round(accuracy)}m)`);
+  } catch(e){
+    // No mostrar error al usuario — falla silenciosa
+    console.warn('No se pudo obtener ubicación:', e.message);
+  }
 }
 
 async function doLogout(){
+  detenerUbicacion();
   await db.auth.signOut();CU=null;CP=null;
   $('app').classList.remove('show');
   $('login').classList.add('show');
