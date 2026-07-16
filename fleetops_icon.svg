@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<rect width="512" height="512" rx="112" fill="#0F172A"/>
+<ellipse cx="256" cy="300" rx="140" ry="46" fill="#3B82F6" opacity="0.12"/>
+<rect x="150" y="218" width="106" height="100" rx="12" fill="#1E40AF"/>
+<rect x="148" y="216" width="110" height="104" rx="13" fill="none" stroke="#3B82F6" stroke-width="2" opacity="0.6"/>
+<rect x="162" y="230" width="82" height="50" rx="6" fill="#0EA5E9" opacity="0.85"/>
+<line x1="203" y1="230" x2="203" y2="280" stroke="#0F172A" stroke-width="2" opacity="0.5"/>
+<rect x="253" y="196" width="126" height="122" rx="10" fill="#1D4ED8"/>
+<rect x="251" y="194" width="130" height="126" rx="11" fill="none" stroke="#3B82F6" stroke-width="2" opacity="0.5"/>
+<line x1="268" y1="210" x2="364" y2="210" stroke="#3B82F6" stroke-width="1.5" opacity="0.4"/>
+<line x1="268" y1="222" x2="364" y2="222" stroke="#3B82F6" stroke-width="1.2" opacity="0.25"/>
+<line x1="268" y1="234" x2="364" y2="234" stroke="#3B82F6" stroke-width="1.2" opacity="0.25"/>
+<rect x="147" y="308" width="236" height="15" rx="5" fill="#1E3A8A"/>
+<circle cx="193" cy="334" r="27" fill="#0F172A"/>
+<circle cx="193" cy="334" r="20" fill="#1E293B"/>
+<circle cx="193" cy="334" r="11" fill="#334155"/>
+<circle cx="193" cy="334" r="5" fill="#60A5FA"/>
+<circle cx="330" cy="334" r="27" fill="#0F172A"/>
+<circle cx="330" cy="334" r="20" fill="#1E293B"/>
+<circle cx="330" cy="334" r="11" fill="#334155"/>
+<circle cx="330" cy="334" r="5" fill="#60A5FA"/>
+<circle cx="364" cy="334" r="27" fill="#0F172A"/>
+<circle cx="364" cy="334" r="20" fill="#1E293B"/>
+<circle cx="364" cy="334" r="11" fill="#334155"/>
+<circle cx="364" cy="334" r="5" fill="#60A5FA"/>
+<circle cx="256" cy="134" r="28" fill="#2563EB"/>
+<circle cx="256" cy="128" r="13" fill="#EFF6FF"/>
+<circle cx="256" cy="128" r="6" fill="#2563EB"/>
+<path d="M247 152 Q256 168 265 152" fill="#2563EB"/>
+<path d="M224 118 Q229 100 256 95 Q283 100 288 118" fill="none" stroke="#60A5FA" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+<path d="M208 108 Q216 82 256 75 Q296 82 304 108" fill="none" stroke="#93C5FD" stroke-width="3" stroke-linecap="round" opacity="0.45"/>
+</svg>

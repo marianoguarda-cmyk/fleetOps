@@ -693,7 +693,7 @@ function toast(m,d=2800){
   const t=$('toast');t.textContent=m;t.style.opacity='1';t.style.transform='translateX(-50%) translateY(0)';
   clearTimeout(ttm);ttm=setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(20px)';},d);
 }
-function hideSplash(){const s=$('splash');s.classList.add('hide');setTimeout(()=>s.style.display='none',400)}
+const s=$('splash');s.classList.add('hide');setTimeout(()=>s.style.display='none',400)
 
 // ── OFFLINE ────────────────────────────────────────────────────────────────
 let DB_IDB=null;
@@ -1306,6 +1306,78 @@ let PE_PEON_ACTIVO = false;
 let PE_GPS_ESTADO_OP = null;
 let PE_FOTOS_OP = [];
 
+const PE_DRAFT_KEY = 'fleetops_pe_draft';
+
+function guardarBorradorPE(){
+  try {
+    const draft = {
+      vehiculo: $('pe-sel-vehiculo')?.value || '',
+      conductor: $('pe-sel-conductor')?.value || '',
+      cliente: $('pe-sel-cliente')?.value || '',
+      empresa: $('pe-sel-empresa')?.value || '',
+      radios: PE_RADIOS,
+      gpsEstado: PE_GPS_ESTADO_OP,
+      gpsObs: $('op-pe-gps-obs')?.value || '',
+      obs: $('pe-obs')?.value || '',
+      peonActivo: PE_PEON_ACTIVO,
+      peonNombre: $('pe-peon-nombre')?.value || '',
+      fotos: PE_FOTOS_OP,
+      ts: Date.now()
+    };
+    localStorage.setItem(PE_DRAFT_KEY, JSON.stringify(draft));
+  } catch(e){ console.warn('No se pudo guardar borrador PE', e); }
+}
+
+function limpiarBorradorPE(){
+  localStorage.removeItem(PE_DRAFT_KEY);
+}
+
+function restaurarBorradorPE(){
+  try {
+    const raw = localStorage.getItem(PE_DRAFT_KEY);
+    if(!raw) return false;
+    const d = JSON.parse(raw);
+    // Solo restaurar si tiene menos de 12 horas
+    if(Date.now() - d.ts > 12 * 60 * 60 * 1000){ limpiarBorradorPE(); return false; }
+
+    if(d.vehiculo && $('pe-sel-vehiculo')) {
+      $('pe-sel-vehiculo').value = d.vehiculo;
+      onPEVehChange(d.vehiculo);
+    }
+    if(d.conductor && $('pe-sel-conductor')) $('pe-sel-conductor').value = d.conductor;
+    if(d.cliente && $('pe-sel-cliente')) $('pe-sel-cliente').value = d.cliente;
+    if(d.empresa && $('pe-sel-empresa')) $('pe-sel-empresa').value = d.empresa;
+
+    // Restaurar radios (opciones del checklist)
+    if(d.radios) {
+      PE_RADIOS = d.radios;
+      Object.entries(d.radios).forEach(([key, val]) => {
+        const btn = document.querySelector(`[data-key="${key}"][data-v="${val}"]`);
+        if(btn) {
+          // Deseleccionar otros del mismo grupo
+          btn.closest('.radio-group')?.querySelectorAll('.radio-btn').forEach(b=>b.classList.remove('active','ok','warn','err'));
+          btn.classList.add('active', val);
+        }
+      });
+    }
+
+    // GPS
+    if(d.gpsEstado) setPEChipGPS(d.gpsEstado);
+    if(d.gpsObs && $('op-pe-gps-obs')) $('op-pe-gps-obs').value = d.gpsObs;
+
+    // Observaciones
+    if(d.obs && $('pe-obs')) $('pe-obs').value = d.obs;
+
+    // Peón
+    if(d.peonActivo) { setPEPeon(true); if(d.peonNombre && $('pe-peon-nombre')) $('pe-peon-nombre').value = d.peonNombre; }
+
+    // Fotos
+    if(d.fotos?.length) { PE_FOTOS_OP = d.fotos; renderPEFotosOp(); }
+
+    return true;
+  } catch(e){ console.warn('No se pudo restaurar borrador PE', e); return false; }
+}
+
 function esPeruOp(){
   const paisId = CP?.pais_id || null;
   if(!paisId) return false;
@@ -1325,9 +1397,15 @@ function tickPEReloj(){
 }
 setInterval(tickPEReloj, 1000);
 
+let PE_INIT_DONE = false;
+
 async function initCheckPEOp(){
   tickPEReloj();
   const paisId = CP?.pais_id || null;
+
+  // Si ya inicializó, solo restaurar borrador sin recargar selects
+  if(PE_INIT_DONE){ restaurarBorradorPE(); return; }
+  PE_INIT_DONE = true;
   let qv = db.from('vehiculos').select('*').eq('activo', true);
   if(paisId) qv = qv.eq('pais_id', paisId);
   const{data:vehs} = await qv.order('patente');
@@ -1364,6 +1442,9 @@ async function initCheckPEOp(){
     const json = await res.json();
     if(json.success) PE_GPS_LIVE_OP = json.data || [];
   }catch(e){ PE_GPS_LIVE_OP = []; }
+
+  // Restaurar borrador si existe
+  restaurarBorradorPE();
 }
 
 function autoSelCondPEOp(vehiculoId){
@@ -1428,18 +1509,21 @@ function onPEVehChange(vid){
   }
   PE_GPS_ESTADO_OP = null;
   ['pe-chip-gps-ok','pe-chip-gps-err'].forEach(id=>{ const el=$(id); if(el) el.className='echip'; });
+  setTimeout(guardarBorradorPE, 100);
 }
 
 function setPEChipGPS(val){
   PE_GPS_ESTADO_OP = val;
   $('pe-chip-gps-ok').className = 'echip' + (val==='ok' ? ' s-ok' : '');
   $('pe-chip-gps-err').className = 'echip' + (val==='err' ? ' s-err' : '');
+  guardarBorradorPE();
 }
 
 function setPERadio(key, el){
   document.querySelectorAll(`.pe-row[data-key="${key}"] .peon-opt`).forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
   PE_RADIOS[key] = el.dataset.v;
+  guardarBorradorPE();
 }
 
 function setPEPeon(activo){
@@ -1593,6 +1677,9 @@ async function guardarCheckPEOp(){
 
   // Vibración háptica
   if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
+
+  limpiarBorradorPE();
+  PE_INIT_DONE = false; // permitir reinicio limpio
 
   // Reset
   PE_RADIOS = {}; PE_FOTOS_OP = []; PE_PEON_ACTIVO = false; PE_GPS_ESTADO_OP = null;
@@ -1788,6 +1875,20 @@ if('serviceWorker' in navigator){
     if(ev==='SIGNED_OUT'){$('app').classList.remove('show');$('login').classList.add('show');}
   });
 })();
+
+// Auto-guardar borrador PE al escribir
+let _peAutoSaveTimer = null;
+document.addEventListener('input', e=>{
+  if(['pe-obs','op-pe-gps-obs','pe-peon-nombre'].includes(e.target?.id)){
+    clearTimeout(_peAutoSaveTimer);
+    _peAutoSaveTimer = setTimeout(guardarBorradorPE, 600);
+  }
+});
+document.addEventListener('change', e=>{
+  if(['pe-sel-vehiculo','pe-sel-conductor','pe-sel-cliente','pe-sel-empresa'].includes(e.target?.id)){
+    setTimeout(guardarBorradorPE, 200);
+  }
+});
 </script>
 </body>
 </html>
