@@ -690,10 +690,9 @@ const bdg=e=>`<span class="badge ${e==='ok'?'b-ok':e==='warn'?'b-warn':'b-err'}"
 
 let ttm;
 function toast(m,d=2800){
-  const t=$('toast');t.textContent=m;t.style.opacity='1';t.style.transform='translateX(-50%) translateY(0)';
+  const t=$('toast');if(!t)return;t.textContent=m;t.style.opacity='1';t.style.transform='translateX(-50%) translateY(0)';
   clearTimeout(ttm);ttm=setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(20px)';},d);
 }
-const s=$('splash');s.classList.add('hide');setTimeout(()=>s.style.display='none',400)
 
 // ── OFFLINE ────────────────────────────────────────────────────────────────
 let DB_IDB=null;
@@ -1860,6 +1859,13 @@ if('serviceWorker' in navigator){
       if(e.data?.type==='SYNC_CHECKS') sincronizar();
     });
   }).catch(()=>{});
+}
+
+function hideSplash(){
+  const s=$('splash');
+  if(!s) return;
+  s.classList.add('hide');
+  setTimeout(()=>{ s.style.display='none'; }, 400);
 }
 
 (async()=>{
