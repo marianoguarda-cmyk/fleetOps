@@ -1689,6 +1689,20 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);bo
         <button class="btn btn-sm" onclick="agregarDetalle()" style="margin-top:6px">+ Agregar motivo</button>
       </div>
 
+      <!-- Incidencias: faltantes y rechazos -->
+      <div style="margin-top:14px">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">⚠️ Faltantes y rechazos</div>
+        <div id="liq-incidencias-list"></div>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <button class="btn btn-sm" onclick="agregarIncidencia('faltante')" style="background:#FEF3C7;color:#92400E;border:1px solid #F59E0B">+ Faltante</button>
+          <button class="btn btn-sm" onclick="agregarIncidencia('rechazo')" style="background:#FEE2E2;color:#991B1B;border:1px solid #EF4444">+ Rechazo</button>
+        </div>
+        <div id="liq-incidencias-resumen" style="display:none;margin-top:8px;padding:8px 10px;background:var(--bg3);border-radius:var(--radius-sm);font-size:12px">
+          <span style="color:var(--text2)">Total descuentos:</span>
+          <strong id="liq-incidencias-total" style="color:var(--red);margin-left:6px">$ 0</strong>
+        </div>
+      </div>
+
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
         <div class="fg">
           <label class="fl">Monto cobrado ($)</label>
@@ -4646,33 +4660,55 @@ function renderLiquidaciones(){
   }).join('');
 }
 
-function exportarLiquidacionCSV(){
+async function exportarLiquidacionCSV(){
   if(!LIQ_DATA_CACHE.length){toast('Sin datos para exportar','err');return;}
-  const headers=['Fecha','Hora salida','Conductor','Vehículo','Cliente','Bultos salida','Monto esperado','Bultos entregados','Bultos no entregados','Efectivo entregado','Transferencia entregada','Monto cobrado','Diferencial total','Hora regreso','Observaciones salida','Observaciones liquidación','Estado','Creado por','Liquidado por','Comprobantes salida','Comprobantes parciales','Comprobantes cierre'];
-  const rows=LIQ_DATA_CACHE.map(l=>[
-    l.fecha||'',
-    l.hora_salida?.slice(0,5)||'',
-    l.conductores?.nombre||'',
-    `${l.vehiculos?.patente||''} ${l.vehiculos?.marca||''}`.trim(),
-    l.clientes?.nombre||'',
-    l.bultos_salida||0,
-    l.monto_esperado||0,
-    l.bultos_entregados??'',
-    l.bultos_no_entregados??'',
-    l.efectivo_entregado??'',
-    l.transferencia_entregada??'',
-    l.monto_cobrado??'',
-    l.monto_diferencia??'',
-    l.hora_regreso?.slice(0,5)||'',
-    (l.observaciones_salida||'').replace(/,/g,';'),
-    (l.observaciones_liquidacion||'').replace(/,/g,';'),
-    l.estado||'',
-    l.creado_por||'',
-    l.liquidado_por||'',
-    (Array.isArray(l.comprobante_salida_url)?l.comprobante_salida_url:l.comprobante_salida_url?[l.comprobante_salida_url]:[]).join(' | '),
-    (Array.isArray(l.comprobantes_parciales)?l.comprobantes_parciales:[]).join(' | '),
-    (Array.isArray(l.comprobante_cierre_url)?l.comprobante_cierre_url:l.comprobante_cierre_url?[l.comprobante_cierre_url]:[]).join(' | ')
-  ]);
+  // Traer incidencias de todas las liquidaciones en el cache
+  const liqIds=LIQ_DATA_CACHE.map(l=>l.id);
+  const{data:incData}=await db.from('liquidaciones_detalle')
+    .select('liquidacion_id,tipo,observacion,monto')
+    .in('liquidacion_id',liqIds)
+    .in('tipo',['faltante','rechazo']);
+  // Agrupar por liquidacion_id
+  const incMap={};
+  (incData||[]).forEach(inc=>{
+    if(!incMap[inc.liquidacion_id]) incMap[inc.liquidacion_id]={faltantes:[],rechazos:[],total:0};
+    const txt=`${inc.observacion||''}${inc.monto?` (-$${inc.monto})`:''}`; 
+    if(inc.tipo==='faltante') incMap[inc.liquidacion_id].faltantes.push(txt);
+    else incMap[inc.liquidacion_id].rechazos.push(txt);
+    incMap[inc.liquidacion_id].total+=parseFloat(inc.monto)||0;
+  });
+
+  const headers=['Fecha','Hora salida','Conductor','Vehículo','Cliente','Bultos salida','Monto esperado','Bultos entregados','Bultos no entregados','Efectivo entregado','Transferencia entregada','Monto cobrado','Diferencial total','Hora regreso','Observaciones salida','Observaciones liquidación','Estado','Creado por','Liquidado por','Comprobantes salida','Comprobantes parciales','Comprobantes cierre','Faltantes','Rechazos','Total descuentos'];
+  const rows=LIQ_DATA_CACHE.map(l=>{
+    const inc=incMap[l.id]||{faltantes:[],rechazos:[],total:0};
+    return [
+      l.fecha||'',
+      l.hora_salida?.slice(0,5)||'',
+      l.conductores?.nombre||'',
+      `${l.vehiculos?.patente||''} ${l.vehiculos?.marca||''}`.trim(),
+      l.clientes?.nombre||'',
+      l.bultos_salida||0,
+      l.monto_esperado||0,
+      l.bultos_entregados??'',
+      l.bultos_no_entregados??'',
+      l.efectivo_entregado??'',
+      l.transferencia_entregada??'',
+      l.monto_cobrado??'',
+      l.monto_diferencia??'',
+      l.hora_regreso?.slice(0,5)||'',
+      (l.observaciones_salida||'').replace(/,/g,';'),
+      (l.observaciones_liquidacion||'').replace(/,/g,';'),
+      l.estado||'',
+      l.creado_por||'',
+      l.liquidado_por||'',
+      (Array.isArray(l.comprobante_salida_url)?l.comprobante_salida_url:l.comprobante_salida_url?[l.comprobante_salida_url]:[]).join(' | '),
+      (Array.isArray(l.comprobantes_parciales)?l.comprobantes_parciales:[]).join(' | '),
+      (Array.isArray(l.comprobante_cierre_url)?l.comprobante_cierre_url:l.comprobante_cierre_url?[l.comprobante_cierre_url]:[]).join(' | '),
+      inc.faltantes.join(' | '),
+      inc.rechazos.join(' | '),
+      inc.total>0?inc.total:''
+    ];
+  });
   const csv=[headers,...rows].map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob);
@@ -5026,12 +5062,31 @@ async function abrirLiquidar(liqId){
   $('liq-entregados').dataset.bultosTotal=liq.bultos_salida||0;
   $('liq-entregados').dataset.montoEsp=liq.monto_esperado||0;
   calcularDiferencia();
-  // Load existing detalle
+  // Load existing detalle e incidencias
   LIQ_DETALLE_COUNT=0;
+  LIQ_INC_COUNT=0;
   $('liq-detalle-list').innerHTML='';
+  $('liq-incidencias-list').innerHTML='';
   const{data:det}=await db.from('liquidaciones_detalle').select('*').eq('liquidacion_id',liqId);
-  (det||[]).forEach(d=>agregarDetalle(d));
+  (det||[]).forEach(d=>{
+    if(d.tipo==='faltante'||d.tipo==='rechazo') agregarIncidencia(d.tipo, d);
+    else agregarDetalle(d);
+  });
+  calcularTotalIncidencias();
   openModal('liquidar');
+}
+
+function calcularTotalIncidencias(){
+  let total=0;
+  for(let i=1;i<=LIQ_INC_COUNT;i++){
+    const el=$(`inc-monto-${i}`);
+    if(el) total+=parseFloat(el.value)||0;
+  }
+  const resumen=$('liq-incidencias-resumen');
+  const totalEl=$('liq-incidencias-total');
+  if(resumen) resumen.style.display=total>0?'flex':'none';
+  if(totalEl) totalEl.textContent='$ '+total.toLocaleString('es-AR',{minimumFractionDigits:2});
+  return total;
 }
 
 function calcularDiferencialUnificado(){
@@ -5041,9 +5096,11 @@ function calcularDiferencialUnificado(){
   // Actualizar monto cobrado
   const cobradoEl = $('liq-cobrado');
   if(cobradoEl) cobradoEl.value = totalCobrado > 0 ? totalCobrado.toFixed(2) : '';
-  // Diferencial total vs esperado
+  // Restar descuentos de incidencias al esperado
   const esperado = parseFloat($('liq-entregados')?.dataset.montoEsp)||0;
-  const diff = totalCobrado - esperado;
+  const descuentos = calcularTotalIncidencias();
+  const esperadoAjustado = esperado - descuentos;
+  const diff = totalCobrado - esperadoAjustado;
   const el = $('liq-diferencial-total');
   if(el && (totalCobrado > 0 || esperado > 0)){
     el.value = (diff >= 0 ? '+' : '') + '$ ' + diff.toLocaleString('es-AR',{minimumFractionDigits:2});
@@ -5059,7 +5116,7 @@ function calcularDiferencialUnificado(){
   if($('liq-no-entregados')) $('liq-no-entregados').value=noEntregados;
   const noWrap=$('liq-no-entregados-wrap');
   if(noWrap) noWrap.style.display=noEntregados>0?'block':'none';
-  // Actualizar liq-diferencia (vs esperado)
+  // Actualizar liq-diferencia (vs esperado ajustado)
   const elD=$('liq-diferencia');
   if(elD){
     elD.value=(diff>=0?'+':'')+'$ '+diff.toLocaleString('es-AR',{minimumFractionDigits:2});
@@ -5071,6 +5128,27 @@ function calcularDiferenciaEfectivo(){ calcularDiferencialUnificado(); }
 function calcularDiferenciaTransferencia(){ calcularDiferencialUnificado(); }
 function calcularDiferencia(){ calcularDiferencialUnificado(); }
 function _calcularDiferenciaBase(){ calcularDiferencialUnificado(); }
+
+let LIQ_INC_COUNT=0;
+
+function agregarIncidencia(tipoDefault='faltante', data=null){
+  LIQ_INC_COUNT++;
+  const i=LIQ_INC_COUNT;
+  const tipo=data?.tipo||tipoDefault;
+  const esFaltante=tipo==='faltante';
+  const div=document.createElement('div');
+  div.id=`inc-${i}`;
+  div.style.cssText='display:grid;grid-template-columns:100px 1fr 110px 30px;gap:6px;margin-bottom:6px;align-items:center';
+  div.innerHTML=`
+    <select id="inc-tipo-${i}" style="padding:6px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;background:${esFaltante?'#FEF3C7':'#FEE2E2'}">
+      <option value="faltante" ${tipo==='faltante'?'selected':''}>📦 Faltante</option>
+      <option value="rechazo" ${tipo==='rechazo'?'selected':''}>↩️ Rechazo</option>
+    </select>
+    <input type="text" id="inc-obs-${i}" value="${data?.observacion||''}" placeholder="Observación..." style="padding:6px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit">
+    <input type="number" id="inc-monto-${i}" value="${data?.monto||''}" min="0" step="0.01" placeholder="$ Monto desc." oninput="calcularDiferencialUnificado()" style="padding:6px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit">
+    <button onclick="$('inc-${i}').remove();calcularDiferencialUnificado()" style="background:var(--red-light,#FEE2E2);color:var(--red);border:none;border-radius:6px;cursor:pointer;font-size:14px;padding:4px">✕</button>`;
+  $('liq-incidencias-list').appendChild(div);
+}
 
 function agregarDetalle(data=null){
   LIQ_DETALLE_COUNT++;
@@ -5108,7 +5186,7 @@ async function guardarLiquidacion(){
     if(!comprobanteCierreUrls){toast('Error al subir los comprobantes','err');return}
   }
 
-  // Save detalle
+  // Save detalle (no entregados)
   await db.from('liquidaciones_detalle').delete().eq('liquidacion_id',liqId);
   const detalles=[];
   for(let i=1;i<=LIQ_DETALLE_COUNT;i++){
@@ -5121,7 +5199,30 @@ async function guardarLiquidacion(){
       descripcion:$(`det-desc-${i}`)?.value.trim()||null
     });
   }
-  if(detalles.length) await db.from('liquidaciones_detalle').insert(detalles);
+  // Save incidencias (faltantes y rechazos)
+  const incidencias=[];
+  for(let i=1;i<=LIQ_INC_COUNT;i++){
+    const tipoEl=$(`inc-tipo-${i}`);
+    if(!tipoEl) continue;
+    const monto=parseFloat($(`inc-monto-${i}`)?.value)||0;
+    incidencias.push({
+      liquidacion_id:liqId,
+      tipo:tipoEl.value,
+      observacion:$(`inc-obs-${i}`)?.value.trim()||null,
+      monto
+    });
+  }
+  if(detalles.length||incidencias.length){
+    const todos=[...detalles,...incidencias.map(inc=>({
+      liquidacion_id:inc.liquidacion_id,
+      motivo:inc.tipo,
+      cantidad:1,
+      descripcion:inc.observacion,
+      tipo:inc.tipo,
+      monto:inc.monto
+    }))];
+    await db.from('liquidaciones_detalle').insert(todos);
+  }
   const efectivoEntregado=parseFloat($('liq-efectivo-entregado').value)||null;
   const diffEfectivo=efectivoEntregado!==null?efectivoEntregado-cobrado:null;
   const transferenciaEntregada=parseFloat($('liq-transferencia-entregada').value)||null;
