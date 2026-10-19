@@ -150,7 +150,8 @@ id, fecha, conductor_id, vehiculo_id, cliente_id, pais_id, empresa_id,
 bultos_salida, monto_esperado, observaciones_salida, hora_salida, creado_por,
 -- Liquidación al regresar (SOLO la cierra admin/super_admin):
 bultos_entregados, bultos_no_entregados, monto_cobrado, monto_diferencia,
-efectivo_entregado, diferencia_efectivo,
+forma_pago ('efectivo_transferencia' | 'cuenta_corriente'), efectivo_entregado,
+transferencia_entregada, cuenta_corriente_monto, diferencia_efectivo,
 hora_regreso, observaciones_liquidacion, liquidado_por,
 estado ('pendiente' | 'liquidado' | 'con_diferencia'),
 created_at, updated_at
@@ -204,7 +205,7 @@ Implementado tanto en `index.html` (sección `#s-checklist-pe`) como en `operado
 
 ### Flujo
 1. **Salida:** el admin (panel web) O el conductor (app operador) crea una "planilla de salida": conductor, vehículo, cliente, bultos a entregar, monto esperado, hora de salida. Queda en estado `pendiente`.
-2. **Liquidación (regreso):** SOLO el admin/super_admin puede cerrarla (reforzado con RLS, no solo en la UI). Completa: bultos entregados (calcula automáticamente los no entregados), detalle de motivos de no entrega (ausente/dirección incorrecta/rechazo/otro), monto cobrado, efectivo que el conductor entrega físicamente.
+2. **Liquidación (regreso):** SOLO el admin/super_admin puede cerrarla (reforzado con RLS, no solo en la UI). Completa: bultos entregados (calcula automáticamente los no entregados), detalle de motivos de no entrega (ausente/dirección incorrecta/rechazo/otro) y cobro. Puede registrar efectivo/transferencia entregados por el conductor o asignar el total a cuenta corriente; en este último caso se contabiliza en `monto_cobrado`, se identifica en `cuenta_corriente_monto` y el conductor no tiene que rendir efectivo ni transferencia.
 3. **Cálculo automático de diferencias:**
    - `monto_diferencia` = monto_cobrado − monto_esperado (cuánto se desvió de lo esperado)
    - `diferencia_efectivo` = efectivo_entregado − monto_cobrado (si el conductor entregó menos efectivo del que dice haber cobrado → posible faltante)

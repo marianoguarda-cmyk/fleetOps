@@ -1870,7 +1870,8 @@ async function loadLiquidacionOp(){
       <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:12px;margin-top:6px">
         <span>📦 ${l.bultos_salida||0} bultos</span>
         <span>💰 Esperado: $${(l.monto_esperado||0).toLocaleString('es-AR')}</span>
-        ${l.monto_cobrado!==null?`<span style="color:var(--green)">✓ Cobrado: $${(l.monto_cobrado||0).toLocaleString('es-AR')}</span>`:''}
+        ${l.monto_cobrado!==null?`<span style="color:var(--green)">✓ Cobrado${l.forma_pago==='cuenta_corriente'?' · Cuenta corriente':''}: $${(l.monto_cobrado||0).toLocaleString('es-AR')}</span>`:''}
+        ${l.forma_pago==='cuenta_corriente'?'<span style="color:var(--green);font-weight:600">No tenés que liquidar nada</span>':''}
         ${l.monto_diferencia!==null&&l.monto_diferencia!==0?`<span style="color:${l.monto_diferencia<0?'var(--red)':'var(--amber)'}">Dif: ${l.monto_diferencia>=0?'+':''}$${(l.monto_diferencia||0).toLocaleString('es-AR')}</span>`:''}
       </div>
       ${l.observaciones_salida?`<div class="hi-obs" style="margin-top:6px">📋 ${l.observaciones_salida}</div>`:''}
