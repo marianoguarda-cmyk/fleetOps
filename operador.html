@@ -694,6 +694,31 @@ function toast(m,d=2800){
   clearTimeout(ttm);ttm=setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(20px)';},d);
 }
 
+async function obtenerUbicacionCheck(){
+  if(!navigator.geolocation){
+    toast('⚠ GPS no disponible; el check se guardará sin ubicación');
+    return null;
+  }
+  try{
+    const pos=await new Promise((resolve,reject)=>
+      navigator.geolocation.getCurrentPosition(resolve,reject,{
+        enableHighAccuracy:true,
+        timeout:10000,
+        maximumAge:30000
+      })
+    );
+    return {
+      check_latitud:pos.coords.latitude,
+      check_longitud:pos.coords.longitude,
+      check_precision_m:pos.coords.accuracy
+    };
+  }catch(error){
+    console.warn('No se pudo obtener la ubicación del check:',error.message);
+    toast('⚠ No se pudo obtener la ubicación; el check se guardará sin ella');
+    return null;
+  }
+}
+
 // ── OFFLINE ────────────────────────────────────────────────────────────────
 let DB_IDB=null;
 const DB_NAME='fleetops-offline';
@@ -1102,6 +1127,7 @@ async function guardarCheck(){
     toast('⚠ Tardó demasiado, intentá de nuevo');
   }, 30000);
 
+  const ubicacionCheck=await obtenerUbicacionCheck();
   const obs=$('obs').value.trim();
   const precinto=$('precinto').value.trim();
   const ef=[CHIPS.chofer,CHIPS.carga,CHIPS.vehiculo].includes('err')?'err':
@@ -1114,6 +1140,7 @@ async function guardarCheck(){
     pais_id:v?.pais_id||CP?.pais_id||null,
     fecha:new Date().toISOString().split('T')[0],
     hora_check:new Date().toTimeString().slice(0,8),
+    ...ubicacionCheck,
     doc_chofer_ok:$('dc0').classList.contains('on')&&$('dc1').classList.contains('on'),
     doc_chofer_estado:CHIPS.chofer,
     carga_ok:$('ca0').classList.contains('on'),
@@ -1174,6 +1201,7 @@ async function guardarCheck(){
         ${precinto?`<br>🔒 Precinto ${precinto}`:''}
         ${PEON_ACTIVO?`<br>👷 Peón${$('peon-nombre').value?' · '+$('peon-nombre').value:''}`:''}
         ${rast?`<br>🛰 ${rast.nombre||rast.gps_id_dispositivo}`:''}
+        ${ubicacionCheck?'<br>📍 Ubicación guardada':'<br>⚠ Check sin ubicación'}
       </div>
       <button class="success-btn" onclick="location.reload()">✅ Nuevo check</button>
       <button class="success-btn success-btn-sec" onclick="goPage('historial')">🕐 Ver historial</button>
@@ -1232,6 +1260,7 @@ async function loadHistorial(){
         ${h.sale_con_peon?`<span>👷${h.nombre_peon?' '+h.nombre_peon:''}</span>`:''}
         ${h.rastreador_nombre||h.rastreador_gid?`<span>🛰 ${h.rastreador_nombre||'GPS #'+h.rastreador_gid}</span>`:''}
         ${h.gps_estado?`<span>${h.gps_estado==='ok'?'📍 GPS OK':'📍 Sin señal'}</span>`:''}
+        ${h.check_latitud!=null&&h.check_longitud!=null?`<a href="https://maps.google.com/?q=${h.check_latitud},${h.check_longitud}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none" onclick="event.stopPropagation()">📍 Ver ubicación · ±${Math.round(h.check_precision_m||0)} m ↗</a>`:'<span>📍 Ubicación no disponible</span>'}
       </div>
       ${h.observaciones?`<div class="hi-obs">📝 ${h.observaciones}</div>`:''}
       ${h.fotos?.length?`<div class="hi-photos">${h.fotos.map(f=>`<img class="hi-photo" src="${f}" onclick="window.open('${f}','_blank')">`).join('')}</div>`:''}
@@ -1577,6 +1606,7 @@ async function guardarCheckPEOp(){
     toast('⚠ Tardó demasiado, intentá de nuevo');
   }, 30000);
 
+  const ubicacionCheck = await obtenerUbicacionCheck();
   const fotosUrls = [];
   for(let i=0; i<PE_FOTOS_OP.length; i++){
     try{
@@ -1599,6 +1629,7 @@ async function guardarCheckPEOp(){
     pais_id: CP?.pais_id || null,
     fecha: new Date().toISOString().split('T')[0],
     hora_check: new Date().toTimeString().slice(0,8),
+    ...ubicacionCheck,
     tipo_check: 'peru',
     estado_final: ef,
     doc_soat: PE_RADIOS.soat,
@@ -1705,6 +1736,7 @@ async function guardarCheckPEOp(){
       </div>
       <div class="success-sub">
         ${new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}
+        ${ubicacionCheck?'<br>📍 Ubicación guardada':'<br>⚠ Check sin ubicación'}
       </div>
       <button class="success-btn" onclick="location.reload()">✅ Nuevo checklist</button>
       <button class="success-btn success-btn-sec" onclick="goPage('historial')">🕐 Ver historial</button>

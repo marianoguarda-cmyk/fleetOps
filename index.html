@@ -1814,6 +1814,31 @@ const isAdmin=()=>CP?.rol==='admin'||CP?.rol==='super_admin';
 let ttm;
 function toast(msg,type='info'){const t=$('the-toast');$('toast-msg').textContent=msg;$('toast-ic').textContent=type==='ok'?'✓ ':type==='err'?'✕ ':'ℹ ';t.className=`toast show toast-${type}`;clearTimeout(ttm);ttm=setTimeout(()=>t.classList.remove('show'),3500)}
 
+async function obtenerUbicacionCheck(){
+  if(!navigator.geolocation){
+    toast('GPS no disponible; el check se guardará sin ubicación','err');
+    return null;
+  }
+  try{
+    const pos=await new Promise((resolve,reject)=>
+      navigator.geolocation.getCurrentPosition(resolve,reject,{
+        enableHighAccuracy:true,
+        timeout:10000,
+        maximumAge:30000
+      })
+    );
+    return {
+      check_latitud:pos.coords.latitude,
+      check_longitud:pos.coords.longitude,
+      check_precision_m:pos.coords.accuracy
+    };
+  }catch(error){
+    console.warn('No se pudo obtener la ubicación del check:',error.message);
+    toast('No se pudo obtener la ubicación; el check se guardará sin ella','err');
+    return null;
+  }
+}
+
 // ── NOTIFICACIONES REALTIME ───────────────────────────────────────────────
 let _realtimeChannels = [];
 
@@ -2565,6 +2590,10 @@ async function guardarCheck(){
   if(!vid){toast('Seleccioná un vehículo','err');return}
   const dc=getChip('chips-chofer'),cc=getChip('chips-carga'),vc=getChip('chips-vehiculo');
   if(!dc||!cc||!vc){toast('Completá el estado de todas las secciones','err');return}
+  const btn=document.querySelector('#s-checklist button[onclick="guardarCheck()"]');
+  if(btn?.disabled)return;
+  if(btn){btn.disabled=true;btn.textContent='Guardando...';}
+  const ubicacionCheck=await obtenerUbicacionCheck();
   const ef=[dc,cc,vc].includes('err')?'err':[dc,cc,vc].includes('warn')?'warn':'ok';
   // Subir fotos a Google Drive
   const fotosUrls = [];
@@ -2575,7 +2604,7 @@ async function guardarCheck(){
       fotosUrls.push(url);
     }catch(e){console.warn('Error subiendo foto:',e);}
   }
-  const{error}=await db.from('checks_diarios').insert({vehiculo_id:vid,fecha:new Date().toISOString().split('T')[0],doc_chofer_ok:$('dc1').checked&&$('dc2').checked,doc_chofer_estado:dc,carga_ok:$('ca1').checked&&$('ca2').checked,carga_estado:cc,precinto_numero:$('precinto-num')?.value.trim()||null,vehiculo_ok:$('ve1').checked&&$('ve2').checked&&$('ve3').checked&&$('ve4').checked,vehiculo_estado:vc,estado_final:ef,observaciones:$('check-obs').value.trim(),registrado_por:CP?.nombre||CU?.email,
+  const{error}=await db.from('checks_diarios').insert({...ubicacionCheck,vehiculo_id:vid,fecha:new Date().toISOString().split('T')[0],doc_chofer_ok:$('dc1').checked&&$('dc2').checked,doc_chofer_estado:dc,carga_ok:$('ca1').checked&&$('ca2').checked,carga_estado:cc,precinto_numero:$('precinto-num')?.value.trim()||null,vehiculo_ok:$('ve1').checked&&$('ve2').checked&&$('ve3').checked&&$('ve4').checked,vehiculo_estado:vc,estado_final:ef,observaciones:$('check-obs').value.trim(),registrado_por:CP?.nombre||CU?.email,
     item_licencia:$('dc1').checked,
     item_dni:$('dc2').checked,
     item_remito:$('ca1').checked,
@@ -2597,10 +2626,11 @@ async function guardarCheck(){
     nombre_peon:$('peon-si')?.checked?($('peon-nombre')?.value.trim()||null):null,
     hora_check:new Date().toTimeString().slice(0,8),
     fotos:fotosUrls.length?fotosUrls:null});
-  if(error){toast('Error: '+error.message,'err');return}
+  if(error){if(btn){btn.disabled=false;btn.textContent='✅ Confirmar check del día';}toast('Error: '+error.message,'err');return}
   CHECK_FOTOS=[];renderCheckFotos();
   resetCheckForm();
-  toast('✓ Check registrado','ok');
+  if(btn){btn.disabled=false;btn.textContent='✅ Confirmar check del día';}
+  toast(ubicacionCheck?'✓ Check registrado':'Check registrado sin ubicación',ubicacionCheck?'ok':'info');
 }
 
 
@@ -2734,6 +2764,7 @@ async function loadHistorial(){
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         ${h.clientes?.nombre?`<span style="background:var(--blue-light);color:var(--blue);font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px">👤 ${h.clientes.nombre}</span>`:''}
         ${h.precinto_numero?`<span style="background:var(--bg3);color:var(--text2);font-size:12px;font-weight:500;padding:3px 10px;border-radius:20px">🔒 Precinto: ${h.precinto_numero}</span>`:''}
+        ${h.check_latitud!=null&&h.check_longitud!=null?`<a href="https://maps.google.com/?q=${h.check_latitud},${h.check_longitud}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="background:var(--blue-light);color:var(--blue);font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;text-decoration:none" title="Precisión aproximada: ${Math.round(h.check_precision_m||0)} m">📍 Ubicación del check ↗</a>`:''}
       ${h.rastreador_nombre||h.rastreador_gid?`${h.link_gps_check?`<a href="${h.link_gps_check}" target="_blank" style="background:var(--blue-light);color:var(--blue);font-size:12px;font-weight:500;padding:3px 10px;border-radius:20px;text-decoration:none" title="Abrir portal GPS">🛰 ${h.rastreador_nombre||'GPS #'+h.rastreador_gid} ↗</a>`:`<span style="background:var(--blue-light);color:var(--blue);font-size:12px;font-weight:500;padding:3px 10px;border-radius:20px" title="GPS asignado al momento del check">🛰 ${h.rastreador_nombre||'GPS #'+h.rastreador_gid}</span>`}`:''}
       ${(()=>{const ra=HIST_RAST_ACTUAL_CACHE[h.vehiculo_id];return ra?`<span style="background:var(--bg3);color:var(--text);font-size:12px;font-weight:500;padding:3px 10px;border-radius:20px" title="GPS actualmente asignado a la unidad">📡 Actual: ${ra.nombre||ra.gps_id_dispositivo||'GPS #'+ra.gps_gid}</span>`:'';})()}
         ${h.sale_con_peon?`<span style="background:#FFF0E6;color:#C05200;font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px">👷 Peón${h.nombre_peon?' · '+h.nombre_peon:''}</span>`:''}
@@ -2794,6 +2825,7 @@ function verCheckDet(h){
     <span style="color:var(--text2)">Fecha</span><span>${fd(h.fecha)}${h.hora_check?' · '+h.hora_check.slice(0,5):''}</span>
     <span style="color:var(--text2)">Estado final</span><span>${bdg(h.estado_final)}</span>
     ${h.cliente_nombre||h.clientes?.nombre?`<span style="color:var(--text2)">Cliente</span><span>${h.cliente_nombre||h.clientes?.nombre}</span>`:''}
+    ${h.check_latitud!=null&&h.check_longitud!=null?`<span style="color:var(--text2)">Ubicación del check</span><span><a href="https://maps.google.com/?q=${h.check_latitud},${h.check_longitud}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;font-weight:500">📍 ${Number(h.check_latitud).toFixed(6)}, ${Number(h.check_longitud).toFixed(6)} · ±${Math.round(h.check_precision_m||0)} m ↗</a></span>`:''}
     ${(h.rastreador_nombre||h.rastreador_gid)?`<span style="color:var(--text2)">GPS al momento del check</span><span>${h.link_gps_check?`<a href="${h.link_gps_check}" target="_blank" style="color:var(--blue);text-decoration:none;font-weight:500">🛰 ${h.rastreador_nombre||'GPS #'+h.rastreador_gid} ↗</a>`:`🛰 ${h.rastreador_nombre||'GPS #'+h.rastreador_gid}`}</span>`:''}
     ${raActual?`<span style="color:var(--text2)">GPS actual de la unidad</span><span>${raActual.link_gps||h.vehiculos?.link_gps?`<a href="${raActual.link_gps||h.vehiculos?.link_gps}" target="_blank" style="color:var(--blue);text-decoration:none;font-weight:500">📡 ${raActual.nombre||raActual.gps_id_dispositivo||'GPS #'+raActual.gps_gid} ↗</a>`:`📡 ${raActual.nombre||raActual.gps_id_dispositivo||'GPS #'+raActual.gps_gid}`}</span>`:''}
     ${h.gps_estado?`<span style="color:var(--text2)">Estado GPS</span><span>${h.gps_estado==='ok'?'✓ Verificado':'✕ Sin señal'}</span>`:''}
@@ -2883,7 +2915,7 @@ async function exportarHistorial(){
   const headers=[
     // General
     'Tipo Check','Fecha','Hora','Patente','Marca','Modelo','Tipo Vehículo','Empresa','Cliente',
-    'Estado Final','Registrado por',
+    'Estado Final','Registrado por','Latitud del check','Longitud del check','Precisión ubicación (m)','Enlace ubicación',
     // Check estándar
     'Doc. Chofer','Estado Chofer','Remito','Estado Carga','Precinto N°',
     'Estado Vehículo','GPS Estado','Rastreador','Empresa GPS','GPS Actual de la Unidad',
@@ -2924,6 +2956,10 @@ async function exportarHistorial(){
       h.clientes?.nombre||'',
       h.estado_final||'',
       h.registrado_por||'',
+      h.check_latitud??'',
+      h.check_longitud??'',
+      h.check_precision_m??'',
+      h.check_latitud!=null&&h.check_longitud!=null?`https://maps.google.com/?q=${h.check_latitud},${h.check_longitud}`:'',
       // Check estándar
       esPE?'':h.doc_chofer_ok?'Sí':'No',
       esPE?'':h.doc_chofer_estado||'',
@@ -4384,7 +4420,9 @@ async function guardarCheckPE(){
   const vid=$('pe-vehiculo-sel')?.value;
   if(!vid){toast('Seleccioná un vehículo','err');return}
   const btn=document.querySelector('#s-checklist-pe .btn-primary');
+  if(btn?.disabled)return;
   if(btn){btn.disabled=true;btn.textContent='Guardando...';}
+  const ubicacionCheck=await obtenerUbicacionCheck();
 
   // Subir fotos
   const fotosUrls=[];
@@ -4398,6 +4436,7 @@ async function guardarCheckPE(){
 
   const v=PE_VEH_CACHE[vid];
   const checkData={
+    ...ubicacionCheck,
     vehiculo_id:vid,
     conductor_id:$('pe-conductor-sel')?.value||null,
     pais_id:getPaisId()||CP?.pais_id||null,
@@ -4484,7 +4523,7 @@ async function guardarCheckPE(){
   if(btn){btn.disabled=false;btn.textContent='✅ Confirmar checklist';}
   if(error){toast('Error: '+error.message,'err');return}
 
-  toast('✓ Checklist PE registrado','ok');
+  toast(ubicacionCheck?'✓ Checklist PE registrado':'Checklist PE registrado sin ubicación',ubicacionCheck?'ok':'info');
   PE_FOTOS=[];renderPEFotos();
   // Reset radios
   document.querySelectorAll('#s-checklist-pe input[type=radio]').forEach(r=>r.checked=false);

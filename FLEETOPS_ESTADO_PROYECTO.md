@@ -127,6 +127,7 @@ vehiculo_id, pais_id, fecha, hora_check, cliente_id,
 doc_chofer_ok, doc_chofer_estado, carga_ok, carga_estado, precinto_numero,
 vehiculo_ok, vehiculo_estado, estado_final, gps_estado,
 link_gps_check, empresa_gps, rastreador_gid, rastreador_nombre,
+check_latitud, check_longitud, check_precision_m,
 sale_con_peon, nombre_peon, observaciones, registrado_por, fotos (array text)
 ```
 
